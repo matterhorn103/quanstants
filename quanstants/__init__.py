@@ -1,9 +1,9 @@
-from decimal import Decimal as dec
 
-from . import constants
-from . import units
-from .quantities import Quantity
+# Expose Quantity class directly but not Constant or Unit
+from . import constant
+from . import unit
+from .quantity import Quantity
 
 # Make unit and constant dictionaries available directly in this namespace
-unit = units.unit_reg
-constant = constants.constant_reg
+units = unit.unit_reg
+constants = constant.constant_reg

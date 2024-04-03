@@ -28,21 +28,21 @@ sr = steradian
 # Named SI derived units, all are canon symbols
 hertz = DerivedUnit("Hz", "hertz", Quantity(1, s**-1), canon_symbol=True)
 newton = DerivedUnit("N", "newton", Quantity(1, kg * m * s**-2), canon_symbol=True)
-pascal
-joule
-watt
-coulomb
-volt
-farad
-ohm
-siemens
-weber 
-tesla
-henry
-degreeC
-lumen
-lux
-becquerel
-gray
-sievert
-katal
+pascal = DerivedUnit("Pa", "pascal", Quantity(1, kg * m**-1 * s**-2), canon_symbol=True)
+joule = DerivedUnit("J", "joule", Quantity(1, kg * m**2 * s**-2), canon_symbol=True)
+watt = DerivedUnit("W", "watt", Quantity(1, kg * m**2 * s**-3), canon_symbol=True)
+coulomb = DerivedUnit("C", "coulomb", Quantity(1, s * A), canon_symbol=True)
+volt = DerivedUnit("V", "volt", Quantity(1, kg * m**2 * s**-3 * A**-1), canon_symbol=True)
+farad = DerivedUnit("F", "farad", Quantity(1, kg**-1 * m**-2 * s**4 * A**2), canon_symbol=True)
+ohm = DerivedUnit("Ω", "ohm", Quantity(1, kg * m**2 * s**-3 * A**-2), canon_symbol=True)
+siemens = DerivedUnit("S", "siemens", Quantity(1, kg**-1 * m**-2 * s**3 * A**2), canon_symbol=True)
+weber = DerivedUnit("Wb", "weber", Quantity(1, kg * m**2 * s**-2 * A**-1), canon_symbol=True)
+tesla = DerivedUnit("T", "tesla", Quantity(1, kg * s**-2 * A**-1), canon_symbol=True)
+henry = DerivedUnit("H", "henry", Quantity(1, kg * m**2 * s**-2 * A**-2), canon_symbol=True)
+# degreeC Don't define for now, need to work out how best to handle temp
+lumen = DerivedUnit("lm", "lumen", Quantity(1, cd * sr), canon_symbol=True)
+lux = DerivedUnit("lx", "lux", Quantity(1, cd * sr * m**-2), canon_symbol=True)
+becquerel = DerivedUnit("Bq", "becquerel", Quantity(1, s**-1), canon_symbol=True)
+gray = DerivedUnit("Gy", "gray", Quantity(1, m**2 * s**-2), canon_symbol=True)
+sievert = DerivedUnit("Sv", "sievert", Quantity(1, m**2 * s**-2), canon_symbol=True)
+katal = DerivedUnit("kat", "katal", Quantity(1, s**-1 * mol), canon_symbol=True)

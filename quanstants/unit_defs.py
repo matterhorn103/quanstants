@@ -1,5 +1,6 @@
-from .unit import BaseUnit, DerivedUnit
+from .unit import UnitlessUnit, BaseUnit, DerivedUnit
 from .quantity import Quantity
+
 
 # SI base units
 second = BaseUnit("s", "second", dimension="T")
@@ -13,6 +14,9 @@ candela = BaseUnit("cd", "candela", dimension="J")
 # Also define radians and steradians as dimensionless base units
 radian = BaseUnit("rad", "radian", dimension="X")
 steradian = BaseUnit("sr", "steradian", dimension="X")
+
+# Special unitless dimensionless unit
+unitless = UnitlessUnit()
 
 # Create aliases for all of the above to make defining new units easier
 s = second

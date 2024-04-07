@@ -32,6 +32,10 @@ class Quantity:
         if isinstance(other, Quantity):
             if self.unit == other.unit:
                 return Quantity(self.number + other.number, self.unit)
+            # Allow mixed units with the same dimension
+            elif self.unit.dimension == other.unit.dimension:
+                converted = other.to(self.unit)
+                return Quantity(self.number + converted.number, self.unit)
             else:
                 raise MismatchedUnitsError(f"Can't add quantity in {other.unit} to quantity in {self.unit}.")
         else:
@@ -40,7 +44,7 @@ class Quantity:
     def __sub__(self, other):
         if isinstance(other, Quantity):
             if self.unit == other.unit:
-                return Quantity(self.number + other.number, self.unit)
+                return Quantity(self.number - other.number, self.unit)
             else:
                 raise MismatchedUnitsError(f"Can't subtract quantity in {other.unit} from quantity in {self.unit}.")
         else:
@@ -52,7 +56,7 @@ class Quantity:
         elif isinstance(other, Quantity):
             return Quantity(self.number * other.number, self.unit * other.unit)
         # Check if it's a unit with duck typing
-        elif hasattr(other, "_defined_in_base"):
+        elif hasattr(other, "base") and hasattr(other, "components"):
             # Note that Q * U only needs to be defined to allow syntax like 3 * units.m * units.s**-2
             return Quantity(self.number, self.unit * other)
         else:
@@ -70,7 +74,7 @@ class Quantity:
         elif isinstance(other, Quantity):
             return Quantity(self.number / other.number, self.unit / other.unit)
         # Check if it's a unit with duck typing
-        elif hasattr(other, "_defined_in_base"):
+        elif hasattr(other, "base") and hasattr(other, "components"):
             return Quantity(self.number, self.unit / other)
         else:
             return NotImplemented

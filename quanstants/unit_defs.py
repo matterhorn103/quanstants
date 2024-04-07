@@ -1,4 +1,4 @@
-from .unit import UnitlessUnit, BaseUnit, DerivedUnit
+from .unit import Unitless, BaseUnit, DerivedUnit
 from .quantity import Quantity
 
 
@@ -16,7 +16,7 @@ radian = BaseUnit("rad", "radian", dimension="X")
 steradian = BaseUnit("sr", "steradian", dimension="X")
 
 # Special unitless dimensionless unit
-unitless = UnitlessUnit()
+unitless = Unitless()
 
 # Create aliases for all of the above to make defining new units easier
 s = second

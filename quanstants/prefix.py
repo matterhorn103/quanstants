@@ -1,7 +1,7 @@
 from decimal import Decimal as dec
 
 from .quantity import Quantity
-from .unit import BaseUnit, DerivedUnit
+from .unit import BaseUnit, DerivedUnit, unit_reg
 
 # Namespace class to contain all the prefixes, making them useable with prefix.n notation
 class PrefixReg:
@@ -9,6 +9,11 @@ class PrefixReg:
 
 prefix_reg = PrefixReg
 
+# Simple list of prefix names
+prefix_list = []
+
+class AlreadyPrefixedError(Exception):
+    pass
 
 class Prefix:
     """An object representing a metric prefix.
@@ -26,9 +31,14 @@ class Prefix:
         self.multiplier = dec(str(multiplier))
         setattr(prefix_reg, self.symbol, self)
         setattr(prefix_reg, self.name, self)
+        prefix_list.append(self.name)
     
     def __mul__(self, other):
         if isinstance(other, (BaseUnit, DerivedUnit)):
+            # Make sure the user is not trying to add a second prefix to a prefixed unit
+            if isinstance(other, DerivedUnit):
+                if other.name.startswith(tuple(prefix_list)):
+                    raise AlreadyPrefixedError
             concat_symbol = self.symbol + other.symbol
             if (self.name is not None) and (other.name is not None):
                 concat_name = self.name + other.name

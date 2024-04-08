@@ -29,6 +29,9 @@ cd = candela
 rad = radian
 sr = steradian
 
+# Most importantly, define the gram, but simply as a DerivedUnit
+gram = DerivedUnit("g", "gram", Quantity("0.001", kg), canon_symbol=True)
+
 # Named SI derived units, all are canon symbols
 hertz = DerivedUnit("Hz", "hertz", Quantity(1, s**-1), canon_symbol=True)
 newton = DerivedUnit("N", "newton", Quantity(1, kg * m * s**-2), canon_symbol=True)
@@ -50,3 +53,6 @@ becquerel = DerivedUnit("Bq", "becquerel", Quantity(1, s**-1), canon_symbol=True
 gray = DerivedUnit("Gy", "gray", Quantity(1, m**2 * s**-2), canon_symbol=True)
 sievert = DerivedUnit("Sv", "sievert", Quantity(1, m**2 * s**-2), canon_symbol=True)
 katal = DerivedUnit("kat", "katal", Quantity(1, s**-1 * mol), canon_symbol=True)
+
+# Imperial
+foot = DerivedUnit("ft", "foot", Quantity("0.3048", m), canon_symbol=True)

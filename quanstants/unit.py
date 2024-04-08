@@ -27,8 +27,22 @@ def generate_symbol(components):
     return symbol
 
 # Function to turn a tuple or other iterable of Factors into a dimension
-def generate_dimension(components):
-    return "X"
+def generate_dimensions(components):
+    new_dimensions = {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
+    for factor in components:
+        for dimension in new_dimensions.keys():
+            if dimension in factor.unit.dimensions:
+                new_dimensions[dimension] += factor.unit.dimensions[dimension] * factor.exponent
+    return new_dimensions
+
+# Function to allow sorting of compound base units into a canonical order
+def base_priority(Factor):
+    priorities = {"s": 0, "m": 1, "kg": 2, "A": 3, "K": 4, "mol": 5, "cd": 6, "rad": 7, "sr": 8}
+    if Factor.unit.symbol in priorities:
+        return priorities[Factor.unit.symbol]
+    else:
+        return 9
+
 
 class Unit(ABC):
     """Parent class for all units."""
@@ -36,14 +50,24 @@ class Unit(ABC):
         self,
         symbol,
         name,
-        dimension,
         components: tuple,
+        dimension: str | None = None,
+        dimensions: dict = None,
         canon_symbol=False,
         alt_names=None,
         ):
         self.symbol = symbol
         self.name = name
-        self.dimension = dimension
+        # Start with a dimensionless unit and add any provided ones
+        self.dimensions = {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
+        if dimension == "X":
+            pass
+        elif isinstance(dimension, str) and len(dimension) == 1:
+            self.dimensions[dimension] += 1
+        else:
+            for dim in self.dimensions.keys():
+                if dim in dimensions:
+                    self.dimensions[dim] += dimensions[dim]
         self.components = components
         self.alt_names = alt_names
         # Add to registry to allow lookup under a provided name
@@ -112,7 +136,20 @@ class Unit(ABC):
         """Return the inverse of the unit as a CompoundUnit."""
         # For now just reuse the __pow__ function
         return self**-1
-
+    
+    def dimensionality(self):
+        """Return the dimensionality as a nice string."""
+        result = ""
+        for dimension, exponent in self.dimensions.items():
+            if exponent != 0:
+                result += dimension
+                if exponent != 1:
+                    result += generate_superscript(exponent)
+        if len(result) > 0:
+            return result
+        else:
+            return "(dimensionless)"
+    
     # Some abstract methods that subclasses need to define
     @abstractmethod
     def base(self):
@@ -124,6 +161,11 @@ class Unit(ABC):
         """Combine any like terms."""
         pass
 
+    @abstractmethod
+    def canonical(self):
+        """Order any base terms."""
+        pass
+
 
 class Unitless(Unit):
     """Special unitless unit."""
@@ -131,8 +173,8 @@ class Unitless(Unit):
         super().__init__(
             symbol="(unitless)",
             name="unitless",
-            dimension="X",
             components=(Factor(self, 1),),
+            dimension="X",
             canon_symbol=False,
             alt_names=None,
         )
@@ -156,6 +198,9 @@ class Unitless(Unit):
 
     def cancel(self):
         return self
+    
+    def canonical(self):
+        return self
 
 
 class BaseUnit(Unit):
@@ -171,8 +216,8 @@ class BaseUnit(Unit):
         super().__init__(
             symbol,
             name,
-            dimension,
             components=(Factor(self, 1),),
+            dimension=dimension,
             canon_symbol=True,
             alt_names=alt_names,
             )
@@ -183,24 +228,29 @@ class BaseUnit(Unit):
     
     def cancel(self):
         return self
+    
+    def canonical(self):
+        return self
 
 
 class CompoundUnit(Unit):
     """An effective unit created through multiplication of non-compound units.
     
-    Constituent units must be passed as a tuple of Factors, where each Factor
-    is a namedtuple of a unit and an exponent.
+    Multiple units multiplied together are treated as a single Unit object with
+    its constituent parts gathered under `components`.
+    Constituent units must be passed as a tuple of `Factors`, a `namedtuple` of
+    a unit and an exponent.
     """
     def __init__(self, components):
         # Generate a symbol
         symbol = generate_symbol(components)
-        dimension = generate_dimension(components)
+        dimensions = generate_dimensions(components)
         # Don't define a name etc., just a symbol and the components
         super().__init__(
             symbol=symbol,
             name=None,
-            dimension=dimension,
             components=components,
+            dimensions=dimensions,
             )
         # Determine whether the unit is expressed in terms of base units
         self.defined_in_base = True
@@ -236,6 +286,10 @@ class CompoundUnit(Unit):
         if len(new_components) == 0:
             return Unitless()
         return CompoundUnit(new_components)
+    
+    def canonical(self):
+        ordered_components = tuple(sorted(self.components, key=base_priority))
+        return CompoundUnit(ordered_components)
 
 
 class DerivedUnit(Unit):
@@ -245,6 +299,7 @@ class DerivedUnit(Unit):
     A symbol must be provided, but a name is optional.
     If a name is given, the unit will be added to the unit registry under that
     name (note that this will replace any existing unit with that name).
+    The dimension is set to that of the provided values unit(s).
     """
     def __init__(
         self,
@@ -258,8 +313,8 @@ class DerivedUnit(Unit):
         super().__init__(
             symbol,
             name,
-            dimension=self.value.unit.dimension,
             components=(Factor(self, 1),),
+            dimensions=self.value.unit.dimensions,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
             )
@@ -269,4 +324,7 @@ class DerivedUnit(Unit):
         return self.value.base()
     
     def cancel(self):
+        return self
+    
+    def canonical(self):
         return self

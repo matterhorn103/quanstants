@@ -55,7 +55,7 @@ class Unit(ABC):
         dimensions: dict = None,
         canon_symbol=False,
         alt_names=None,
-        ):
+    ):
         self.symbol = symbol
         self.name = name
         # Start with a dimensionless unit and add any provided ones
@@ -79,7 +79,7 @@ class Unit(ABC):
                 setattr(unit_reg, alt_name, self)
         # Also add under the symbol if it has been indicated via canon_symbol
         # that the symbol should uniquely refer to this unit
-        if canon_symbol:
+        if (canon_symbol) and (self.symbol != self.name):
             setattr(unit_reg, self.symbol, self)
 
     def __str__(self):
@@ -211,7 +211,7 @@ class BaseUnit(Unit):
         name,
         dimension,
         alt_names=None,
-        ):
+    ):
         # All base units will be the canonical unit for that symbol
         super().__init__(
             symbol,
@@ -220,7 +220,7 @@ class BaseUnit(Unit):
             dimension=dimension,
             canon_symbol=True,
             alt_names=alt_names,
-            )
+        )
     
     def base(self):
         """Return the unit's value in base units as a Quantity."""
@@ -251,7 +251,7 @@ class CompoundUnit(Unit):
             name=None,
             components=components,
             dimensions=dimensions,
-            )
+        )
         # Determine whether the unit is expressed in terms of base units
         self.defined_in_base = True
         for component in self.components:
@@ -308,7 +308,7 @@ class DerivedUnit(Unit):
         value,
         canon_symbol=False,
         alt_names=None,
-        ):
+    ):
         self.value = value
         super().__init__(
             symbol,
@@ -317,7 +317,7 @@ class DerivedUnit(Unit):
             dimensions=self.value.unit.dimensions,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
-            )
+        )
 
     def base(self):
         """Return the unit's value in base units as a Quantity."""

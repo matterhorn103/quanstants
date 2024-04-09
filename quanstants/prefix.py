@@ -25,7 +25,7 @@ class Prefix:
         symbol,
         name,
         multiplier: str | int | float | dec,
-        ):
+    ):
         self.symbol = symbol
         self.name = name
         self.multiplier = dec(str(multiplier))
@@ -54,12 +54,12 @@ class Prefix:
                 name=concat_name,
                 value=Quantity(self.multiplier, other),
                 alt_names=concat_alt_names,
-                )
+            )
         else:
             return NotImplemented
 
 
-# Define the prefixes
+# Metric prefixes
 quetta = Prefix("Q", "quetta", "1E+30")
 ronna = Prefix("R", "ronna", "1E+27")
 yotta = Prefix("Y", "yotta", "1E+24")
@@ -84,3 +84,13 @@ zepto = Prefix("z", "zepto", "1E-21")
 yocto = Prefix("y", "yocto", "1E-24")
 ronto = Prefix("r", "ronto", "1E-27")
 quecto = Prefix("q", "quecto", "1E-30")
+
+# Binary prefixes
+yobi = Prefix("Yi", "yobi", 1024**8)
+zebi = Prefix("Zi", "zebi", 1024**7)
+exbi = Prefix("Ei", "exbi", 1024**6)
+pebi = Prefix("Pi", "pebi", 1024**5)
+tebi = Prefix("Ti", "tebi", 1024**4)
+gibi = Prefix("Gi", "gibi", 1024**3)
+mebi = Prefix("Mi", "mebi", 1024**2)
+kibi = Prefix("Ki", "kibi", 1024**1)

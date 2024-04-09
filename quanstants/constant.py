@@ -11,12 +11,13 @@ constant_reg = ConstantReg
 class Constant(Quantity):
     def __init__(
         self,
-        symbol,
-        name,
-        value,
-        canon_symbol=False,
-        alt_names=None,
-        ):
+        symbol: str | None,
+        name: str,
+        value: Quantity,
+        uncertainty: str | int | float | dec | None = None,
+        canon_symbol: str = False,
+        alt_names: list = None,
+    ):
         self.symbol = symbol
         self.name = name
         self.value = value
@@ -24,7 +25,8 @@ class Constant(Quantity):
         super().__init__(
             value.number,
             value.unit,
-            )
+            uncertainty=uncertainty,
+        )
         # Add to registry to allow lookup under the provided name
         setattr(constant_reg, self.name, self)
         # Any constant named "<x> constant" automatically gets "<x>"" as an alt name

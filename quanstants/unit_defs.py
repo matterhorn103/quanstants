@@ -1,6 +1,7 @@
 from .unit import Unitless, BaseUnit, DerivedUnit
 from .quantity import Quantity
 
+# fmt: off
 
 # SI base units
 second = BaseUnit("s", "second", dimension="T")
@@ -54,5 +55,29 @@ gray = DerivedUnit("Gy", "gray", Quantity(1, m**2 * s**-2), canon_symbol=True)
 sievert = DerivedUnit("Sv", "sievert", Quantity(1, m**2 * s**-2), canon_symbol=True)
 katal = DerivedUnit("kat", "katal", Quantity(1, s**-1 * mol), canon_symbol=True)
 
+# CODATA 2018
+#Angstrom_star = Constant(None, "Angstrom_star", Quantity("1.00001495e-10", m), uncertainty="0.00000090e-10", canon_symbol=False)
+#atomic_mass_unit
+
+# Other
+#Dalton
+electronvolt = DerivedUnit("eV", "electronvolt", Quantity("1.602176634e-19", joule), canon_symbol=True)
+
+# Atomic units
+
+# Natural units
+
+# Planck units
+
+# Standard states
+# standard atm
+# standard pressure
+
 # Imperial
 foot = DerivedUnit("ft", "foot", Quantity("0.3048", m), canon_symbol=True)
+
+# Data
+bit = BaseUnit("bit", "bit", dimension="X")
+byte_8_bit = DerivedUnit("B", "byte_8_bit", Quantity(8, bit), canon_symbol=True, alt_names=["byte", "octet"])
+
+# fmt: on

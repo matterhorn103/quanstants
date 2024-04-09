@@ -11,7 +11,12 @@ class NotUnitlessError(Exception):
     pass
 
 class Quantity:
-    def __init__(self, number: str | int | float | dec, unit):
+    def __init__(
+        self,
+        number: str | int | float | dec,
+        unit,
+        uncertainty: str | int | float | dec | None = None,
+    ):
         # Use Decimal type internally, exclusively
         # By default convert to string then to dec so that the resulting dec is the same as what
         # the user *thinks* the float is, not of the actual binary float value e.g. str(5.2) gives 
@@ -22,12 +27,24 @@ class Quantity:
         else:
             self.number = dec(number)
         self.unit = unit
+        if (uncertainty is None) or (uncertainty == "(exact)"):
+            self.uncertainty = "(exact)"
+        elif CONVERT_FLOAT_AS_STR:
+            self.uncertainty = dec(str(uncertainty))
+        else:
+            self.uncertainty = dec(uncertainty)
     
     def __repr__(self):
-        return f"Quantity({self.number}, {self.unit.symbol})"
+        if self.uncertainty != "(exact)":
+            return f"Quantity({self.number}, {self.unit.symbol}, uncertainty={self.uncertainty})"
+        else:
+            return f"Quantity({self.number}, {self.unit.symbol})"
 
     def __str__(self):
-        return f"{self.number} {self.unit.symbol}"
+        if self.uncertainty != "(exact)":
+            return f"{self.number}({''.join([str(n) for n in self.uncertainty.as_tuple().digits])}) {self.unit.symbol}"
+        else:
+            return f"{self.number} {self.unit.symbol}"
     
     def __float__(self):
         return float(self.number)
@@ -177,13 +194,27 @@ class Quantity:
                 new_digits.append(0)
             new_exponent = self.number.as_tuple().exponent - n_digits_to_add
             return Quantity(dec((self.number.as_tuple().sign, new_digits, new_exponent)), self.unit)
-        
+    
     def exp(self):
         if self.dimensionality() != "(dimensionless)":
             raise NotUnitlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
             return dimensionless_quant.number.exp()
+    
+    def ln(self):
+        if self.dimensionality() != "(dimensionless)":
+            raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
+        else:
+            dimensionless_quant = self.base().cancel()
+            return dimensionless_quant.number.ln()
+    
+    def log10(self):
+        if self.dimensionality() != "(dimensionless)":
+            raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
+        else:
+            dimensionless_quant = self.base().cancel()
+            return dimensionless_quant.number.log10()
     
     def dimensionality(self):
         """Return the dimensionality as a nice string."""

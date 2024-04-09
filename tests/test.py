@@ -1,58 +1,33 @@
+from decimal import Decimal as dec
+
 from quanstants import prefixes as pr, units as un, constants as co
 
-a = 30 * (pr.k * un.W) # 30 kW
+a = 3 * un.m * un.s**-1
 
-b = 400 * un.J # 400 J
+b = 3 * un.s**-1 * un.m
 
-c = 5 * (pr.k * un.J) # 5 kJ
+print(a)
+print(b)
+print(a.canonical())
+print(b.canonical())
+print(a.unit == b.unit)
+print(a.canonical().unit.__repr__())
+print(b.canonical().unit.__repr__())
+print(a.canonical().unit == b.canonical().unit)
+print(a == b)
 
-d = 6000 * un.J * un.mol**-1 # 6000 J/mol
+print("----------------")
+c = 2*un.kg
+d = 2*(pr.k * un.g)
+print(c.base())
+print(d.base())
+print(c.base().unit == d.base().unit)
+print(c == d)
 
-e = 3 * c * un.mol**-1 # 3 kJ/mol
+print("----------------")
+e = dec("0.6096") * un.m
+f = 2 * un.ft
+print(e > f)
+g = 3 * un.ft
+print(f < g)
 
-for qu in [a,b,c,d,e]:
-    print(qu)
-    print(qu.base())
-
-f = pr.k * un.J
-print(str(f))
-print(repr(f))
-print(f.name)
-print(type(f))
-
-print(b.base())
-print(f.base())
-
-g = b.base() / f.base()
-print(g.__repr__())
-
-h = g.cancel()
-print(h)
-
-print(h.number)
-print(h.unit)
-print(type(h.unit))
-
-i = h.unit * f
-print(i)
-
-j = b.to(pr.k * un.J)
-print(j.__repr__())
-
-k = e.to(un.J * un.mol**-1)
-print(k.__repr__())
-
-l = pr.k * un.J
-print(repr(l))
-
-m = (1*l) / (1*f)
-print(m.base().cancel())
-
-n = 3 * un.m**2
-print(n)
-print(repr(n.to(un.m)))
-
-o = 2 * un.m
-p = 50 * (pr.centi * un.metre)
-q = o + p
-print(q)

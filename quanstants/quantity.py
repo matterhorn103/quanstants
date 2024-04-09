@@ -1,5 +1,6 @@
 from decimal import Decimal as dec
 from decimal import localcontext
+from fractions import Fraction as frac
 import math
 
 from .config import *
@@ -11,6 +12,79 @@ class NotUnitlessError(Exception):
     pass
 
 class Quantity:
+    """A class that represents physical quantities.
+    
+    The quantity is expressed as a numerical value `number` and a unit of measurement `unit`, with an
+    optional associated `uncertainty`, which is also a numerical value.
+    `number` and `uncertainty` are any numerical type that can be converted to `Decimal`.
+    `unit` is any `BaseUnit` or `DerivedUnit`, or any `CompoundUnit` formed by multiplication thereof,
+    or any instance of the special `Unitless` unit.
+
+    Both `number` and `uncertainty` are stored internally as `Decimal` objects and provided values are
+    first converted to `Decimal`. By making `Decimal` the default, quantities behave as the user would
+    expect:
+    * numbers can be represented exactly, and arithmetic results in other exact numbers;
+    * significant figures are incorporated and significant trailing zeroes are not dropped;
+    * quantities round according to users' expectations (see `Quantity.round()`).
+
+    Mathematical operations are in general performed with the quantity considered to be the product of
+    its number and unit. The implementation of arithmetic on the numerical part is typically that of
+    the `Decimal` type.
+
+    Arithmetic with instances of `Quantity` can be performed in the usual way with the operators
+    `+ - * / **`. Addition and subtraction will raise a `MismatchedUnitsError` if the units of the two
+    do not match, which serves as a useful sanity check. Quantities with the same dimensionality,
+    however, can be added and subtracted, and the result will have the unit of the first of the two
+    values:
+
+    ```
+    >>> (4 * units.metre) + (50 * units.centimetre)
+    Quantity(4.5, m)
+    >>> (50 * units.centimetre) + (4 * units.metre)
+    Quantity(450, cm)
+    >>> (4 * units.metre) + (3 * units.kilogram)
+    quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
+    ```
+
+    Similarly, (in)equalities between quantities with the same dimensionality are supported.
+
+    Rounding can be performed either to an integer, a given number of decimal places, or a given number
+    of significant figures.
+
+    As for `Decimal`, the mathematical functions `.sqrt()`, `.exp()`, `.ln()`, and `.log10()` are
+    available.
+
+    By default, units of the results of arithmetic with quantities are not cancelled out automatically.
+    This can be done on demand using `.cancel()`.
+
+    Quantities can be easily expressed in terms of another unit using `.to()`. To express in terms of
+    SI base units, `.base()` is provided. `.canonical()` returns the same, but with the base units in a
+    set, consistent order.
+    
+    If `quanstants.CONVERT_FLOAT_AS_STR` is `True`, as it is by default, a provided `float` is first
+    converted to a `str`, then to a `Decimal`. The result is that providing `number=5.2` gives a
+    `Quantity` with the exact numerical value 5.2, as the user likely expects, as opposed to the true
+    decimal representation of the binary float 5.2, which they likely don't:
+
+    ```
+    >>> 5.2 * units.kilogram
+    Quantity(5.2, kg)
+    >>> Quantity(5.2, units.kilogram)
+    Quantity(5.2, kg)
+    >>> Quantity(5.2, units.kilogram).number
+    Decimal('5.2')
+    >>> Decimal(5.2)
+    Decimal('5.20000000000000017763568394002504646778106689453125')
+    >>> Decimal("5.2")
+    Decimal('5.2')
+    >>> Decimal(str(5.2))
+    Decimal('5.2')
+    ```
+
+    This behaviour lowers the barrier to entry for non-expert users. However, if for whatever reason it
+    should be desirable to have floats be converted directly to decimals, set
+    `quanstants.CONVERT_FLOAT_AS_STR=False`.
+    """
     def __init__(
         self,
         number: str | int | float | dec,
@@ -110,10 +184,12 @@ class Quantity:
         else:
             return NotImplemented
     
-    # For now Unit only supports integer exponents
+    # For now Unit only supports integer or fractional exponents
     def __pow__(self, other):
         if isinstance(other, int):
             return Quantity(self.number ** other, self.unit ** other)
+        elif isinstance(other, frac):
+            return Quantity(self.number ** dec(str(float(other))), self.unit ** other)
         else:
             return NotImplemented
     
@@ -165,10 +241,22 @@ class Quantity:
         return self
     
     def __round__(self, ndigits=0):
+        """Alias for `Quantity.round()` to allow the use of the in-built `round()`."""
         return self.round(ndigits)
     
     def round(self, ndigits=0):
-        # Set decimal rounding to the traditionally expected method
+        """Return the quantity with the numerical part rounded to the specified number of decimal places.
+        
+        The method used for rounding is that specified by the `quanstants.ROUNDING_MODE` variable,
+        which takes any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`.
+
+        Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
+        specified by `quanstants.ROUNDING_MODE` does not override the current `decimal.Context()`
+        and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
+        which by default uses `"ROUND_HALF_EVEN"`.
+        """
+        # Set decimal rounding to the specified method, which by default is the traditionally
+        # expected behaviour
         # Use in a local context so that user's context isn't overwritten
         with localcontext() as ctx:
             ctx.rounding=ROUNDING_MODE
@@ -176,11 +264,22 @@ class Quantity:
         return rounded
     
     def sigfig(self, nsigfigs=1):
+        """Return the quantity with the numerical part rounded to the specified number of significant figures.
+        
+        The method used for rounding is that specified by the `quanstants.ROUNDING_MODE` variable,
+        which takes any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`.
+
+        Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
+        specified by `quanstants.ROUNDING_MODE` does not override the current `decimal.Context()`
+        and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
+        which by default uses `"ROUND_HALF_EVEN"`.
+        """
         digits = self.number.as_tuple().digits
         if nsigfigs <= len(digits):
             exponent = math.floor(self.number.log10())
             significand = self.number / dec(f"1E{exponent}")
-            # Set decimal rounding to the traditionally expected method
+            # Set decimal rounding to the specified method, which by default is the traditionally
+            # expected behaviour
             # Use in a local context so that user's context isn't overwritten
             with localcontext() as ctx:
                 ctx.rounding=ROUNDING_MODE
@@ -195,7 +294,12 @@ class Quantity:
             new_exponent = self.number.as_tuple().exponent - n_digits_to_add
             return Quantity(dec((self.number.as_tuple().sign, new_digits, new_exponent)), self.unit)
     
+    def sqrt(self):
+        """Return the square root of the quantity, equivalent to `Quantity**Fraction(1, 2)`."""
+        return self**frac(1, 2)
+
     def exp(self):
+        """Return the value of e raised to the power of the quantity, for dimensionless quantities only."""
         if self.dimensionality() != "(dimensionless)":
             raise NotUnitlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
@@ -203,6 +307,7 @@ class Quantity:
             return dimensionless_quant.number.exp()
     
     def ln(self):
+        """Return the natural logarithm of the quantity, for dimensionless quantities only."""
         if self.dimensionality() != "(dimensionless)":
             raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
@@ -210,6 +315,7 @@ class Quantity:
             return dimensionless_quant.number.ln()
     
     def log10(self):
+        """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
         if self.dimensionality() != "(dimensionless)":
             raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:

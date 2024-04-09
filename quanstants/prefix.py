@@ -1,13 +1,21 @@
 from decimal import Decimal as dec
 
 from .quantity import Quantity
-from .unit import BaseUnit, DerivedUnit, unit_reg
+from .unit import BaseUnit, DerivedUnit
+from .unit_defs import kilogram
+
+
+class PrefixAlreadyDefinedError(Exception):
+    pass
 
 # Namespace class to contain all the prefixes, making them useable with prefix.n notation
 class PrefixReg:
-    pass
+    def add(self, name, prefix):
+        if hasattr(self, name):
+            raise PrefixAlreadyDefinedError
+        setattr(self, name, prefix)
 
-prefix_reg = PrefixReg
+prefix_reg = PrefixReg()
 
 # Simple list of prefix names
 prefix_list = []
@@ -29,12 +37,15 @@ class Prefix:
         self.symbol = symbol
         self.name = name
         self.multiplier = dec(str(multiplier))
-        setattr(prefix_reg, self.symbol, self)
-        setattr(prefix_reg, self.name, self)
+        prefix_reg.add(self.symbol, self)
+        prefix_reg.add(self.name, self)
         prefix_list.append(self.name)
     
     def __mul__(self, other):
         if isinstance(other, (BaseUnit, DerivedUnit)):
+            # Special behaviour for kilo + gram
+            if (self.name == "kilo") and (other.name == "gram"):
+                return kilogram
             # Make sure the user is not trying to add a second prefix to a prefixed unit
             if isinstance(other, DerivedUnit):
                 if other.name.startswith(tuple(prefix_list)):
@@ -53,6 +64,7 @@ class Prefix:
                 symbol=concat_symbol,
                 name=concat_name,
                 value=Quantity(self.multiplier, other),
+                add_to_reg=False,
                 alt_names=concat_alt_names,
             )
         else:

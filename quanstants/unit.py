@@ -1,16 +1,23 @@
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from decimal import Decimal as dec
+from fractions import Fraction as frac
 
 from .quantity import Quantity
 from .unicode import generate_superscript
 
 
-# Namespace class to contain all the units, making them useable with unit.m notation
-class UnitReg:
+class UnitAlreadyDefinedError(Exception):
     pass
 
-unit_reg = UnitReg
+# Namespace class to contain all the units, making them useable with unit.m notation
+class UnitReg:
+    def add(self, name, unit):
+        if hasattr(self, name):
+            raise UnitAlreadyDefinedError(f"{name} is already defined!")
+        setattr(self, name, unit)
+
+unit_reg = UnitReg()
 
 # Create a named tuple that is used to hold a unit with its exponent
 Factor = namedtuple("Factor", ["unit", "exponent"])
@@ -53,6 +60,7 @@ class Unit(ABC):
         components: tuple,
         dimension: str | None = None,
         dimensions: dict = None,
+        add_to_reg=False,
         canon_symbol=False,
         alt_names=None,
     ):
@@ -70,17 +78,18 @@ class Unit(ABC):
                     self.dimensions[dim] += dimensions[dim]
         self.components = components
         self.alt_names = alt_names
-        # Add to registry to allow lookup under a provided name
-        if self.name is not None:
-            setattr(unit_reg, self.name, self)
-        # Also add under any alternative names e.g. meter vs metre
-        if self.alt_names is not None:
-            for alt_name in self.alt_names:
-                setattr(unit_reg, alt_name, self)
-        # Also add under the symbol if it has been indicated via canon_symbol
-        # that the symbol should uniquely refer to this unit
-        if (canon_symbol) and (self.symbol != self.name):
-            setattr(unit_reg, self.symbol, self)
+        if add_to_reg:
+            # Add to registry to allow lookup under a provided name
+            if self.name is not None:
+                unit_reg.add(self.name, self)
+            # Also add under any alternative names e.g. meter vs metre
+            if self.alt_names is not None:
+                for alt_name in self.alt_names:
+                    unit_reg.add(alt_name, self)
+            # Also add under the symbol if it has been indicated via canon_symbol
+            # that the symbol should uniquely refer to this unit
+            if (canon_symbol) and (self.symbol != self.name):
+                unit_reg.add(self.symbol, self)
 
     def __str__(self):
         return f"Unit({self.symbol})"
@@ -121,11 +130,11 @@ class Unit(ABC):
         else:
             return NotImplemented
 
-    # For now only allow integer exponents
+    # For now only allow integer and fractional exponents
     def __pow__(self, other):
         if other == 1:
             return self
-        elif isinstance(other, int):
+        elif isinstance(other, (int, frac)):
             # Tuple comprehensions don't exist so make a tuple from a generator
             new_components = tuple((Factor(component.unit, component.exponent * other) for component in self.components),)
             return CompoundUnit(new_components)
@@ -169,12 +178,13 @@ class Unit(ABC):
 
 class Unitless(Unit):
     """Special unitless unit."""
-    def __init__(self):
+    def __init__(self, add_to_reg=False):
         super().__init__(
             symbol="(unitless)",
             name="unitless",
             components=(Factor(self, 1),),
             dimension="X",
+            add_to_reg=add_to_reg,
             canon_symbol=False,
             alt_names=None,
         )
@@ -218,6 +228,7 @@ class BaseUnit(Unit):
             name,
             components=(Factor(self, 1),),
             dimension=dimension,
+            add_to_reg=True,
             canon_symbol=True,
             alt_names=alt_names,
         )
@@ -241,7 +252,7 @@ class CompoundUnit(Unit):
     Constituent units must be passed as a tuple of `Factors`, a `namedtuple` of
     a unit and an exponent.
     """
-    def __init__(self, components):
+    def __init__(self, components, add_to_reg=False):
         # Generate a symbol
         symbol = generate_symbol(components)
         dimensions = generate_dimensions(components)
@@ -251,6 +262,7 @@ class CompoundUnit(Unit):
             name=None,
             components=components,
             dimensions=dimensions,
+            add_to_reg=add_to_reg,
         )
         # Determine whether the unit is expressed in terms of base units
         self.defined_in_base = True
@@ -295,17 +307,18 @@ class CompoundUnit(Unit):
 class DerivedUnit(Unit):
     """Units derived from and defined with SI units.
     
-    value is a Quantity with both a number and a Unit.
+    value is a Quantity with both a number and a Unit, and optionally, an uncertainty.
     A symbol must be provided, but a name is optional.
     If a name is given, the unit will be added to the unit registry under that
     name (note that this will replace any existing unit with that name).
-    The dimension is set to that of the provided values unit(s).
+    The dimension is set to that of the provided value's unit(s).
     """
     def __init__(
         self,
         symbol,
         name,
         value,
+        add_to_reg=True,
         canon_symbol=False,
         alt_names=None,
     ):
@@ -315,6 +328,7 @@ class DerivedUnit(Unit):
             name,
             components=(Factor(self, 1),),
             dimensions=self.value.unit.dimensions,
+            add_to_reg=add_to_reg,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )

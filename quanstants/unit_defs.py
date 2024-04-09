@@ -17,7 +17,7 @@ radian = BaseUnit("rad", "radian", dimension="X")
 steradian = BaseUnit("sr", "steradian", dimension="X")
 
 # Special unitless dimensionless unit
-unitless = Unitless()
+unitless = Unitless(add_to_reg=True)
 
 # Create aliases for all of the above to make defining new units easier
 s = second

@@ -2,11 +2,18 @@ from decimal import Decimal as dec
 
 from .quantity import Quantity
 
-# Namespace class to contain all the constants, making them useable with constant.c notation
-class ConstantReg:
+
+class ConstantAlreadyDefinedError(Exception):
     pass
 
-constant_reg = ConstantReg
+# Namespace class to contain all the constants, making them useable with constant.c notation
+class ConstantReg:
+    def add(self, name, constant):
+        if hasattr(self, name):
+            raise ConstantAlreadyDefinedError
+        setattr(self, name, constant)
+
+constant_reg = ConstantReg()
 
 class Constant(Quantity):
     def __init__(
@@ -28,7 +35,7 @@ class Constant(Quantity):
             uncertainty=uncertainty,
         )
         # Add to registry to allow lookup under the provided name
-        setattr(constant_reg, self.name, self)
+        constant_reg.add(self.name, self)
         # Any constant named "<x> constant" automatically gets "<x>"" as an alt name
         if self.name[-9:] == "_constant":
             if self.alt_names is None:
@@ -39,11 +46,11 @@ class Constant(Quantity):
         # there could be a hundred permutations of each constant's name)
         if self.alt_names is not None:
             for alt_name in self.alt_names:
-                setattr(constant_reg, alt_name, self)
+                constant_reg.add(alt_name, self)
         # Also add under the symbol if it has been indicated via canon_symbol
         # that the symbol should uniquely refer to this constant
         if canon_symbol:
-            setattr(constant_reg, self.symbol, self)
+            constant_reg.add(self.symbol, self)
     
     def __str__(self):
         return f"Constant({self.name} = {self.value})"

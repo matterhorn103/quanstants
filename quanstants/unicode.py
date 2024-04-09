@@ -1,3 +1,5 @@
+from fractions import Fraction as frac
+
 
 # Dictionary of correspondence between Factor.exponent, which is just an integer,
 # and the appropriate Unicode symbol. For now, only hard-code up to |9|
@@ -24,11 +26,13 @@ _unicode_superscripts = {
     }
 
 # Also provide function to generate a superscript string
-def generate_superscript(exponent: int):
+def generate_superscript(exponent: int | frac):
     if exponent == 1:
         superscript = ""
-    elif abs(exponent) <= 9:
-        superscript = _unicode_superscripts[exponent]
+    elif exponent.is_integer() and (abs(exponent) <= 9):
+        superscript = _unicode_superscripts[int(exponent)]
+    elif isinstance(exponent, frac):
+        superscript = exponent.numerator + "⁄" + exponent.denominator
     else:
         superscript = ""
         for char in str(int):

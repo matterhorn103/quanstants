@@ -1,5 +1,10 @@
+import math
+from decimal import Decimal as dec
+
 from .unit import Unitless, BaseUnit, DerivedUnit
 from .quantity import Quantity
+
+pi = dec(math.pi)
 
 # fmt: off
 
@@ -33,7 +38,7 @@ sr = steradian
 # Most importantly, define the gram, but simply as a DerivedUnit
 gram = DerivedUnit("g", "gram", Quantity("0.001", kg), canon_symbol=True)
 
-# Named SI derived units, all are canon symbols
+# Named SI coherent derived units, all are canon symbols
 hertz = DerivedUnit("Hz", "hertz", Quantity(1, s**-1), canon_symbol=True)
 newton = DerivedUnit("N", "newton", Quantity(1, kg * m * s**-2), canon_symbol=True)
 pascal = DerivedUnit("Pa", "pascal", Quantity(1, kg * m**-1 * s**-2), canon_symbol=True)
@@ -55,13 +60,28 @@ gray = DerivedUnit("Gy", "gray", Quantity(1, m**2 * s**-2), canon_symbol=True)
 sievert = DerivedUnit("Sv", "sievert", Quantity(1, m**2 * s**-2), canon_symbol=True)
 katal = DerivedUnit("kat", "katal", Quantity(1, s**-1 * mol), canon_symbol=True)
 
+# Non-SI units officially accepted for use with the SI
+arcminute = DerivedUnit("′", "arcminute", Quantity(pi/10800, rad), canon_symbol=True)
+arcsecond = DerivedUnit("″", "arcsecond", Quantity(pi/648000, rad), canon_symbol=True)
+astronomical_unit = DerivedUnit("au", "astronomical_unit", Quantity(149597870700, m), canon_symbol=True)
+#bel TODO
+dalton = DerivedUnit("Da", "dalton", Quantity("1.66053906660e-27", kg, "0.00000000050e-27"), canon_symbol=True, alt_names=["atomic_mass_unit", "unified_atomic_mass_unit"])
+day = DerivedUnit("d", "day", Quantity(86400, s), canon_symbol=True)
+#decibel TODO
+degree = DerivedUnit("°", "degree", Quantity(pi/180, rad), canon_symbol=True)
+electronvolt = DerivedUnit("eV", "electronvolt", Quantity("1.602176634e-19", joule), canon_symbol=True)
+hectare = DerivedUnit("ha", "hectare", Quantity("1E4", m**2), canon_symbol=True)
+hour = DerivedUnit("h", "hour", Quantity(3600, s), canon_symbol=True)
+litre = DerivedUnit("L", "litre", Quantity("1E-3", m**3), canon_symbol=True, alt_names=["liter"])
+minute = DerivedUnit("min", "minute", Quantity(60, s), canon_symbol=True)
+#neper TODO
+tonne = DerivedUnit("t", "tonne", Quantity(1000, kg), canon_symbol=True)
+
 # CODATA 2018
-#Angstrom_star = Constant(None, "Angstrom_star", Quantity("1.00001495e-10", m), uncertainty="0.00000090e-10", canon_symbol=False)
+#Angstrom_star = Constant(None, "Angstrom_star", Quantity("1.00001495e-10", m, "0.00000090e-10"), canon_symbol=False)
 #atomic_mass_unit
 
 # Other
-#Dalton
-electronvolt = DerivedUnit("eV", "electronvolt", Quantity("1.602176634e-19", joule), canon_symbol=True)
 
 # Atomic units
 

@@ -21,7 +21,6 @@ class Constant(Quantity):
         symbol: str | None,
         name: str,
         value: Quantity,
-        uncertainty: str | int | float | dec | None = None,
         canon_symbol: str = False,
         alt_names: list = None,
     ):
@@ -32,7 +31,7 @@ class Constant(Quantity):
         super().__init__(
             value.number,
             value.unit,
-            uncertainty=uncertainty,
+            uncertainty=value.uncertainty,
         )
         # Add to registry to allow lookup under the provided name
         constant_reg.add(self.name, self)

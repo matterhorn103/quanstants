@@ -50,9 +50,11 @@ class Prefix:
             if isinstance(other, DerivedUnit):
                 if other.name.startswith(tuple(prefix_list)):
                     raise AlreadyPrefixedError
+            # Create prefixed symbol and name
             concat_symbol = self.symbol + other.symbol
             if (self.name is not None) and (other.name is not None):
                 concat_name = self.name + other.name
+            # Also prefix any alternative names of the unit
             if (self.name is not None) and (other.alt_names is not None):
                 concat_alt_names = []
                 for alt_name in other.alt_names:
@@ -60,11 +62,13 @@ class Prefix:
                     concat_alt_names.append(concat_alt_name)
             else:
                 concat_alt_names = None
+            # Create a new unit, don't add to registry to avoid overwrites
             return DerivedUnit(
                 symbol=concat_symbol,
                 name=concat_name,
                 value=Quantity(self.multiplier, other),
                 add_to_reg=False,
+                canon_symbol=False,
                 alt_names=concat_alt_names,
             )
         else:

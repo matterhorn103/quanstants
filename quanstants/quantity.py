@@ -16,9 +16,12 @@ class Quantity:
     
     The quantity is expressed as a numerical value `number` and a unit of measurement `unit`, with an
     optional associated `uncertainty`, which is also a numerical value.
-    `number` and `uncertainty` are any numerical type that can be converted to `Decimal`.
+    `number` is any type that can be converted to `Decimal`, including strings.
     `unit` is any `BaseUnit` or `DerivedUnit`, or any `CompoundUnit` formed by multiplication thereof,
     or any instance of the special `Unitless` unit.
+    `uncertainty` is also any type that can be converted to `Decimal`, including strings, however if
+    `uncertainty` is not specified or given as the string `"(exact)"` or `None` (default), the
+    quantity`s uncertainty is set to `"(exact)"`.
 
     Both `number` and `uncertainty` are stored internally as `Decimal` objects and provided values are
     first converted to `Decimal`. By making `Decimal` the default, quantities behave as the user would
@@ -31,9 +34,10 @@ class Quantity:
     its number and unit. The implementation of arithmetic on the numerical part is typically that of
     the `Decimal` type.
 
-    Arithmetic with instances of `Quantity` can be performed in the usual way with the operators
+    Arithmetic with instances of `Quantity` can be performed in the usual way with the operators `*` and
+    `/`. The results will posess the correct number to the correct precision, the correct compound
     `+ - * / **`. Addition and subtraction will raise a `MismatchedUnitsError` if the units of the two
-    do not match, which serves as a useful sanity check. Quantities with the same dimensionality,
+    do not match, which serves as a useful sanity check. Quantities with the same dimension,
     however, can be added and subtracted, and the result will have the unit of the first of the two
     values:
 
@@ -46,7 +50,7 @@ class Quantity:
     quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
     ```
 
-    Similarly, (in)equalities between quantities with the same dimensionality are supported.
+    Similarly, (in)equalities between quantities with the same dimension are supported.
 
     Rounding can be performed either to an integer, a given number of decimal places, or a given number
     of significant figures.
@@ -109,26 +113,38 @@ class Quantity:
             self.uncertainty = dec(uncertainty)
     
     def __repr__(self):
-        if self.uncertainty != "(exact)":
-            return f"Quantity({self.number}, {self.unit.symbol}, uncertainty={self.uncertainty})"
-        else:
+        if self.uncertainty == "(exact)":
             return f"Quantity({self.number}, {self.unit.symbol})"
+        else:
+            return f"Quantity({self.number}, {self.unit.symbol}, uncertainty={self.uncertainty})"
 
     def __str__(self):
-        if self.uncertainty != "(exact)":
-            return f"{self.number}({''.join([str(n) for n in self.uncertainty.as_tuple().digits])}) {self.unit.symbol}"
-        else:
+        if self.uncertainty == "(exact)":
             return f"{self.number} {self.unit.symbol}"
+        else:
+            return f"{self.number}({''.join([str(n) for n in self.uncertainty.as_tuple().digits])}) {self.unit.symbol}"
+            
+        
+    def __int__(self):
+        if self.dimension() != "(dimensionless)":
+            raise NotUnitlessError("Cannot cast a non-dimensionless quantity to an integer!")
+        else:
+            dimensionless_quant = self.base().cancel()
+            return int(dimensionless_quant.number)
     
     def __float__(self):
-        return float(self.number)
+        if self.dimension() != "(dimensionless)":
+            raise NotUnitlessError("Cannot cast a non-dimensionless quantity to a float!")
+        else:
+            dimensionless_quant = self.base().cancel()
+            return float(dimensionless_quant.number)
     
     def __add__(self, other):
         if isinstance(other, Quantity):
             if self.unit == other.unit:
                 return Quantity(self.number + other.number, self.unit)
             # Allow mixed units with the same dimension
-            elif self.unit.dimensions == other.unit.dimensions:
+            elif self.unit.dimensional_exponents == other.unit.dimensional_exponents:
                 converted = other.to(self.unit)
                 return Quantity(self.number + converted.number, self.unit)
             else:
@@ -141,7 +157,7 @@ class Quantity:
             if self.unit == other.unit:
                 return Quantity(self.number - other.number, self.unit)
             # Allow mixed units with the same dimension
-            elif self.unit.dimensions == other.unit.dimensions:
+            elif self.unit.dimensional_exponents == other.unit.dimensional_exponents:
                 converted = other.to(self.unit)
                 return Quantity(self.number - converted.number, self.unit)
             else:
@@ -150,25 +166,27 @@ class Quantity:
             return NotImplemented
 
     def __mul__(self, other):
-        if isinstance(other, (int, float, dec)):
+        if isinstance(other, (str, int, float, dec)):
             return Quantity(self.number * dec(str(other)), self.unit)
         elif isinstance(other, Quantity):
             return Quantity(self.number * other.number, self.unit * other.unit)
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
-            # Note that Q * U only needs to be defined to allow syntax like 3 * units.m * units.s**-2
             return Quantity(self.number, self.unit * other)
         else:
             return NotImplemented
     
     def __rmul__(self, other):
-        if isinstance(other, (int, float, dec)):
+        if isinstance(other, (str, int, float, dec)):
             return Quantity(dec(str(other)) * self.number, self.unit)
+        # Check if it's a unit with duck typing
+        elif hasattr(other, "base") and hasattr(other, "components"):
+            return Quantity(self.number, other * self.unit)
         else:
             return NotImplemented
     
     def __truediv__(self, other):
-        if isinstance(other, (int, float, dec)):
+        if isinstance(other, (str, int, float, dec)):
             return Quantity(self.number / dec(str(other)), self.unit)
         elif isinstance(other, Quantity):
             return Quantity(self.number / other.number, self.unit / other.unit)
@@ -179,8 +197,11 @@ class Quantity:
             return NotImplemented
     
     def __rtruediv__(self, other):
-        if isinstance(other, (int, float, dec)):
+        if isinstance(other, (str, int, float, dec)):
             return Quantity(dec(str(other)) / self.number, self.unit)
+        # Check if it's a unit with duck typing
+        elif hasattr(other, "base") and hasattr(other, "components"):
+            return Quantity(1 / self.number, other / self.unit)
         else:
             return NotImplemented
     
@@ -193,13 +214,21 @@ class Quantity:
         else:
             return NotImplemented
     
+    # Can only use a Quantity as an exponent if it is unitless
+    def __rpow__(self, other):
+        if self.dimension() != "(dimensionless)":
+            raise NotUnitlessError("Cannot raise to the power of a non-dimensionless quantity!")
+        else:
+            dimensionless_quant = self.base().cancel()
+            return other ** (dimensionless_quant.number)
+    
     def __eq__(self, other):
         if isinstance(other, Quantity):
             # Convert both to canonical representations
             a = self.canonical()
             b = other.canonical()
-            # Have to use dimensions as a sanity check in case different units have the same symbol
-            if (a.number == b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensions == b.unit.dimensions):
+            # Have to use dimension as a sanity check in case different units have the same symbol
+            if (a.number == b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
                 return True
             else:
                 return False
@@ -211,9 +240,9 @@ class Quantity:
             # Convert both to canonical representations
             a = self.canonical()
             b = other.canonical()
-            if (a.unit.dimensions != b.unit.dimensions):
+            if (a.unit.dimensional_exponents != b.unit.dimensional_exponents):
                 raise MismatchedUnitsError
-            if (a.number > b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensions == b.unit.dimensions):
+            if (a.number > b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
                 return True
             else:
                 return False
@@ -225,9 +254,9 @@ class Quantity:
             # Convert both to canonical representations
             a = self.canonical()
             b = other.canonical()
-            if (a.unit.dimensions != b.unit.dimensions):
+            if (a.unit.dimensional_exponents != b.unit.dimensional_exponents):
                 raise MismatchedUnitsError
-            if (a.number >= b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensions == b.unit.dimensions):
+            if (a.number >= b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
                 return True
             else:
                 return False
@@ -300,7 +329,7 @@ class Quantity:
 
     def exp(self):
         """Return the value of e raised to the power of the quantity, for dimensionless quantities only."""
-        if self.dimensionality() != "(dimensionless)":
+        if self.dimension() != "(dimensionless)":
             raise NotUnitlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
@@ -308,7 +337,7 @@ class Quantity:
     
     def ln(self):
         """Return the natural logarithm of the quantity, for dimensionless quantities only."""
-        if self.dimensionality() != "(dimensionless)":
+        if self.dimension() != "(dimensionless)":
             raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
@@ -316,33 +345,36 @@ class Quantity:
     
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
-        if self.dimensionality() != "(dimensionless)":
+        if self.dimension() != "(dimensionless)":
             raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
             return dimensionless_quant.number.log10()
     
-    def dimensionality(self):
-        """Return the dimensionality as a nice string."""
-        return self.unit.dimensionality()
+    def dimension(self):
+        """Return the dimension as a nice string."""
+        return self.unit.dimension()
 
     def base(self):
         """Return the quantity expressed in terms of base units."""
-        # Do as multiplication because the Quantity returned by unit.base() might have number != 1
         return self.number * self.unit.base()
     
     def cancel(self):
         """Combine any like terms in the unit."""
-        return Quantity(self.number, self.unit.cancel())
+        return self.number * self.unit.cancel()
+    
+    def fully_cancel(self):
+        """Combine any like terms in the unit, with units of the same dimension converted and combined."""
+        return self.number * self.unit.fully_cancel()
     
     def canonical(self):
         """Express the quantity in base units in a canonical order."""
         cancelled = self.base().cancel()
-        return Quantity(cancelled.number, cancelled.unit.canonical())
+        return cancelled.number * cancelled.unit.canonical()
     
     def to(self, unit):
-        """Express the quantity in terms of another unit."""
+        """Express the quantity in terms of another unit (or quantity)."""
         # Convert both to quantities in base units, then divide, then cancel to get ratio
         result = (self.base() / unit.base()).cancel()
-        return Quantity(result.number, result.unit * unit)
+        return result * unit
         

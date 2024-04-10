@@ -2,6 +2,7 @@ from collections import namedtuple
 from decimal import Decimal as dec
 from fractions import Fraction as frac
 
+from .config import QuanstantsConfig
 from .quantity import Quantity
 from .unicode import generate_superscript
 
@@ -24,13 +25,26 @@ Factor = namedtuple("Factor", ["unit", "exponent"])
 # Function to turn a tuple or other iterable of Factors into a symbol
 def generate_symbol(components):
     # Create symbol as concatenation of symbols of components, with spaces
-    symbol = ""
-    for index, factor in enumerate(components):
-        if index != 0:
-            symbol += " "
-        symbol += factor.unit.symbol
-        symbol += generate_superscript(factor.exponent)
-    return symbol
+    positive_terms = []
+    negative_terms = []
+    for factor in components:
+        term = factor.unit.symbol
+        if factor.exponent >= 0:
+            term += generate_superscript(factor.exponent)
+            positive_terms.append(term)
+        elif factor.exponent < 0:
+            if QuanstantsConfig.INVERSE_UNIT == "NEGATIVE_SUPERSCRIPT":
+                term += generate_superscript(factor.exponent)
+            elif QuanstantsConfig.INVERSE_UNIT == "SLASH":
+                term += generate_superscript(-1 * factor.exponent)
+            negative_terms.append(term)
+    if len(negative_terms) > 0:
+        if QuanstantsConfig.INVERSE_UNIT == "NEGATIVE_SUPERSCRIPT":
+            return " ".join(positive_terms) + " " + " ".join(negative_terms)
+        elif QuanstantsConfig.INVERSE_UNIT == "SLASH":
+            return " ".join(positive_terms) + " / " + " ".join(negative_terms)
+    else:
+        return " ".join(positive_terms)
 
 # Function to turn a tuple or other iterable of Factors into a dimension
 def generate_dimensional_exponents(components):
@@ -78,28 +92,45 @@ class Unit:
         canon_symbol=False,
         alt_names=None,
     ):
-        self.symbol = symbol
-        self.name = name
+        self._symbol = symbol
+        self._name = name
         # Start with a dimensionless unit and add any provided ones
-        self.dimensional_exponents = {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
+        self._dimensional_exponents = {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
         if dimension == "X":
             pass
         elif isinstance(dimension, str) and len(dimension) == 1:
-            self.dimensional_exponents[dimension] += 1
+            self._dimensional_exponents[dimension] += 1
         else:
-            for dim in self.dimensional_exponents.keys():
+            for dim in self._dimensional_exponents.keys():
                 if dim in dimensional_exponents:
-                    self.dimensional_exponents[dim] += dimensional_exponents[dim]
-        self.components = components
-        self.canon_symbol = canon_symbol
-        self.alt_names = alt_names
+                    self._dimensional_exponents[dim] += dimensional_exponents[dim]
+        self._components = components
+        self._alt_names = alt_names
         if add_to_reg:
-            self.add_to_reg()
+            self.add_to_reg(add_symbol=canon_symbol)
+
+    @property
+    def symbol(self):
+        return self._symbol
+    
+    @property
+    def name(self):
+        return self._name
+    
+    @property
+    def dimensional_exponents(self):
+        return self._dimensional_exponents
+    
+    @property
+    def components(self):
+        return self._components
+
+    @property
+    def alt_names(self):
+        return self._alt_names
 
     def __str__(self):
         return f"Unit({self.symbol})"
-
-    # Define logic for arithmetic operators, used for unit creation
 
     # Only allow num * Unit, not Unit * num
     # Quantity * Unit is defined by Quantity.__mul__()
@@ -135,13 +166,17 @@ class Unit:
         else:
             return NotImplemented
 
-    # For now only allow integer and fractional exponents
+    # For now only allow integer and fractional exponents, or string representations of fractions
     def __pow__(self, other):
         if other == 1:
             return self
         elif isinstance(other, (int, frac)):
             # Tuple comprehensions don't exist so make a tuple from a generator
             new_components = tuple((Factor(component.unit, component.exponent * other) for component in self.components),)
+            return CompoundUnit(new_components)
+        elif isinstance(other, str):
+            # Tuple comprehensions don't exist so make a tuple from a generator
+            new_components = tuple((Factor(component.unit, component.exponent * frac(other)) for component in self.components),)
             return CompoundUnit(new_components)
         else:
             return NotImplemented
@@ -151,7 +186,7 @@ class Unit:
         # For now just reuse the __pow__ function
         return self**-1
     
-    def add_to_reg(self):
+    def add_to_reg(self, add_symbol=False):
         # Add to registry to allow lookup under a provided name
         if self.name is not None:
             unit_reg.add(self.name, self)
@@ -161,7 +196,7 @@ class Unit:
                 unit_reg.add(alt_name, self)
         # Also add under the symbol if it has been indicated via canon_symbol
         # that the symbol should uniquely refer to this unit
-        if (self.canon_symbol) and (self.symbol != self.name):
+        if (add_symbol) and (self.symbol != self.name):
             unit_reg.add(self.symbol, self)
 
     def dimension(self):
@@ -287,10 +322,14 @@ class CompoundUnit(Unit):
             add_to_reg=add_to_reg,
         )
         # Determine whether the unit is expressed in terms of base units
-        self.defined_in_base = True
+        defined_in_base = True
         for component in self.components:
-            self.defined_in_base *= isinstance(component.unit, BaseUnit)
-        self.defined_in_base = bool(self.defined_in_base)
+            defined_in_base *= isinstance(component.unit, BaseUnit)
+        self._defined_in_base = bool(defined_in_base)
+
+    @property
+    def defined_in_base(self):
+        return self._defined_in_base
     
     def base(self):
         """Return the unit's value in base units as a Quantity."""
@@ -358,7 +397,7 @@ class CompoundUnit(Unit):
                 
     def canonical(self):
         ordered_components = tuple(sorted(self.components, key=base_priority))
-        return CompoundUnit(ordered_components)            
+        return CompoundUnit(ordered_components)
 
 
 class DerivedUnit(Unit):
@@ -380,7 +419,7 @@ class DerivedUnit(Unit):
         canon_symbol: bool = False,
         alt_names: list | None = None,
     ):
-        self.value = value
+        self._value = value
         super().__init__(
             symbol,
             name,
@@ -390,6 +429,10 @@ class DerivedUnit(Unit):
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
+
+    @property
+    def value(self):
+        return self._value
 
     def base(self):
         """Return the unit's value in base units as a Quantity."""

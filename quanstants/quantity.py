@@ -3,7 +3,7 @@ from decimal import localcontext
 from fractions import Fraction as frac
 import math
 
-from .config import *
+from .config import QuanstantsConfig
 
 class MismatchedUnitsError(Exception):
     pass
@@ -100,18 +100,30 @@ class Quantity:
         # the user *thinks* the float is, not of the actual binary float value e.g. str(5.2) gives 
         # "5.2" but dec(5.2) gives Decimal('5.20000000000000017763568394002504646778106689453125')
         # and we want to give the user what they think they have -- Decimal('5.2')
-        if CONVERT_FLOAT_AS_STR:
-            self.number = dec(str(number))
+        if QuanstantsConfig.CONVERT_FLOAT_AS_STR:
+            self._number = dec(str(number))
         else:
-            self.number = dec(number)
-        self.unit = unit
+            self._number = dec(number)
+        self._unit = unit
         if (uncertainty is None) or (uncertainty == "(exact)"):
-            self.uncertainty = "(exact)"
-        elif CONVERT_FLOAT_AS_STR:
-            self.uncertainty = dec(str(uncertainty))
+            self._uncertainty = "(exact)"
+        elif QuanstantsConfig.CONVERT_FLOAT_AS_STR:
+            self._uncertainty = dec(str(uncertainty))
         else:
-            self.uncertainty = dec(uncertainty)
+            self._uncertainty = dec(uncertainty)
     
+    @property
+    def number(self):
+        return self._number
+    
+    @property
+    def unit(self):
+        return self._unit
+    
+    @property
+    def uncertainty(self):
+        return self._uncertainty
+
     def __repr__(self):
         if self.uncertainty == "(exact)":
             return f"Quantity({self.number}, {self.unit.symbol})"
@@ -288,7 +300,7 @@ class Quantity:
         # expected behaviour
         # Use in a local context so that user's context isn't overwritten
         with localcontext() as ctx:
-            ctx.rounding=ROUNDING_MODE
+            ctx.rounding=QuanstantsConfig.ROUNDING_MODE
             rounded = Quantity(round(self.number, ndigits), self.unit)
         return rounded
     
@@ -311,7 +323,7 @@ class Quantity:
             # expected behaviour
             # Use in a local context so that user's context isn't overwritten
             with localcontext() as ctx:
-                ctx.rounding=ROUNDING_MODE
+                ctx.rounding=QuanstantsConfig.ROUNDING_MODE
                 rounded_significand = round(significand, nsigfigs - 1)
             return Quantity(rounded_significand * dec(f"1E{exponent}"), self.unit)
         elif nsigfigs > len(digits):

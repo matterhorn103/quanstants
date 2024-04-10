@@ -1,6 +1,8 @@
 from decimal import Decimal as dec
 
-from quanstants import prefixes as pr, units as un, constants as co, unit_defs
+from quanstants import prefixes as pr, units as un, constants as co, QuanstantsConfig
+
+#QuanstantsConfig.INVERSE_UNIT = "SLASH"
 
 a = 5.2 * un.m * un.s**-1
 
@@ -26,7 +28,6 @@ print(d.base())
 print(c.base().unit == d.base().unit)
 print(c == d)
 print(un.kg.__repr__())
-print(unit_defs.kilogram.__repr__())
 
 print("----------------")
 e = dec("0.6096") * un.m
@@ -35,22 +36,11 @@ print(e > f)
 g = 3 * un.ft
 print(f < g)
 h = e + g
-i = a + e
+
+i = 3 * un.J**-2 * un.m * un.s**-1 * un.kg
+print(i)
+print(i.canonical())
 print("----------------")
 
-class TestClass:
-    def add(self, name):
-        setattr(self, name, 12)
 
-test = TestClass()
-print(test)
-print(type(test))
-test2 = TestClass()
-print(test2)
-print(type(test2))
-
-setattr(test, "ex1", 10)
-print(test.ex1)
-test.add("ex2")
-print(test.ex2)
 

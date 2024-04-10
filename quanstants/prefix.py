@@ -34,12 +34,24 @@ class Prefix:
         name,
         multiplier: str | int | float | dec,
     ):
-        self.symbol = symbol
-        self.name = name
-        self.multiplier = dec(str(multiplier))
-        prefix_reg.add(self.symbol, self)
-        prefix_reg.add(self.name, self)
-        prefix_list.append(self.name)
+        self._symbol = symbol
+        self._name = name
+        self._multiplier = dec(str(multiplier))
+        prefix_reg.add(symbol, self)
+        prefix_reg.add(name, self)
+        prefix_list.append(name)
+    
+    @property
+    def symbol(self):
+        return self._symbol
+    
+    @property
+    def name(self):
+        return self._name
+    
+    @property
+    def multiplier(self):
+        return self._multiplier
     
     def __mul__(self, other):
         if isinstance(other, (BaseUnit, DerivedUnit)):

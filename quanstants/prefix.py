@@ -2,7 +2,7 @@ from decimal import Decimal as dec
 
 from .quantity import Quantity
 from .unit import BaseUnit, DerivedUnit
-from .unit_defs import kilogram
+from .si import kilogram
 
 
 class PrefixAlreadyDefinedError(Exception):

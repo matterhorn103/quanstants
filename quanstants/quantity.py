@@ -255,7 +255,7 @@ class Quantity:
             b = other.base().cancel().canonical()
             if (a.unit.dimensional_exponents != b.unit.dimensional_exponents):
                 raise MismatchedUnitsError
-            if (a.number > b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
+            elif (a.number > b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
                 return True
             else:
                 return False
@@ -269,7 +269,7 @@ class Quantity:
             b = other.base().cancel().canonical()
             if (a.unit.dimensional_exponents != b.unit.dimensional_exponents):
                 raise MismatchedUnitsError
-            if (a.number >= b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
+            elif (a.number >= b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
                 return True
             else:
                 return False

@@ -7,10 +7,13 @@ from decimal import Decimal as dec
 # Definition modules are unused but need to be imported so that dictionaries get populated
 # Import unit first because the other classes rely on it
 from .config import QuanstantsConfig
-from . import unit, unit_defs
+from . import unit, si
 from . import prefix, prefix_defs
 from . import constant, constant_defs
 from . import quantity
+
+# Then import whichever unit sets should be provided by default
+from . import metric #, imperial, atomic, natural, planck
 
 # Make unit, prefix, and constant namespaces available directly in this namespace
 units = unit.unit_reg

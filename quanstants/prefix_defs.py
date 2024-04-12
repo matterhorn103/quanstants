@@ -2,29 +2,9 @@ from .unit import Unitless, BaseUnit, DerivedUnit
 from .prefix import Prefix, PrefixedUnit
 from .quantity import Quantity
 
-from .unit_defs import (
-    gram,
-    metre,
-    second,
-    mole,
-    ampere,
-    kelvin,
-    litre,
-    hertz,
-    newton,
-    pascal,
-    ohm,
-    volt,
-    watt,
-    watthour,
-    joule,
-    electronvolt,
-    hour,
-    farad,
-    henry,
-    coulomb,
-    tesla,
-)
+from .si import *
+from .metric import watthour
+
 
 # fmt: off
 

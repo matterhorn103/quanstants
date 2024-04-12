@@ -85,6 +85,9 @@ def get_priority(factor: Factor) -> int:
 class Unit:
     """Parent class for all units, not intended for direct instantiation.
 
+    Either `symbol` or `name` must be provided. If `symbol` is not provided, it will be set to the
+    value of `name`, so that all units have a symbolic representation that is used in printed
+    representations.
     At minimum, `components` and one of `dimension` or `dimensional_exponents` must be specified.
     `components` is a tuple of `Factor`s. `Factor` is a `namedtuple` found in this module.
     If a unit only has a single base dimension without exponents, that dimension can be passed as
@@ -109,7 +112,14 @@ class Unit:
         canon_symbol: bool = False,
         alt_names: list | None = None,
     ):
-        self._symbol = symbol
+        if symbol is not None:
+            self._symbol = symbol
+        elif name is not None:
+            self._symbol = name
+            # Symbol can't be canon if it wasn't even provided
+            canon_symbol = False
+        else:
+            raise RuntimeError("Either a symbol or a name must be provided!")
         self._name = name
         # Start with a dimensionless unit and add any provided ones
         self._dimensional_exponents = {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}

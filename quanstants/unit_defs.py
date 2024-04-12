@@ -112,7 +112,7 @@ watthour = DerivedUnit("Wh", "watthour", Quantity("3.6E6", joule), canon_symbol=
 #chain 22 yd
 yard = DerivedUnit("yd", "yard", Quantity("0.9144", m), canon_symbol=True)
 foot = DerivedUnit("ft", "foot", Quantity("0.3048", m), canon_symbol=True)
-inch = DerivedUnit("in", "inch", Quantity("0.0254", m), canon_symbol=True)
+inch = DerivedUnit("in", "inch", Quantity("0.0254", m), canon_symbol=False) # Can't add in as it is Python keyword
 # Area
 #acre 4840 yd**2
 #rood 1210 yd**2

@@ -17,16 +17,14 @@ class PrefixReg:
 
 prefix_reg = PrefixReg()
 
-# Simple list of prefix names
-prefix_list = []
 
 class AlreadyPrefixedError(Exception):
     pass
 
 class Prefix:
-    """An object representing a metric prefix.
+    """An object representing a (usually metric) prefix.
     
-    Combines with a BaseUnit or DerivedUnit to form a new DerivedUnit.
+    Combines with a `BaseUnit` or `DerivedUnit` to form a new `PrefixedUnit`.
     """
     def __init__(
         self,
@@ -39,7 +37,6 @@ class Prefix:
         self._multiplier = dec(str(multiplier))
         prefix_reg.add(symbol, self)
         prefix_reg.add(name, self)
-        prefix_list.append(name)
     
     @property
     def symbol(self):
@@ -59,66 +56,63 @@ class Prefix:
             if (self.name == "kilo") and (other.name == "gram"):
                 return kilogram
             # Make sure the user is not trying to add a second prefix to a prefixed unit
-            if isinstance(other, DerivedUnit):
-                if other.name.startswith(tuple(prefix_list)):
-                    raise AlreadyPrefixedError
-            # Create prefixed symbol and name
-            concat_symbol = self.symbol + other.symbol
-            if (self.name is not None) and (other.name is not None):
-                concat_name = self.name + other.name
-            # Also prefix any alternative names of the unit
-            if (self.name is not None) and (other.alt_names is not None):
-                concat_alt_names = []
-                for alt_name in other.alt_names:
-                    concat_alt_name = self.name + alt_name
-                    concat_alt_names.append(concat_alt_name)
-            else:
-                concat_alt_names = None
+            if isinstance(other, PrefixedUnit):
+                raise AlreadyPrefixedError
             # Create a new unit, don't add to registry to avoid overwrites
-            return DerivedUnit(
-                symbol=concat_symbol,
-                name=concat_name,
-                value=Quantity(self.multiplier, other),
+            return PrefixedUnit(
+                prefix=self,
+                unit=other,
                 add_to_reg=False,
                 canon_symbol=False,
-                alt_names=concat_alt_names,
             )
         else:
             return NotImplemented
 
 
-# Metric prefixes
-quetta = Prefix("Q", "quetta", "1E+30")
-ronna = Prefix("R", "ronna", "1E+27")
-yotta = Prefix("Y", "yotta", "1E+24")
-zetta = Prefix("Z", "zetta", "1E+21")
-exa = Prefix("E", "exa", "1E+18")
-peta = Prefix("P", "peta", "1E+15")
-tera = Prefix("T", "tera", "1E+12")
-giga = Prefix("G", "giga", "1E+9")
-mega = Prefix("M", "mega", "1E+6")
-kilo = Prefix("k", "kilo", "1E+3")
-hecto = Prefix("h", "hecto", "1E+2")
-deca = Prefix("da", "deca", "1E+1")
-deci = Prefix("d", "deci", "1E-1")
-centi = Prefix("c", "centi", "1E-2")
-milli = Prefix("m", "milli", "1E-3")
-micro = Prefix("μ", "micro", "1E-6")
-nano = Prefix("n", "nano", "1E-9")
-pico = Prefix("p", "pico", "1E-12")
-femto = Prefix("f", "femto", "1E-15")
-atto = Prefix("a", "atto", "1E-18")
-zepto = Prefix("z", "zepto", "1E-21")
-yocto = Prefix("y", "yocto", "1E-24")
-ronto = Prefix("r", "ronto", "1E-27")
-quecto = Prefix("q", "quecto", "1E-30")
+class PrefixedUnit(DerivedUnit):
+    """A unit created through the combination of a `BaseUnit` or `DerivedUnit` with a `Prefix`.
+    
+    For now acts almost exactly like a `DerivedUnit` except that it cannot be prefixed.
+    TODO: automatically adjust the prefix upon request (so that e.g. 2000 kJ becomes 2 MJ).
+    """
+    def __init__(
+        self,
+        prefix: Prefix,
+        unit: BaseUnit | DerivedUnit,
+        add_to_reg: bool = False,
+        canon_symbol: bool = False,
+        alt_names: list | None = None,
+    ):
+        # Create prefixed symbol and name
+        concat_symbol = prefix.symbol + unit.symbol
+        if (prefix.name is not None) and (unit.name is not None):
+            concat_name = prefix.name + unit.name
+        else:
+            concat_name = None
+        # Automatically prefix any alternative names of the unit and add to list of alt names
+        if (prefix.name is not None) and (unit.alt_names is not None):
+            concat_alt_names = [] if alt_names is None else alt_names
+            for alt_name in unit.alt_names:
+                concat_alt_name = prefix.name + alt_name
+                concat_alt_names.append(concat_alt_name)
+        else:
+            concat_alt_names = None if alt_names is None else alt_names
+        super().__init__(
+            symbol=concat_symbol,
+            name=concat_name,
+            value=Quantity(prefix.multiplier, unit),
+            add_to_reg=add_to_reg,
+            canon_symbol=canon_symbol,
+            alt_names=concat_alt_names,
+        )
 
-# Binary prefixes
-yobi = Prefix("Yi", "yobi", 1024**8)
-zebi = Prefix("Zi", "zebi", 1024**7)
-exbi = Prefix("Ei", "exbi", 1024**6)
-pebi = Prefix("Pi", "pebi", 1024**5)
-tebi = Prefix("Ti", "tebi", 1024**4)
-gibi = Prefix("Gi", "gibi", 1024**3)
-mebi = Prefix("Mi", "mebi", 1024**2)
-kibi = Prefix("Ki", "kibi", 1024**1)
+        self._prefix = prefix
+        self._unit = unit
+    
+    @property
+    def prefix(self):
+        return self._prefix
+    
+    @property
+    def unit(self):
+        return self._unit

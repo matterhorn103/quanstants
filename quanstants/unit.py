@@ -12,7 +12,7 @@ class UnitAlreadyDefinedError(Exception):
 
 # Namespace class to contain all the units, making them useable with unit.m notation
 class UnitReg:
-    def add(self, name, unit):
+    def add(self, name: str, unit: "Unit"):
         if hasattr(self, name):
             raise UnitAlreadyDefinedError(f"{name} is already defined!")
         setattr(self, name, unit)
@@ -23,31 +23,45 @@ unit_reg = UnitReg()
 Factor = namedtuple("Factor", ["unit", "exponent"])
 
 # Function to turn a tuple or other iterable of Factors into a symbol
-def generate_symbol(components):
+def generate_symbol(
+    components: tuple[Factor, ...],
+    sort_by="sign",
+    inverse=QuanstantsConfig.INVERSE_UNIT
+) -> str:
     # Create symbol as concatenation of symbols of components, with spaces
+    terms = []
     positive_terms = []
     negative_terms = []
     for factor in components:
         term = factor.unit.symbol
         if factor.exponent >= 0:
             term += generate_superscript(factor.exponent)
-            positive_terms.append(term)
+            if sort_by == "sign":
+                positive_terms.append(term)
+            else:
+                terms.append(term)
         elif factor.exponent < 0:
-            if QuanstantsConfig.INVERSE_UNIT == "NEGATIVE_SUPERSCRIPT":
+            if (inverse == "NEGATIVE_SUPERSCRIPT") or (sort_by != "sign"):
                 term += generate_superscript(factor.exponent)
-            elif QuanstantsConfig.INVERSE_UNIT == "SLASH":
+            elif (inverse == "SLASH") and (sort_by == "sign"):
                 term += generate_superscript(-1 * factor.exponent)
-            negative_terms.append(term)
-    if len(negative_terms) > 0:
-        if QuanstantsConfig.INVERSE_UNIT == "NEGATIVE_SUPERSCRIPT":
-            return " ".join(positive_terms) + " " + " ".join(negative_terms)
-        elif QuanstantsConfig.INVERSE_UNIT == "SLASH":
-            return " ".join(positive_terms) + " / " + " ".join(negative_terms)
+            if sort_by == "sign":
+                negative_terms.append(term)
+            else:
+                terms.append(term)
+    if sort_by == "sign":
+        if len(negative_terms) > 0:
+            if inverse == "NEGATIVE_SUPERSCRIPT":
+                return " ".join(positive_terms) + " " + " ".join(negative_terms)
+            elif inverse == "SLASH":
+                return " ".join(positive_terms) + " / " + " ".join(negative_terms)
+        else:
+            return " ".join(positive_terms)
     else:
-        return " ".join(positive_terms)
+        return " ".join(terms)
 
 # Function to turn a tuple or other iterable of Factors into a dimension
-def generate_dimensional_exponents(components):
+def generate_dimensional_exponents(components: tuple[Factor, ...]) -> dict:
     new_dimensional_exponents = {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
     for factor in components:
         for dimension in new_dimensional_exponents.keys():
@@ -56,18 +70,21 @@ def generate_dimensional_exponents(components):
     return new_dimensional_exponents
 
 # Function to allow sorting of compound base units into a canonical order
-def base_priority(Factor):
+def get_priority(factor: Factor) -> int:
     priorities = {"s": 0, "m": 1, "kg": 2, "A": 3, "K": 4, "mol": 5, "cd": 6, "rad": 7, "sr": 8}
-    if Factor.unit.symbol in priorities:
-        return priorities[Factor.unit.symbol]
+    if factor.unit.symbol in priorities:
+        priority =  priorities[factor.unit.symbol]
     else:
-        return 9
+        # Generate a priority based on the length and Unicode code points of the characters
+        priority = 0
+        for index, char in enumerate(factor.unit.symbol):
+            priority += ord(char) * 10**(index)
+    return priority
 
 
 class Unit:
-    """Parent class for all units.
-    
-    Not intended for direct instantiation
+    """Parent class for all units, not intended for direct instantiation.
+
     At minimum, `components` and one of `dimension` or `dimensional_exponents` must be specified.
     `components` is a tuple of `Factor`s. `Factor` is a `namedtuple` found in this module.
     If a unit only has a single base dimension without exponents, that dimension can be passed as
@@ -88,9 +105,9 @@ class Unit:
         components: tuple,
         dimension: str | None = None,
         dimensional_exponents: dict | None = None,
-        add_to_reg=False,
-        canon_symbol=False,
-        alt_names=None,
+        add_to_reg: bool = False,
+        canon_symbol: bool = False,
+        alt_names: list | None = None,
     ):
         self._symbol = symbol
         self._name = name
@@ -105,7 +122,7 @@ class Unit:
                 if dim in dimensional_exponents:
                     self._dimensional_exponents[dim] += dimensional_exponents[dim]
         self._components = components
-        self._alt_names = alt_names
+        self._alt_names = tuple(alt_names) if alt_names is not None else None
         if add_to_reg:
             self.add_to_reg(add_symbol=canon_symbol)
 
@@ -152,7 +169,7 @@ class Unit:
     # Only allow num / Unit, not Unit / num
     # Quantity / Unit is defined by Quantity.__div__()
     def __rtruediv__(self, other):
-        if isinstance(other, (int, float, dec)):
+        if isinstance(other, (str, int, float, dec)):
             return Quantity(other, self.inverse())
         else:
             return NotImplemented
@@ -180,6 +197,10 @@ class Unit:
             return CompoundUnit(new_components)
         else:
             return NotImplemented
+
+    def _mul_with_concat(self, other):
+        """Similar to multiplication, but the `symbol` of the resulting CompoundUnit is just the symbols of the two concatenated."""
+        return CompoundUnit(components=None, units=[self, other], combine_symbol=False)
 
     def inverse(self):
         """Return the inverse of the unit as a CompoundUnit."""
@@ -227,7 +248,7 @@ class Unit:
         return self.cancel()
     
     def canonical(self):
-        """Order any base terms and return as a Unit."""
+        """Order terms into a reproducible order and return as a Unit."""
         raise NotImplementedError
 
 
@@ -304,14 +325,32 @@ class BaseUnit(Unit):
 class CompoundUnit(Unit):
     """An effective unit created through multiplication of non-compound units.
     
-    Multiple units multiplied together are treated as a single Unit object with
-    its constituent parts gathered under `components`.
-    Constituent units must be passed as a tuple of `Factors`, a `namedtuple` of
-    a unit and an exponent.
+    Multiple units multiplied together are treated as a single `Unit` object with its constituent parts
+    gathered under `components`.
+    Generally, the constituent units are passed as a tuple of `Factors`, a `namedtuple` of a unit and an
+    exponent.
+    Alternatively, a list of `Unit` objects can be passed and the `components` attributes of each will
+    be combined automatically.
     """
-    def __init__(self, components, add_to_reg=False):
-        # Generate a symbol
-        symbol = generate_symbol(components)
+    def __init__(
+            self,
+            components: tuple[Factor, ...] | None,
+            units: list[Unit] | None = None,
+            add_to_reg: bool = False,
+            symbol_sort: str = "sign",
+            symbol_inverse: str = QuanstantsConfig.INVERSE_UNIT,
+            combine_symbol: bool = True,
+        ):
+        # If no components passed, first get components from list of units
+        if components is None:
+            # Repeated addition of tuples, starting with (), fastest method for low n (n < 10)
+            components = sum([unit.components for unit in units], ())
+        # Generate a symbol based on passed options
+        if (units is not None) and (not combine_symbol):
+            # Just put each unit's symbol in parentheses
+            symbol = "".join([("(" + unit.symbol + ")") for unit in units])
+        else:
+            symbol = generate_symbol(components, symbol_sort, symbol_inverse)
         dimensional_exponents = generate_dimensional_exponents(components)
         # Don't define a name etc., just a symbol and the components
         super().__init__(
@@ -396,8 +435,16 @@ class CompoundUnit(Unit):
         return product.cancel()     
                 
     def canonical(self):
-        ordered_components = tuple(sorted(self.components, key=base_priority))
-        return CompoundUnit(ordered_components)
+        """Order terms into a reproducible order and return as a Unit."""
+        ordered_components = tuple(sorted(self.components, key=get_priority))
+        # Now that the components have the canonical order, make sure the order of units in the
+        # generated symbol is the same by passing appropriate settings
+        return CompoundUnit(
+            ordered_components,
+            symbol_sort="unsorted",
+            symbol_inverse="NEGATIVE_SUPERSCRIPT",
+            combine_symbol=True,
+        )
 
 
 class DerivedUnit(Unit):
@@ -443,3 +490,4 @@ class DerivedUnit(Unit):
     
     def canonical(self):
         return self
+

@@ -1,13 +1,17 @@
 from decimal import Decimal as dec
 
-from quanstants import prefixes as pr, units as un, constants as co, QuanstantsConfig
+from quanstants import (
+    units as qu,
+    prefixes as qp,
+    constants as qc,
+    Quantity,
+    QuanstantsConfig,
+)
 
 #QuanstantsConfig.INVERSE_UNIT = "SLASH"
+a = 5.2 * qu.m * qu.s**-1
 
-a = 5.2 * un.m * un.s**-1
-
-b = 3 * un.s**-1 * un.m
-
+b = 3 * qu.s**-1 * qu.m
 print(a)
 print(a.__repr__())
 print(a.number.__repr__())
@@ -21,23 +25,23 @@ print(a.canonical().unit == b.canonical().unit)
 print(a == b)
 
 print("----------------")
-c = 2*un.kg
-d = 2*(pr.k * un.g)
+c = 2*qu.kg
+d = 2*(qp.k * qu.g)
 print(c.base())
 print(d.base())
 print(c.base().unit == d.base().unit)
 print(c == d)
-print(un.kg.__repr__())
+print(qu.kg.__repr__())
 
 print("----------------")
-e = dec("0.6096") * un.m
-f = 2 * un.ft
+e = dec("0.6096") * qu.m
+f = 2 * qu.ft
 print(e > f)
-g = 3 * un.ft
+g = 3 * qu.ft
 print(f < g)
 h = e + g
 
-i = 3 * un.J**-2 * un.m * un.s**-1 * un.kg
+i = 3 * qu.J**-2 * qu.m * qu.s**-1 * qu.kg
 print(i)
 print(i.canonical())
 print("----------------")

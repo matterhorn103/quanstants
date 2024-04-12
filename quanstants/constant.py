@@ -1,7 +1,7 @@
 from decimal import Decimal as dec
 
 from .quantity import Quantity
-
+from .unit import Unit, DerivedUnit
 
 class ConstantAlreadyDefinedError(Exception):
     pass
@@ -60,6 +60,31 @@ class Constant(Quantity):
     def __str__(self):
         return f"Constant({self.name} = {self.value})"
     
+    # Override * and / dunder methods of Quantity to allow the creation of units from constants
+    def __mul__(self, other):
+        if isinstance(other, Unit):
+            return self.as_unit() * other
+        else:
+            return super().__mul__(self, other)
+    
+    def __rmul__(self, other):
+        if isinstance(other, Unit):
+            return other * self.as_unit()
+        else:
+            return super().__rmul__(self, other)
+    
+    def __truediv__(self, other):
+        if isinstance(other, Unit):
+            return self.as_unit() / other
+        else:
+            return super().__truediv__(self, other)
+    
+    def __rtruediv__(self, other):
+        if isinstance(other, Unit):
+            return other / self.as_unit()
+        else:
+            return super().__rtruediv__(self, other)
+    
     def add_to_reg(self, add_symbol=False):
         # Add to registry to allow lookup under the provided name
         constant_reg.add(self.name, self)
@@ -73,3 +98,13 @@ class Constant(Quantity):
         # that the symbol should uniquely refer to this constant
         if add_symbol:
             constant_reg.add(self.symbol, self)
+    
+    def as_unit(self):
+        """Return a `DerivedUnit` with the same value and symbol as the constant."""
+        constant_as_unit = DerivedUnit(
+            self.symbol,
+            name=None,
+            value=self.value,
+            add_to_reg=False,
+        )
+        return constant_as_unit

@@ -52,7 +52,7 @@ siemens = DerivedUnit("S", "siemens", Quantity(1, kg**-1 * m**-2 * s**3 * A**2),
 weber = DerivedUnit("Wb", "weber", Quantity(1, kg * m**2 * s**-2 * A**-1), canon_symbol=True)
 tesla = DerivedUnit("T", "tesla", Quantity(1, kg * s**-2 * A**-1), canon_symbol=True)
 henry = DerivedUnit("H", "henry", Quantity(1, kg * m**2 * s**-2 * A**-2), canon_symbol=True)
-# degreeC Don't define for now, need to work out how best to handle temp
+#degreeC TODO Don't define for now, need to work out how best to handle temp
 lumen = DerivedUnit("lm", "lumen", Quantity(1, cd * sr), canon_symbol=True)
 lux = DerivedUnit("lx", "lux", Quantity(1, cd * sr * m**-2), canon_symbol=True)
 becquerel = DerivedUnit("Bq", "becquerel", Quantity(1, s**-1), canon_symbol=True)
@@ -79,9 +79,10 @@ tonne = DerivedUnit("t", "tonne", Quantity(1000, kg), canon_symbol=True)
 
 # CODATA 2018
 #Angstrom_star = Constant(None, "Angstrom_star", Quantity("1.00001495e-10", m, "0.00000090e-10"), canon_symbol=False)
-#atomic_mass_unit
+
 
 # Other
+watthour = DerivedUnit("Wh", "watthour", Quantity("3.6E6", joule), canon_symbol=True)
 
 # Atomic units
 
@@ -89,12 +90,68 @@ tonne = DerivedUnit("t", "tonne", Quantity(1000, kg), canon_symbol=True)
 
 # Planck units
 
+# Temperature
+#celsius
+#fahrenheit
+#rankine
+#delisle
+#newton
+#reaumur
+#romer
+
+
 # Standard states
 # standard atm
+# bar
 # standard pressure
 
-# Imperial
+# Imperial (from Weights and Measures Act 1985)
+# Length
+#mile 1760 yd
+#furlong 220 yd
+#chain 22 yd
+yard = DerivedUnit("yd", "yard", Quantity("0.9144", m), canon_symbol=True)
 foot = DerivedUnit("ft", "foot", Quantity("0.3048", m), canon_symbol=True)
+inch = DerivedUnit("in", "inch", Quantity("0.0254", m), canon_symbol=True)
+# Area
+#acre 4840 yd**2
+#rood 1210 yd**2
+# Capacity
+#Bushel	=	8 gallons.
+#Peck	=	2 gallons
+#GALLON	=	4.54609 cubic decimetres.
+# Pint?
+#Quart	=	¼ gallon.
+#Gill	=	¼ pint.
+#[F119Fluid ounce]	[F119=]	[F1191/20 pint.]
+#Fluid drachm	=	1/8 fluid ounce.
+#Minim	=	1/60 fluid drachm.
+#gallon 4.54609 cubic decimetres.
+# Mass
+#Ton	=	2240 pounds.
+#Hundredweight	=	112 pounds.
+#Cental	=	100 pounds.
+#Quarter	=	28 pounds.
+#Stone	=	14 pounds.
+pound = DerivedUnit("lb", "pound", Quantity("0.45359237", kg), canon_symbol=True)
+#Ounce] 1/16 pound
+#Dram	=	1/16 ounce
+#Grain	=	1/7000 pound
+#Pennyweight	=	24 grains
+#Ounce apothecaries	=	480 grains
+#Drachm	=	1/8 ounce apothecaries
+#Scruple	=	1/3 drachm
+# Nautical
+#fathom
+#cable
+#nautical mile
+
+#Troy weight
+#avoirdupois weight
+#apothecaries' weight
+#carat and point
+
+# US customary units (from NIST)
 
 # Data
 bit = BaseUnit("bit", "bit", dimension="X")

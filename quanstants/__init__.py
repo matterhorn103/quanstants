@@ -8,7 +8,7 @@ from decimal import Decimal as dec
 # Import unit first because the other classes rely on it
 from .config import QuanstantsConfig
 from . import unit, unit_defs
-from . import prefix, prefixed_unit_defs
+from . import prefix, prefix_defs
 from . import constant, constant_defs
 from . import quantity
 

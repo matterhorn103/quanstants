@@ -62,8 +62,9 @@ class Quantity:
     This can be done on demand using `.cancel()`.
 
     Quantities can be easily expressed in terms of another unit using `.to()`. To express in terms of
-    SI base units, `.base()` is provided. `.canonical()` returns the same, but with the base units in a
-    set, consistent order.
+    SI base units, `.base()` is provided.
+    
+    `.canonical()` returns the quantity with its units in a set, reproducible order.
     
     If `quanstants.CONVERT_FLOAT_AS_STR` is `True`, as it is by default, a provided `float` is first
     converted to a `str`, then to a `Decimal`. The result is that providing `number=5.2` gives a
@@ -236,9 +237,9 @@ class Quantity:
     
     def __eq__(self, other):
         if isinstance(other, Quantity):
-            # Convert both to canonical representations
-            a = self.canonical()
-            b = other.canonical()
+            # Convert both to canonical base unit representations
+            a = self.base().cancel().canonical()
+            b = other.base().cancel().canonical()
             # Have to use dimension as a sanity check in case different units have the same symbol
             if (a.number == b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
                 return True
@@ -249,9 +250,9 @@ class Quantity:
     
     def __gt__(self, other):
         if isinstance(other, Quantity):
-            # Convert both to canonical representations
-            a = self.canonical()
-            b = other.canonical()
+            # Convert both to canonical base unit representations
+            a = self.base().cancel().canonical()
+            b = other.base().cancel().canonical()
             if (a.unit.dimensional_exponents != b.unit.dimensional_exponents):
                 raise MismatchedUnitsError
             if (a.number > b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
@@ -263,9 +264,9 @@ class Quantity:
 
     def __ge__(self, other):
         if isinstance(other, Quantity):
-            # Convert both to canonical representations
-            a = self.canonical()
-            b = other.canonical()
+            # Convert both to canonical base unit representations
+            a = self.base().cancel().canonical()
+            b = other.base().cancel().canonical()
             if (a.unit.dimensional_exponents != b.unit.dimensional_exponents):
                 raise MismatchedUnitsError
             if (a.number >= b.number) and (a.unit.symbol == b.unit.symbol) and (a.unit.dimensional_exponents == b.unit.dimensional_exponents):
@@ -281,21 +282,46 @@ class Quantity:
     def __pos__(self):
         return self
     
-    def __round__(self, ndigits=0):
+    def __round__(self, ndigits):
         """Alias for `Quantity.round()` to allow the use of the in-built `round()`."""
         return self.round(ndigits)
     
-    def round(self, ndigits=0):
+    def round(self, ndigits):
+        """Return the quantity with the numerical part rounded by the set method.
+        
+        By default, rounds to the specified number of decimal places.
+
+        Calls one of the other rounding methods depending on the value of `QuanstantsConfig.ROUND_TO`:
+        "PLACES" (default) ⇒ `Quantity.places()`
+        "FIGURES" ⇒ `Quantity.sigfigs()`
+        "UNCERTAINTY" ⇒ `Quantity.round_to_uncertainty()`
+        """
+        if QuanstantsConfig.ROUND_TO == "FIGURES":
+            return self.sigfigs(ndigits)
+        elif QuanstantsConfig.ROUND_TO == "UNCERTAINTY":
+            return self.round_to_uncertainty(ndigits)
+        else:
+            return self.places(ndigits)
+
+    def places(self, ndigits=0):
         """Return the quantity with the numerical part rounded to the specified number of decimal places.
         
         The method used for rounding is that specified by the `quanstants.ROUNDING_MODE` variable,
-        which takes any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`.
+        which takes any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`, i.e.
+        to nearest with ties going away from zero.
+
+        Like siunitx, by default extra zeroes will be added to a short number to reach the desired
+        number of decimal places. This can be turned off by changing `QuanstantsConfig.ROUND_PAD`.
 
         Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
         specified by `quanstants.ROUNDING_MODE` does not override the current `decimal.Context()`
         and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
         which by default uses `"ROUND_HALF_EVEN"`.
         """
+        current_places = self.number.as_tuple().exponent * -1
+        # Don't round if padding is turned off and the number doesn't have enough places
+        if (not QuanstantsConfig.ROUND_PAD) and (current_places < ndigits):
+            return self
         # Set decimal rounding to the specified method, which by default is the traditionally
         # expected behaviour
         # Use in a local context so that user's context isn't overwritten
@@ -304,17 +330,24 @@ class Quantity:
             rounded = Quantity(round(self.number, ndigits), self.unit)
         return rounded
     
-    def sigfig(self, nsigfigs=1):
+    def sigfigs(self, nsigfigs=1):
         """Return the quantity with the numerical part rounded to the specified number of significant figures.
         
-        The method used for rounding is that specified by the `quanstants.ROUNDING_MODE` variable,
-        which takes any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`.
+        The method used for rounding is that specified by `QuanstantsConfig.ROUNDING_MODE`, which takes
+        any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`, i.e. to 
+        nearest with ties going away from zero.
+
+        Like siunitx, by default extra zeroes will be added to a short number to reach the desired
+        number of significant figures. This can be turned off by changing `QuanstantsConfig.ROUND_PAD`.
 
         Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
-        specified by `quanstants.ROUNDING_MODE` does not override the current `decimal.Context()`
+        specified by `QuanstantsConfig.ROUNDING_MODE` does not override the current `decimal.Context()`
         and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
         which by default uses `"ROUND_HALF_EVEN"`.
         """
+        # Sanity check for requested number of sigfigs
+        if nsigfigs < 1:
+            return self
         digits = self.number.as_tuple().digits
         if nsigfigs <= len(digits):
             exponent = math.floor(self.number.log10())
@@ -334,6 +367,43 @@ class Quantity:
                 new_digits.append(0)
             new_exponent = self.number.as_tuple().exponent - n_digits_to_add
             return Quantity(dec((self.number.as_tuple().sign, new_digits, new_exponent)), self.unit)
+    
+    def round_to_uncertainty(self, nsigfigs=1):
+        """Round the uncertainty to the specified number of digits, then return the quantity with the numerical part rounded to the same precision.
+        
+        The method used for rounding is that specified by `QuanstantsConfig.ROUNDING_MODE`, which takes
+        any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`, i.e. to 
+        nearest with ties going away from zero.
+
+        Like siunitx, by default extra zeroes will be added to a short number to reach the same number
+        of digits as the uncertainty. This can be turned off by changing `QuanstantsConfig.ROUND_PAD`.
+        However, no padding is applied to the uncertainty, so the rounded quantity will never have a
+        precision greater than the original uncertainty.
+
+        Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
+        specified by `QuanstantsConfig.ROUNDING_MODE` does not override the current `decimal.Context()`
+        and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
+        which by default uses `"ROUND_HALF_EVEN"`.
+        """
+        # First round the uncertainty
+        digits = self.uncertainty.as_tuple().digits
+        # Sanity check for requested number of sigfigs
+        # Also don't allow increasing the precision of the uncertainty
+        if (nsigfigs < 1) or (nsigfigs > len(digits)):
+            return self
+        else:
+            exponent = math.floor(self.uncertainty.log10())
+            significand = self.uncertainty / dec(f"1E{exponent}")
+            # Set decimal rounding to the specified method, which by default is the traditionally
+            # expected behaviour
+            # Use in a local context so that user's context isn't overwritten
+            with localcontext() as ctx:
+                ctx.rounding=QuanstantsConfig.ROUNDING_MODE
+                rounded_significand = round(significand, nsigfigs - 1)
+            rounded_uncertainty = rounded_significand * dec(f"1E{exponent}")
+        # Now round the number to the same precision
+        uncertainty_places = rounded_uncertainty.as_tuple().exponent * -1
+        return self.places(uncertainty_places)
     
     def sqrt(self):
         """Return the square root of the quantity, equivalent to `Quantity**Fraction(1, 2)`."""
@@ -380,13 +450,17 @@ class Quantity:
         return self.number * self.unit.fully_cancel()
     
     def canonical(self):
-        """Express the quantity in base units in a canonical order."""
-        cancelled = self.base().cancel()
-        return cancelled.number * cancelled.unit.canonical()
+        """Express the quantity with its units in a canonical order."""
+        return self.number * self.unit.canonical()
     
-    def to(self, unit):
-        """Express the quantity in terms of another unit (or quantity)."""
-        # Convert both to quantities in base units, then divide, then cancel to get ratio
-        result = (self.base() / unit.base()).cancel()
-        return result * unit
+    def to(self, other):
+        """Express the quantity in terms of another unit (or rarely, a quantity)."""
+        # Allowing other to be a quantity means that quantities can be expressed in terms of
+        # natural/atomic/Planck units, e.g. particle masses in units of MeV/c**2
+        # Convert both args to quantities in base units, then divide, then cancel to get ratio
+        result = (self.base() / other.base()).cancel()
+        if isinstance(other, Quantity):
+            return Quantity((result.number * other.number), result.unit._mul_with_concat(other.unit))
+        else:
+            return Quantity(result.number, result.unit._mul_with_concat(other.unit))
         

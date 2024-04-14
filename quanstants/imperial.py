@@ -28,7 +28,7 @@ league = DerivedUnit("lea", "league", Quantity("4828.032", m))
 
 # Area
 #perch?
-#rood?
+rood = DerivedUnit(None, "rood", Quantity("1011.714106", m**2))
 acre = DerivedUnit(None, "acre", Quantity("4046.8564224", m**2))
 
 # Capacity
@@ -40,32 +40,40 @@ gill = DerivedUnit("gi", "gill", Quantity("0.1420653125", litre))
 pint = DerivedUnit("pt", "pint", Quantity("0.56826125", litre))
 quart = DerivedUnit("qt", "quart", Quantity("1.1365225", litre))
 gallon = DerivedUnit("gal", "gallon", Quantity("4.54609", litre))
-#Bushel	=	8 gallons.
-#Peck	=	2 gallons
+peck = DerivedUnit(None, "peck", Quantity("9.09218", litre))
+bushel = DerivedUnit(None, "bushel", Quantity("36.36872", litre))
 
-# Mass
-#Ton	=	2240 pounds.
-#Hundredweight	=	112 pounds.
-#Cental	=	100 pounds.
-#Quarter	=	28 pounds.
-#Stone	=	14 pounds.
+# Mass (all three systems, only grain is common to all)
+grain = DerivedUnit("gr", "grain", Quantity("64.79891E-6", kg))
+
+## Avoirdupois system
+dram = DerivedUnit("dr", "dram", Quantity("0.0017718451953125", kg))
+ounce = DerivedUnit("oz", "ounce", Quantity("0.028349523125", kg))
 pound = DerivedUnit("lb", "pound", Quantity("0.45359237", kg))
-#Ounce] 1/16 pound
-#Dram	=	1/16 ounce
-#Grain	=	1/7000 pound
-#Pennyweight	=	24 grains
-#Ounce apothecaries	=	480 grains
-#Drachm	=	1/8 ounce apothecaries
-#Scruple	=	1/3 drachm
+stone = DerivedUnit("st", "stone", Quantity("6.35029318", kg))
+quarter = DerivedUnit("qr", "quarter", Quantity("12.70058636", kg))
+cental = DerivedUnit(None, "cental", Quantity("45.359237", kg))
+hundredweight = DerivedUnit("cwt", "hundredweight", Quantity("50.80234544", kg))
+ton = DerivedUnit(None, "ton", Quantity("1016.0469088", kg), alt_names=["tun"])
 
-# Nautical
-#fathom
-#cable
-#nautical mile
-#knot
+## Troy system
+pennyweight = DerivedUnit("dwt", "pennyweight", Quantity("0.00155517384", kg))
+troy_ounce = DerivedUnit("oz t", "troy_ounce", Quantity("0.03110347680", kg))
+troy_pound = DerivedUnit("lb t", "troy_pound", Quantity("0.37324172", kg))
 
-#Troy weight
-#avoirdupois weight
-#apothecaries' weight
-#carat and point
+## Apothecaries system
+scruple = DerivedUnit(None, "scruple", Quantity("0.001295962", kg))
+drachm = DerivedUnit("oz a", "ounce_apothecaries", Quantity("0.003887886", kg))
+ounce_apothecaries = DerivedUnit("oz a", "ounce_apothecaries", Quantity("0.031103088", kg))
 
+
+# Nautical units
+fathom_practical = DerivedUnit(None, "fathom_practical", Quantity("1.8288", m)) # According to Wiki, the Admiralty used 1 ftm = 6 ft in practice
+british_fathom = DerivedUnit("br ftm", "british_fathom", Quantity("1.853184", m)) # 1/1000 nmi
+fathom = DerivedUnit("ftm", "fathom", Quantity("1.852", m))
+british_cable = DerivedUnit(None, "british_cable", Quantity("185.3184", m))
+cable = DerivedUnit(None, "cable", Quantity("185.2", m))
+british_nautical_mile = DerivedUnit("br nmi", "nautical_mile", Quantity("1853.184", m)) # Tradtional value of 6080 ft
+nautical_mile = DerivedUnit("nmi", "nautical_mile", Quantity("1852", m)) # International definition
+british_knot = DerivedUnit("br kn", "british_knot", Quantity("1853.184", m * hour**-1))
+knot = DerivedUnit("kn", "knot", Quantity("1852", m * hour**-1))

@@ -139,14 +139,14 @@ class Quantity:
             
         
     def __int__(self):
-        if self.dimension() != "(dimensionless)":
+        if not self.is_dimensionless():
             raise NotUnitlessError("Cannot cast a non-dimensionless quantity to an integer!")
         else:
             dimensionless_quant = self.base().cancel()
             return int(dimensionless_quant.number)
     
     def __float__(self):
-        if self.dimension() != "(dimensionless)":
+        if not self.is_dimensionless():
             raise NotUnitlessError("Cannot cast a non-dimensionless quantity to a float!")
         else:
             dimensionless_quant = self.base().cancel()
@@ -229,7 +229,7 @@ class Quantity:
     
     # Can only use a Quantity as an exponent if it is unitless
     def __rpow__(self, other):
-        if self.dimension() != "(dimensionless)":
+        if not self.is_dimensionless():
             raise NotUnitlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
@@ -411,7 +411,7 @@ class Quantity:
 
     def exp(self):
         """Return the value of e raised to the power of the quantity, for dimensionless quantities only."""
-        if self.dimension() != "(dimensionless)":
+        if not self.is_dimensionless():
             raise NotUnitlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
@@ -419,7 +419,7 @@ class Quantity:
     
     def ln(self):
         """Return the natural logarithm of the quantity, for dimensionless quantities only."""
-        if self.dimension() != "(dimensionless)":
+        if not self.is_dimensionless():
             raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
@@ -427,12 +427,16 @@ class Quantity:
     
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
-        if self.dimension() != "(dimensionless)":
+        if not self.is_dimensionless():
             raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
             return dimensionless_quant.number.log10()
     
+    def is_dimensionless(self):
+        """Check if unit is dimensionless."""
+        return self.unit.is_dimensionless()
+
     def dimension(self):
         """Return the dimension as a nice string."""
         return self.unit.dimension()

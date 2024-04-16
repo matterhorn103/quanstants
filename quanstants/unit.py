@@ -230,18 +230,24 @@ class Unit:
         if (add_symbol) and (self.symbol != self.name):
             unit_reg.add(self.symbol, self)
 
+    def is_dimensionless(self):
+        if self.dimensional_exponents == {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}:
+            return True
+        else:
+            return False
+        
     def dimension(self):
         """Return the dimension as a nice string."""
-        result = ""
-        for dimension, exponent in self.dimensional_exponents.items():
-            if exponent != 0:
-                result += dimension
-                if exponent != 1:
-                    result += generate_superscript(exponent)
-        if len(result) > 0:
-            return result
-        else:
+        if self.is_dimensionless():
             return "(dimensionless)"
+        else:
+            result = ""
+            for dimension, exponent in self.dimensional_exponents.items():
+                if exponent != 0:
+                    result += dimension
+                    if exponent != 1:
+                        result += generate_superscript(exponent)
+            return result
     
     # Some methods that subclasses need to redefine
     def base(self):

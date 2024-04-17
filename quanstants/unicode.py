@@ -69,7 +69,7 @@ def generate_superscript(exponent: int | frac):
         superscript = str(exponent)
     elif exponent == 1:
         superscript = ""
-    elif exponent.is_integer() and (abs(exponent) <= 9):
+    elif (abs(exponent) <= 9) and (isinstance(exponent, int) or exponent.is_integer()):
         superscript = _unicode_superscripts[int(exponent)]
     elif isinstance(exponent, frac):
         superscript = multidigit(exponent.numerator) + "⁄" + multidigit(exponent.denominator, sub=True)

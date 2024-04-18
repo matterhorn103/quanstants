@@ -26,7 +26,7 @@ Factor = namedtuple("Factor", ["unit", "exponent"])
 def generate_symbol(
     components: tuple[Factor, ...],
     sort_by="sign",
-    inverse=QuanstantsConfig.INVERSE_UNIT
+    inverse=QuanstantsConfig.INVERSE_UNIT,
 ) -> str:
     # Create symbol as concatenation of symbols of components, with spaces
     terms = []
@@ -363,8 +363,15 @@ class CompoundUnit(Unit):
             components = sum([unit.components for unit in units], ())
         # Generate a symbol based on passed options
         if (units is not None) and (not combine_symbol):
-            # Just put each unit's symbol in parentheses
-            symbol = "".join([("(" + unit.symbol + ")") for unit in units])
+            # Put each unit's symbol in parentheses if they contain a slash, but drop if they are unitless
+            symbols = []
+            for unit in units:
+                if not isinstance(unit, Unitless):
+                    if "/" in unit.symbol:
+                        symbols.append("(" + unit.symbol + ")")
+                    else:
+                        symbols.append(unit.symbol)
+            symbol = " ".join(symbols)
         else:
             symbol = generate_symbol(components, symbol_sort, symbol_inverse)
         dimensional_exponents = generate_dimensional_exponents(components)

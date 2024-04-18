@@ -13,7 +13,8 @@ from . import constant, constant_defs
 from . import quantity
 
 # Then import whichever unit sets should be provided by default
-from . import metric #, imperial, atomic, natural, planck
+from . import metric
+#, imperial, atomic, natural, planck
 
 # Make unit, prefix, and constant namespaces available directly in this namespace
 units = unit.unit_reg

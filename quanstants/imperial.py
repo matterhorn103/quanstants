@@ -5,10 +5,13 @@ from .unit import Unitless, BaseUnit, DerivedUnit
 from .quantity import Quantity
 from .si import *
 
+# fmt: off
+
 # Imperial units get the right to use the simple name, whereas US customary units are prefixed
 # with "us" e.g. "us_foot"
 # However, since US customary units are probably more likely to be used these days, US customary
-# units are given canon symbols and imperial units aren't (unless there is no US cus. equivalent)
+# units are given canon symbols and imperial units aren't (unless there is no US cus. equivalent,
+# or they are identical in both systems)
 
 # Imperial (from the international yard and pound agreement and the Weights and Measures Act 1985)
 # Length
@@ -29,7 +32,7 @@ league = DerivedUnit("lea", "league", Quantity("4828.032", m))
 # Area
 #perch?
 rood = DerivedUnit(None, "rood", Quantity("1011.714106", m**2))
-acre = DerivedUnit(None, "acre", Quantity("4046.8564224", m**2))
+acre = DerivedUnit("ac", "acre", Quantity("4046.8564224", m**2))
 
 # Capacity
 minim = DerivedUnit("min", "minim", Quantity("0.000059193880208333333333", litre)) # to 20 sf
@@ -62,9 +65,9 @@ troy_ounce = DerivedUnit("oz t", "troy_ounce", Quantity("0.03110347680", kg))
 troy_pound = DerivedUnit("lb t", "troy_pound", Quantity("0.37324172", kg))
 
 ## Apothecaries system
-scruple = DerivedUnit(None, "scruple", Quantity("0.001295962", kg))
-drachm = DerivedUnit("oz a", "ounce_apothecaries", Quantity("0.003887886", kg))
-ounce_apothecaries = DerivedUnit("oz a", "ounce_apothecaries", Quantity("0.031103088", kg))
+scruple = DerivedUnit("℈", "scruple", Quantity("0.001295962", kg))
+drachm = DerivedUnit("ʒ", "drachm", Quantity("0.003887886", kg))
+ounce_apothecaries = DerivedUnit("℥", "ounce_apothecaries", Quantity("0.031103088", kg))
 
 
 # Nautical units
@@ -73,7 +76,9 @@ british_fathom = DerivedUnit("br ftm", "british_fathom", Quantity("1.853184", m)
 fathom = DerivedUnit("ftm", "fathom", Quantity("1.852", m))
 british_cable = DerivedUnit(None, "british_cable", Quantity("185.3184", m))
 cable = DerivedUnit(None, "cable", Quantity("185.2", m))
-british_nautical_mile = DerivedUnit("br nmi", "nautical_mile", Quantity("1853.184", m)) # Tradtional value of 6080 ft
+british_nautical_mile = DerivedUnit("br nmi", "british_nautical_mile", Quantity("1853.184", m)) # Tradtional value of 6080 ft
 nautical_mile = DerivedUnit("nmi", "nautical_mile", Quantity("1852", m)) # International definition
 british_knot = DerivedUnit("br kn", "british_knot", Quantity("1853.184", m * hour**-1))
 knot = DerivedUnit("kn", "knot", Quantity("1852", m * hour**-1))
+
+# fmt: on

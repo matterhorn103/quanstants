@@ -459,12 +459,7 @@ class Quantity:
     
     def to(self, other):
         """Express the quantity in terms of another unit (or rarely, a quantity)."""
-        # Allowing other to be a quantity means that quantities can be expressed in terms of
-        # natural/atomic/Planck units, e.g. particle masses in units of MeV/c**2
         # Convert both args to quantities in base units, then divide, then cancel to get ratio
         result = (self.base() / other.base()).cancel()
-        if isinstance(other, Quantity):
-            return Quantity((result.number * other.number), result.unit._mul_with_concat(other.unit))
-        else:
-            return Quantity(result.number, result.unit._mul_with_concat(other.unit))
+        return Quantity(result.number, result.unit._mul_with_concat(other))
         

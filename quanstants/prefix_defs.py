@@ -55,7 +55,8 @@ for p in common_prefixes[1:7]:
     if p.name != "micro":
         PrefixedUnit(p, metre, add_to_reg=True)
 PrefixedUnit(micro, metre, add_to_reg=True, alt_names=["micron"])
-PrefixedUnit(centi, metre, add_to_reg=True)
+# Have a variable pointing to the centimetre for easier import by other modules
+centimetre = PrefixedUnit(centi, metre, add_to_reg=True)
 PrefixedUnit(deci, metre, add_to_reg=True)
 
 for p in common_prefixes[:6]:

@@ -211,7 +211,7 @@ class Quantity:
     
     def __rtruediv__(self, other):
         if isinstance(other, (str, int, float, dec)):
-            return Quantity(dec(str(other)) / self.number, self.unit)
+            return Quantity(dec(str(other)) / self.number, self.unit.inverse())
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
             return Quantity(1 / self.number, other / self.unit)

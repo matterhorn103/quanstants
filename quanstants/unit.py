@@ -352,7 +352,9 @@ class CompoundUnit(Unit):
             self,
             components: tuple[Factor, ...] | None,
             units: list[Unit] | None = None,
+            name: str | None = None,
             add_to_reg: bool = False,
+            alt_names: list | None = None,
             symbol_sort: str = "sign",
             symbol_inverse: str = QuanstantsConfig.INVERSE_UNIT,
             combine_symbol: bool = True,
@@ -378,10 +380,11 @@ class CompoundUnit(Unit):
         # Don't define a name etc., just a symbol and the components
         super().__init__(
             symbol=symbol,
-            name=None,
+            name=name,
             components=components,
             dimensional_exponents=dimensional_exponents,
             add_to_reg=add_to_reg,
+            alt_names=alt_names,
         )
         # Determine whether the unit is expressed in terms of base units
         defined_in_base = True

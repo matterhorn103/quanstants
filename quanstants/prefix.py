@@ -83,6 +83,9 @@ class PrefixedUnit(DerivedUnit):
         canon_symbol: bool = False,
         alt_names: list | None = None,
     ):
+        self._prefix = prefix
+        self._unit = unit
+    
         # Create prefixed symbol and name
         concat_symbol = prefix.symbol + unit.symbol
         if (prefix.name is not None) and (unit.name is not None):
@@ -105,9 +108,6 @@ class PrefixedUnit(DerivedUnit):
             canon_symbol=canon_symbol,
             alt_names=concat_alt_names,
         )
-
-        self._prefix = prefix
-        self._unit = unit
     
     @property
     def prefix(self):

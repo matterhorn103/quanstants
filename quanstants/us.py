@@ -35,6 +35,9 @@ us_survey_league = DerivedUnit("lea", "us_survey_league", Quantity("4828.0416560
 us_survey_acre = DerivedUnit("ac", "us_survey_acre", Quantity("4046.872609874", m**2))
 us_survey_section = DerivedUnit(None, "us_survey_section", Quantity("2589998.47", m**2))
 
+# Capacity
+us_fluid_ounce = DerivedUnit("fl oz", "us_fluid_ounce", Quantity("0.0295735295625", litre), canon_symbol=True)
+
 # Nautical units
 us_fathom = DerivedUnit("ftm", "us_fathom", Quantity("1.8288", m))
 us_cable = DerivedUnit(None, "us_cable", Quantity("219.456", m))

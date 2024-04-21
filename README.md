@@ -140,7 +140,7 @@ Quantity(256, GiB)
 True
 ```
 
-Various common prefixed units are pre-generated and available within `units`, but not under their symbol to avoid clashes within the namespace:
+Various common prefixed units are pre-generated and available within `quanstants.units`, but not under their symbol to avoid clashes within the namespace:
 ```python
 >>> 50 * qu.micrometre
 Quantity(50, µm)
@@ -150,14 +150,22 @@ Quantity(50, µm)
 Quantity(99.7, MHz)
 ```
 
-A huge selection of units is available, not just SI or metric:
+A huge selection of units is available, including metric units not approved by the SI:
 ```python
 >>> 45032.5 * qu.kilowatthour
 Quantity(45032.5, kWh)
->>> 6 * qu.foot
-Quantity(6, ft)
 >>> 1.27 * qu.carat
 Quantity(1.27, ct)
+```
+
+Other systems and categories of units are easily accessed by importing the appropriate module, which adds the units within to `quanstants.units`:
+```python
+>>> from quanstants import imperial
+>>> 6 * qu.foot
+Quantity(6, ft)
+>>> from quanstants import us
+>>> 20 * qu.us_fluid_ounce
+Quantity(20, fl oz)
 >>> 32 * qu.nautical_mile
 Quantity(32, nmi)
 >>> 32 * (qp.nano * qu.mile)            # Nothing to stop you doing this
@@ -166,7 +174,19 @@ Quantity(32, nmi)
 False
 ```
 
-Currently, `quanstants` comes with a set of >31 pre-defined units, plus an additional 105 pre-defined prefixed units, accessible under >209 different names in the `quanstants.units` namespace.
+Units are often made available in multiple modules if shared between systems, so you only need to worry about importing the units system of interest:
+```python
+>>> from quanstants import imperial, us
+>>> imperial.foot is us.foot
+True
+>>> imperial.foot is us.us_survey_foot
+False
+```
+
+Currently, `quanstants` comes by default with a set of >51 pre-defined units, accessible under >113 different names in the `quanstants.units` namespace class.
+An additional 87 prefixed units are also pre-defined.
+With all unit submodules imported, >117 (unprefixed) units are defined under >212 different names.
+
 This compares to ~950 defined names in a default `pint` `UnitRegistry()`.
 `astropy.units` contains >3900 defined names, but most are just prefixed units, so the total number of unique unprefixed units is more like 70 to 80.
 

@@ -69,6 +69,7 @@ def generate_superscript(exponent: int | frac):
         superscript = str(exponent)
     elif exponent == 1:
         superscript = ""
+    # Can't just do int(exponent) because float and Decimal get rounded to an integer by int
     elif (abs(exponent) <= 9) and (isinstance(exponent, int) or exponent.is_integer()):
         superscript = _unicode_superscripts[int(exponent)]
     elif isinstance(exponent, frac):

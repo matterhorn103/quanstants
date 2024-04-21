@@ -12,9 +12,19 @@ class UnitAlreadyDefinedError(Exception):
 
 # Namespace class to contain all the units, making them useable with unit.m notation
 class UnitReg:
+    def __init__(self):
+        self.total_names = 0
+        self.total_units = 0
+        self.total_prefixed = 0
     def add(self, name: str, unit: "Unit"):
         if hasattr(self, name):
             raise UnitAlreadyDefinedError(f"{name} is already defined!")
+        if hasattr(unit, "prefix") and unit not in self.__dict__.values():
+            self.total_prefixed += 1
+        else:
+            self.total_names += 1
+            if unit not in self.__dict__.values():
+                self.total_units += 1
         setattr(self, name, unit)
 
 unit_reg = UnitReg()

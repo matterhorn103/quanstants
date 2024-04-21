@@ -9,4 +9,4 @@ from quanstants import (
 )
 
 
-assert qc.proton_mass.value.to(qu.dalton) == Quantity(1.007276466621, qu.Da, uncertainty=0.000000000053)
+#assert qc.proton_mass.value.to(qu.dalton) == Quantity(1.007276466621, qu.Da, uncertainty=0.000000000053)

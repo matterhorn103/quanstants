@@ -458,8 +458,14 @@ class Quantity:
         return self.number * self.unit.canonical()
     
     def to(self, other):
-        """Express the quantity in terms of another unit (or rarely, a quantity)."""
-        # Convert both args to quantities in base units, then divide, then cancel to get ratio
-        result = (self.base() / other.base()).cancel()
-        return Quantity(result.number, result.unit._mul_with_concat(other))
+        """Express the quantity in terms of another unit."""
+        # If trying to convert to a non-kelvin temperature, let the TemperatureUnit handle it
+        # Note that only temperatures in kelvin are normal Quantities, temperatures on other scales
+        # are instances of `quanstants.temperature.Temperature`, which handles its own conversion
+        if hasattr(other, "from_temperature"):
+            return other.from_temperature(self)
+        else:
+            # Convert both args to quantities in base units, then divide, then cancel to get ratio
+            result = (self.base() / other.base()).cancel()
+            return Quantity(result.number, result.unit._mul_with_concat(other))
         

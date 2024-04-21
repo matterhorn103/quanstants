@@ -468,7 +468,7 @@ class CompoundUnit(Unit):
             if not component_matched:
                 product *= component.unit ** component.exponent
         # Finally cancel again
-        return product.cancel()     
+        return product.cancel()
                 
     def canonical(self):
         """Order terms into a reproducible order and return as a Unit."""

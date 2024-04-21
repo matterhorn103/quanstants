@@ -1,5 +1,3 @@
-from decimal import Decimal as dec
-
 from .quantity import Quantity
 from .unit import Unit, DerivedUnit
 
@@ -8,9 +6,15 @@ class ConstantAlreadyDefinedError(Exception):
 
 # Namespace class to contain all the constants, making them useable with constant.c notation
 class ConstantReg:
+    def __init__(self):
+        self.total_names = 0
+        self.total_constants = 0
     def add(self, name, constant):
         if hasattr(self, name):
             raise ConstantAlreadyDefinedError
+        self.total_names += 1
+        if constant not in self.__dict__.values():
+            self.total_constants += 1
         setattr(self, name, constant)
 
 constant_reg = ConstantReg()

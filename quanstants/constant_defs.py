@@ -1,5 +1,3 @@
-from decimal import Decimal as dec
-
 from .constant import Constant
 from .quantity import Quantity
 from .unit import unit_reg as u

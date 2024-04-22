@@ -4,12 +4,9 @@ from fractions import Fraction as frac
 
 from .config import quanfig
 from .quantity import Quantity
-from .unitreg import UnitReg
+from .unitreg import unit_reg
 from .unicode import generate_superscript
 
-
-# Instantiate the main unit registry, which all units will be added to
-unit_reg = UnitReg()
 
 # Create a named tuple that is used to hold a unit with its exponent
 Factor = namedtuple("Factor", ["unit", "exponent"])
@@ -192,6 +189,37 @@ class Unit:
         elif isinstance(other, str):
             new_components = tuple((Factor(component.unit, component.exponent * frac(other)) for component in self.components),)
             return CompoundUnit(new_components)
+        else:
+            return NotImplemented
+    
+    # Tests for equality rely on the implementation of the same functions for `Quantity`, at least for now
+    def __eq__(self, other):
+        if isinstance(other, Unit):
+            # Convert both to base unit representations (Quantities)
+            a = self.base().cancel().canonical()
+            b = other.base().cancel().canonical()
+            # Compare the quantities
+            return a == b
+        else:
+            return NotImplemented
+    
+    def __gt__(self, other):
+        if isinstance(other, Unit):
+            # Convert both to base unit representations (Quantities)
+            a = self.base().cancel().canonical()
+            b = other.base().cancel().canonical()
+            # Compare the quantities
+            return a > b
+        else:
+            return NotImplemented
+    
+    def __ge__(self, other):
+        if isinstance(other, Unit):
+            # Convert both to base unit representations (Quantities)
+            a = self.base().cancel().canonical()
+            b = other.base().cancel().canonical()
+            # Compare the quantities
+            return a >= b
         else:
             return NotImplemented
 

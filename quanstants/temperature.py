@@ -44,15 +44,43 @@ class TemperatureUnit(Unit):
         )
     
     def from_temperature(self, other: Quantity):
+        """Convert another quantity with temperature units to a Temperature with this unit.
+        
+        When `Quantity.to()` is called on a quantity and the target unit is an instance of
+        `TemperatureUnit`, this method of the target unit is called instead.
+
+        """
         if other.unit == kelvin:
             new_number = self._from_kelvin(other.number)
-            new_uncertainty = None if other.uncertainty is None else self._from_kelvin(other.uncertainty)
+            if other.uncertainty == "(exact)":
+                new_uncertainty = "(exact)"
+            else:
+                new_uncertainty = self._from_kelvin(other.uncertainty)
         elif isinstance(other, Temperature):
             new_number = self._from_kelvin(other.unit._to_kelvin(other.number))
-            new_uncertainty = None if other.uncertainty is None else self._from_kelvin(other.unit._to_kelvin(other.uncertainty))
+            if other.uncertainty == "(exact)":
+                new_uncertainty = "(exact)"
+            else:
+                new_uncertainty = self._from_kelvin(other.unit._to_kelvin(other.uncertainty))
         else:
             raise NotATemperatureError("Temperatures")
-        return Temperature(new_number, self)
+        return Temperature(new_number, self, new_uncertainty)
+    
+    def base(self):
+        """Return the unit's value in base units as a Quantity."""
+        raise NotImplementedError
+
+    def cancel(self):
+        """Combine any like terms and return as a Quantity."""
+        raise NotImplementedError
+    
+    def fully_cancel(self):
+        """Combine any like terms and return as a Quantity, with units of the same dimension converted and also combined."""
+        return self.cancel()
+    
+    def canonical(self):
+        """Order terms into a reproducible order and return as a Unit."""
+        raise NotImplementedError
 
 
 class Temperature(Quantity):
@@ -73,14 +101,22 @@ class Temperature(Quantity):
             uncertainty,
         )
     
-    
     def _to_kelvin(self):
-        return Quantity(
-            self.unit._to_kelvin(self.number),
-            kelvin,
-            self.unit._to_kelvin(self.uncertainty),
+        """Return the temperature as a normal `Quantity` object with units of kelvin.
+        
+        This is only necessary for use by the arithmetic functions below and does not need to be in the
+        public API - `Temperature.base()` is essentially an alias, and users can call
+        `Temperature.to(kelvin)` without an issue, as it goes via conversion of the temperature to kelvin
+        with `Temperature.base()`.
+        """
+        if self.uncertainty == "(exact)":
+            return Quantity(self.unit._to_kelvin(self.number), kelvin)
+        else:
+            return Quantity(
+                self.unit._to_kelvin(self.number),
+                kelvin,
+                self.unit._to_kelvin(self.uncertainty),
             )
-
 
     # Addition and subtraction work fine as defined in super()
     # For other mathematical functions, need to first convert to kelvin
@@ -108,7 +144,22 @@ class Temperature(Quantity):
 
     def __ge__(self, other):
         return super().__ge__(self._to_kelvin(), other)
+
+    def base(self):
+        """Return the quantity expressed in terms of base units."""
+        return self._to_kelvin()
     
+    def cancel(self):
+        """Combine any like terms in the unit."""
+        return self
+    
+    def fully_cancel(self):
+        """Combine any like terms in the unit, with units of the same dimension converted and combined."""
+        return self
+    
+    def canonical(self):
+        """Express the quantity with its units in a canonical order."""
+        return self
 
 
 degreeCelsius = TemperatureUnit(

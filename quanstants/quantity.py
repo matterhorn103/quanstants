@@ -4,6 +4,7 @@ from fractions import Fraction as frac
 import math
 
 from .config import quanfig
+from .unitreg import unit_reg
 
 class MismatchedUnitsError(Exception):
     pass
@@ -22,6 +23,8 @@ class Quantity:
     `uncertainty` is also any type that can be converted to `Decimal`, including strings, however if
     `uncertainty` is not specified or given as the string `"(exact)"` or `None` (default), the
     quantity`s uncertainty is set to `"(exact)"`.
+
+    If only a single string is provided, it will be parsed and split into the appropriate strings.
 
     Both `number` and `uncertainty` are stored internally as `Decimal` objects and provided values are
     first converted to `Decimal`. By making `Decimal` the default, quantities behave as the user would
@@ -93,7 +96,7 @@ class Quantity:
     def __init__(
         self,
         number: str | int | float | dec,
-        unit,
+        unit = None,
         uncertainty: str | int | float | dec | None = None,
     ):
         # Use Decimal type internally, exclusively
@@ -101,11 +104,16 @@ class Quantity:
         # the user *thinks* the float is, not of the actual binary float value e.g. str(5.2) gives 
         # "5.2" but dec(5.2) gives Decimal('5.20000000000000017763568394002504646778106689453125')
         # and we want to give the user what they think they have -- Decimal('5.2')
+        if isinstance(number, str) and unit is None and uncertainty is None:
+            number, unit, uncertainty = self._parse(number)
         if quanfig.CONVERT_FLOAT_AS_STR:
             self._number = dec(str(number))
         else:
             self._number = dec(number)
-        self._unit = unit
+        if isinstance(unit, str):
+            self._unit = unit_reg.parse(unit)
+        else:
+            self._unit = unit
         if (uncertainty is None) or (uncertainty == "(exact)"):
             self._uncertainty = "(exact)"
         elif quanfig.CONVERT_FLOAT_AS_STR:
@@ -137,7 +145,6 @@ class Quantity:
         else:
             return f"{self.number}({''.join([str(n) for n in self.uncertainty.as_tuple().digits])}) {self.unit.symbol}"
             
-        
     def __int__(self):
         if not self.is_dimensionless():
             raise NotUnitlessError("Cannot cast a non-dimensionless quantity to an integer!")
@@ -459,7 +466,10 @@ class Quantity:
     
     def to(self, other):
         """Express the quantity in terms of another unit."""
-        # If trying to convert to a non-kelvin temperature, let the TemperatureUnit handle it
+        if isinstance(other, str):
+            # Allow parsing of unit string
+            other = unit_reg.parse(other)
+        # If trying to convert to a non-kelvin temperature, let the `TemperatureUnit` handle it
         # Note that only temperatures in kelvin are normal Quantities, temperatures on other scales
         # are instances of `quanstants.temperature.Temperature`, which handles its own conversion
         if hasattr(other, "from_temperature"):
@@ -468,4 +478,9 @@ class Quantity:
             # Convert both args to quantities in base units, then divide, then cancel to get ratio
             result = (self.base() / other.base()).cancel()
             return Quantity(result.number, result.unit._mul_with_concat(other))
-        
+
+    def _parse(self, string):
+        # Split at first whitespace into number part and unit part
+        # TODO parse uncertainty too
+        split_string = string.split(maxsplit=1)
+        return (split_string[0], split_string[1], None)

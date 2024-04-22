@@ -84,3 +84,75 @@ class TestGenerateSuperscript:
         for exponent in exponents:
             assert unicode.generate_superscript(exponent) == str(exponent)
 
+class TestExponentParser:
+    def test_ascii_integer(self):
+        exponent = "2"
+        assert unicode.exponent_parser(exponent) == 2
+
+    def test_ascii_negative_integer(self):
+        exponent = "-2"
+        assert unicode.exponent_parser(exponent) == -2
+
+    def test_ascii_large_integer(self):
+        exponent = "23"
+        assert unicode.exponent_parser(exponent) == 23
+
+    def test_ascii_zero(self):
+        exponent = "0"
+        assert unicode.exponent_parser(exponent) == 0
+
+    def test_ascii_positive_fraction(self):
+        exponent = "1/2"
+        assert unicode.exponent_parser(exponent) == frac(1, 2)
+
+    def test_ascii_improper_fraction(self):
+        exponent = "3/2"
+        assert unicode.exponent_parser(exponent) == frac(3, 2)
+    
+    def test_ascii_negative_fraction(self):
+        exponent = "-1/2"
+        assert unicode.exponent_parser(exponent) == frac(-1, 2)
+    
+    def test_ascii_fraction_integer(self):
+        exponent = "4/2"
+        assert unicode.exponent_parser(exponent) == 2
+
+    def test_ascii_fraction_unity(self):
+        exponent = "3/3"
+        assert unicode.exponent_parser(exponent) == 1
+    
+    def test_ascii_fraction_zero(self):
+        exponent = "0/2"
+        assert unicode.exponent_parser(exponent) == 0
+    
+    def test_superscript_integer(self):
+        exponent = "²"
+        assert unicode.exponent_parser(exponent) == 2
+
+    def test_superscript_negative_integer(self):
+        exponent = "⁻²"
+        assert unicode.exponent_parser(exponent) == -2
+
+    def test_superscript_large_integer(self):
+        exponent = "²³"
+        assert unicode.exponent_parser(exponent) == 23
+
+    def test_superscript_zero(self):
+        exponent = "⁰"
+        assert unicode.exponent_parser(exponent) == 0
+    
+    def test_superscript_positive_fraction(self):
+        exponent = "¹⁄₂"
+        assert unicode.exponent_parser(exponent) == frac(1, 2)
+
+    def test_superscript_improper_fraction(self):
+        exponent = "³⁄₂"
+        assert unicode.exponent_parser(exponent) == frac(3, 2)
+    
+    def test_superscript_large_fraction(self):
+        exponent = "⁷³⁄₂₅"
+        assert unicode.exponent_parser(exponent) == frac(73, 25)
+    
+    def test_superscript_negative_fraction(self):
+        exponent = "⁻¹⁄₂"
+        assert unicode.exponent_parser(exponent) == frac(-1, 2)

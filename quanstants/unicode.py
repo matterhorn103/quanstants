@@ -90,12 +90,18 @@ def exponent_parser(exponent: str) -> int | frac:
     
     Does the reverse of `generate_superscript()`.
     """
-    # First try the simple case, where the string is just a normal ASCII integer
-    try:
-        return int(exponent)
-    except ValueError:
-        # In which case we are dealing with superscript characters
-        pass
+    # First try the simple case, where the string is normal ASCII
+    if exponent.isascii():
+        try:
+            return int(exponent)
+        except ValueError:
+            # Is a fraction
+            # Cancel to integer if possible
+            if frac(exponent).is_integer():
+                return int(frac(exponent))
+            else:
+                return frac(exponent)
+    # If not, we are dealing with a string of superscripts
     # Invert super/subscript dicts
     inverse_superscripts = {v: k for k, v in _unicode_superscripts.items()}
     inverse_subscripts = {v: k for k, v in _unicode_subscripts.items()}
@@ -110,7 +116,6 @@ def exponent_parser(exponent: str) -> int | frac:
             elif char in inverse_subscripts:
                 term_ascii += str(inverse_subscripts[char])
         terms_ascii.append(term_ascii)
-    print(terms_ascii)
     if len(terms_ascii) == 2:
         return frac(int(terms_ascii[0]), int(terms_ascii[1]))
     elif len(terms_ascii) == 1:

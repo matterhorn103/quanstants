@@ -1,6 +1,7 @@
 from .config import quanfig
 from .unicode import exponent_parser
 
+
 class UnitAlreadyDefinedError(Exception):
     pass
 
@@ -107,7 +108,7 @@ class UnitReg:
                 exponent = int(exponent_string)
             except ValueError:
                 exponent = exponent_parser(exponent_string)
-        term = getattr(self, unit_string) ** exponent_string
+        term = getattr(self, unit_string) ** exponent
         return term
 
     def parse(self, string: str):
@@ -166,8 +167,6 @@ class UnitReg:
         current_terms = terms
 
         for index, char in enumerate(string):
-            print(current_unit)
-            print(current_exponent)
             # Catch letters early, though there are non-letter characters that are valid for unit symbols
             if char.isalpha():
                 current_unit += char
@@ -177,11 +176,15 @@ class UnitReg:
             elif char in minus_chars:
                 current_exponent += char
             elif (char in multiplication_chars) or char.isspace():
-                current_terms.append(self._create_term(current_unit, current_exponent))
+                new_term = self._create_term(current_unit, current_exponent)
+                if new_term is not None:
+                    current_terms.append(new_term)
                 current_unit = ""
                 current_exponent = ""
             elif char in division_chars:
-                current_terms.append(self._create_term(current_unit, current_exponent))
+                new_term = self._create_term(current_unit, current_exponent)
+                if new_term is not None:
+                    current_terms.append(new_term)
                 current_unit = ""
                 current_exponent = ""
                 # Add subsequent terms to divisor instead
@@ -194,7 +197,9 @@ class UnitReg:
                 current_unit += char
         
         # Make sure final working unit gets parsed too
-        current_terms.append(self._create_term(current_unit, current_exponent))
+        final_term = self._create_term(current_unit, current_exponent)
+        if final_term is not None:
+            current_terms.append(final_term)
         # Arithmetic with terms to give final CompoundUnit
         try:
             parsed_unit = terms[0]
@@ -218,4 +223,7 @@ class UnitReg:
             return len(self.list_names(include_prefixed, prefixed_only))
         elif request == "units":
             return len(self.list_units(include_prefixed, prefixed_only))
-        
+
+
+# Instantiate the main unit registry, which all units will be added to
+unit_reg = UnitReg()

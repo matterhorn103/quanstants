@@ -5,7 +5,7 @@ from quanstants import (
     prefixes as qp,
     constants as qc,
     Quantity,
-    QuanstantsConfig,
+    quanfig,
 )
 
 

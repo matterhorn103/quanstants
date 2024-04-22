@@ -3,7 +3,7 @@ from decimal import Decimal as dec
 
 from .unit import Unitless, BaseUnit, DerivedUnit
 from .quantity import Quantity
-
+from . import temperature
 
 # fmt: off
 
@@ -12,7 +12,7 @@ second = BaseUnit("s", "second", dimension="T")
 metre = BaseUnit("m", "metre", dimension="L", alt_names=["meter"])
 kilogram = BaseUnit("kg", "kilogram", dimension="M", alt_names=["kilo"])
 ampere = BaseUnit("A", "ampere", dimension="I", alt_names=["amp"])
-kelvin = BaseUnit("K", "kelvin", dimension="Θ")
+kelvin = temperature.kelvin
 mole = BaseUnit("mol", "mole", dimension="N")
 candela = BaseUnit("cd", "candela", dimension="J")
 
@@ -55,7 +55,7 @@ siemens = DerivedUnit("S", "siemens", Quantity(1, kg**-1 * m**-2 * s**3 * A**2),
 weber = DerivedUnit("Wb", "weber", Quantity(1, kg * m**2 * s**-2 * A**-1), canon_symbol=True)
 tesla = DerivedUnit("T", "tesla", Quantity(1, kg * s**-2 * A**-1), canon_symbol=True)
 henry = DerivedUnit("H", "henry", Quantity(1, kg * m**2 * s**-2 * A**-2), canon_symbol=True)
-#degreeC TODO Don't define for now, need to work out how best to handle temp
+degreeCelsius = temperature.degreeCelsius
 lumen = DerivedUnit("lm", "lumen", Quantity(1, cd * sr), canon_symbol=True)
 lux = DerivedUnit("lx", "lux", Quantity(1, cd * sr * m**-2), canon_symbol=True)
 becquerel = DerivedUnit("Bq", "becquerel", Quantity(1, s**-1), canon_symbol=True)

@@ -5,7 +5,7 @@ import pytest
 
 from quanstants import (
     unicode,
-    QuanstantsConfig,
+    quanfig,
 )
 
 class TestGenerateSuperscript:
@@ -78,7 +78,7 @@ class TestGenerateSuperscript:
             unicode.generate_superscript(exponent)
 
     def test_unicode_superscripts_off(self):
-        QuanstantsConfig.UNICODE_SUPERSCRIPTS = False
+        quanfig.UNICODE_SUPERSCRIPTS = False
         # List of all exponents tested above, all should just return their string representation
         exponents = [1, 2, -2, 0, 12, -34, frac(1, 2), frac(3, 2), frac(-1, 2), frac(4, 2), frac(3, 3), frac(0, 2), 2.3, 2.0, dec("2.3"), dec("2.0")]
         for exponent in exponents:

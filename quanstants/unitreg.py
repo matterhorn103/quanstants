@@ -1,4 +1,10 @@
+from .config import quanfig
+from .unicode import exponent_parser
+
 class UnitAlreadyDefinedError(Exception):
+    pass
+
+class ParsingError(Exception):
     pass
 
 # Namespace class to contain all the units, making them useable with unit.m notation
@@ -90,59 +96,118 @@ class UnitReg:
             elif len(search["name"]["partial"]) > 0:
                 return getattr(self, search["name"]["partial"][0])
 
+    def _create_term(self, unit_string, exponent_string):
+        if len(unit_string) < 1:
+            return
+        exponent_string.replace("−", "-")
+        if len(exponent_string) < 1:
+            exponent = 1
+        else:
+            try:
+                exponent = int(exponent_string)
+            except ValueError:
+                exponent = exponent_parser(exponent_string)
+        term = getattr(self, unit_string) ** exponent_string
+        return term
+
     def parse(self, string: str):
         """Take a string of unit symbols or names and digits and convert to an appropriate Unit object.
         
-        The string should ideally take a form such as "kg m2 s-1", with terms separated by spaces and
+        Units may be specified by their symbols (which may be non-ASCII Unicode) or by one of their
+        defined names in the registry (which consist of ASCII letters, numbers, and underscores "_" only).
+
+        The string should ideally take a form such as `"kg m2 s-1"`, with terms separated by spaces and
         exponents given as ASCII integers directly appended to the respective unit, but various deviations
         are tolerated, as follows:
 
         Inverse units are ideally shown using negative exponents, but a _single_ U+002F "/" "SOLIDUS"
-        character is allowed within the string e.g. "kg m2 / s" for the above.
+        character (a normal slash) is allowed within the string e.g. `"kg m2 / s"` for the above.
         Similar characters are also checked for:
         U+2044 "⁄" "FRACTION SLASH", U+2215 "∕" "DIVISION SLASH"
-        If a slash is used, **all** components to the right of the slash are considered to together comprise
-        the divisor, e.g. "J / kg s" is treated as "J kg-1 s-1".
+        If a slash is used, **all** components to the right of the slash are considered to together
+        comprise the divisor, e.g. `"J / kg s"` is treated as `"J kg-1 s-1"`.
         Whitespace either side of the slash is ignored.
         Using more than one slash will throw an error.
 
         Brackets should _not_ be used within the string; they are completely ignored and do not affect the
-        order of operations, e.g. "(J / kg) s" is still parsed as "J kg-1 s-1".
+        order of operations, e.g. `"(J / kg) s"` is still parsed as `"J kg-1 s-1"`.
 
-        Multiplication of terms can be shown in various ways, but consistency is required.
-        Multiplication is expected primarily as whitespace (as implemented by `split()` without an
-        argument) so most different space characters are tolerated.
-        If whitespace is not found, the parser will attempt to split the terms by other characters until
-        a split has been made (or none of the characters were found), in the following order:
+        Multiplication is expected primarily as whitespace but can also be represented with dots.
+        The set of characters considered whitespace is the same as that described by the docs for
+        `str.isspace()`, so many different space characters are tolerated.
+        Any of the following dot-like characters may be also be used:
         U+002E "." "FULL STOP", U+00B7 "·" "MIDDLE DOT", U+22C5 "⋅" "DOT OPERATOR",
         U+2022 "•" "BULLET", U+2219 "∙" "BULLET_OPERATOR"
-        Asterisk characters * must _not_ be used.
+        U+002A "*" "ASTERISK", U+2217 "∗" "ASTERISK OPERATOR"
+        In addition, the current value of `quanfig.UNIT_SEPARATOR` is always valid.
 
-        Exponents preceded by U+005E "^" "CIRCUMFLEX ACCENT" or two asterisks ** are tolerated, but in no
-        case should there be any whitespace between a unit and its exponent.
-        The character U+002D "-" "HYPHEN-MINUS" is expected for negative exponents, but
-        U+2212 "−" "MINUS SIGN" is also tolerated.
-
+        A symbol is not necessary to indicate an exponent, but preceeding an exponent by
+        U+005E "^" "CIRCUMFLEX ACCENT" or two asterisks ** is tolerated.
+        However, in no case should there be any whitespace between a unit and its exponent.
+        The characters U+002D "-" "HYPHEN-MINUS" or U+207B "⁻" "SUPERSCRIPT MINUS" are expected for
+        negative exponents, but U+2212 "−" "MINUS SIGN" is also tolerated.
+        Fractional exponents may be indicated either:
+        * by a superscript numerator, subscript denominator, and a dividing U+2044 "⁄" "FRACTION SLASH"
+        e.g. `"⁻¹⁄₂"` - this is the style printed by `quanstants`
+        * by normal ASCII integers separated by a normal slash e.g. `"-1/2"` - this is the same as the
+        style printed by `str(Fraction(-1, 2))`
         """
-        # Remove any brackets
-        string = string.replace("(", "").replace(")", "")
-        # Split into dividend and divisor, if a slash is used
-        divided_string = string.split("/").split("⁄").split("∕")
-        # Remove any whitespace
-        fraction_terms = [term.strip() for term in divided_string]
-        # Split multiplied terms
-        for fraction_term in fraction_terms:
-            split_string = [fraction_term]
-            while len(split_string) == 1:
-                split_string = fraction_term.split()
-                split_string = fraction_term.split(".")
-                split_string = fraction_term.split("·")
-                split_string = fraction_term.split("⋅")
-                split_string = fraction_term.split("•")
-                split_string = fraction_term.split("∙")
-                break
-            
-            
+        multiplication_chars = [".", "·", "⋅", "•", "∙", "*", "∗", quanfig.UNIT_SEPARATOR]
+        division_chars = ["/", "⁄", "∕"]
+        exponent_chars = ["^"]
+        minus_chars = ["-", "⁻", "−"]
+        ignored_chars = ["(", ")", "[", "]", "{", "}"]
+        # Prepare string by trimming whitespace
+        string = string.strip()
+        current_unit = ""
+        current_exponent = ""
+        terms = []
+        divisor_terms = []
+        current_terms = terms
+
+        for index, char in enumerate(string):
+            print(current_unit)
+            print(current_exponent)
+            # Catch letters early, though there are non-letter characters that are valid for unit symbols
+            if char.isalpha():
+                current_unit += char
+            # Note that isdigit() also returns True for superscript digits
+            elif char.isdigit():
+                current_exponent += char
+            elif char in minus_chars:
+                current_exponent += char
+            elif (char in multiplication_chars) or char.isspace():
+                current_terms.append(self._create_term(current_unit, current_exponent))
+                current_unit = ""
+                current_exponent = ""
+            elif char in division_chars:
+                current_terms.append(self._create_term(current_unit, current_exponent))
+                current_unit = ""
+                current_exponent = ""
+                # Add subsequent terms to divisor instead
+                current_terms = divisor_terms
+            elif char in exponent_chars:
+                continue
+            elif char in ignored_chars:
+                continue
+            else:
+                current_unit += char
+        
+        # Make sure final working unit gets parsed too
+        current_terms.append(self._create_term(current_unit, current_exponent))
+        # Arithmetic with terms to give final CompoundUnit
+        try:
+            parsed_unit = terms[0]
+        except IndexError:
+            raise ParsingError("No units could be successfully parsed.")
+        for term in terms[1:]:
+            parsed_unit *= term
+        if len(divisor_terms) > 0:
+            divisor_unit = divisor_terms[0]
+            for term in divisor_terms[1:]:
+                divisor_unit *= term
+            parsed_unit = parsed_unit / divisor_unit
+        return parsed_unit
     
     def get_total(self, request: str, include_prefixed=True, prefixed_only=False):
         """Return the total number of defined names, units, or prefixed units according to the request.

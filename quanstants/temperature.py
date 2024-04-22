@@ -6,6 +6,10 @@ from .quantity import Quantity
 from .si import *
 
 
+# Define the most important unit of temperature, though as a BaseUnit not a TemperatureUnit
+kelvin = BaseUnit("K", "kelvin", dimension="Θ")
+
+
 class NotATemperatureError(Exception):
     pass
 

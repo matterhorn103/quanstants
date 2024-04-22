@@ -6,7 +6,7 @@ from decimal import Decimal as dec
 
 # Definition modules are unused but need to be imported so that dictionaries get populated
 # Import unit first because the other classes rely on it
-from .config import QuanstantsConfig
+from .config import quanfig
 from . import unit, si
 from . import prefix, prefix_defs
 from . import constant, constant_defs

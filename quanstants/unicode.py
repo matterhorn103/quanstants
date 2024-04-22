@@ -1,6 +1,6 @@
 from fractions import Fraction as frac
 
-from .config import QuanstantsConfig
+from .config import quanfig
 
 # Dictionary of correspondence between Factor.exponent, which is just an integer,
 # and the appropriate Unicode symbol. For now, only hard-code up to |9|
@@ -63,9 +63,16 @@ def multidigit(number: int, sub=False):
                 result += _unicode_superscripts[int(char)]
     return result
 
-# Also provide function to generate a superscript string
-def generate_superscript(exponent: int | frac):
-    if not QuanstantsConfig.UNICODE_SUPERSCRIPTS:
+def generate_superscript(exponent: int | frac) -> str:
+    """Generate a superscipt string from an integer or fraction.
+    
+    This is used to generate symbols for compound units and therefore to prepare their printed
+    representation.
+    Using Unicode superscript characters to represent exponents can be turned off by setting
+    `quanfig.UNICODE_SUPERSCRIPTS = False`, in which case the result is simply the same as
+    `str(exponent)`.
+    """
+    if not quanfig.UNICODE_SUPERSCRIPTS:
         superscript = str(exponent)
     elif exponent == 1:
         superscript = ""
@@ -77,3 +84,35 @@ def generate_superscript(exponent: int | frac):
     else:
         superscript = multidigit(exponent)
     return superscript
+
+def exponent_parser(exponent: str) -> int | frac:
+    """Generate an integer or fraction as appropriate from a string of Unicode representing an exponent.
+    
+    Does the reverse of `generate_superscript()`.
+    """
+    # First try the simple case, where the string is just a normal ASCII integer
+    try:
+        return int(exponent)
+    except ValueError:
+        # In which case we are dealing with superscript characters
+        pass
+    # Invert super/subscript dicts
+    inverse_superscripts = {v: k for k, v in _unicode_superscripts.items()}
+    inverse_subscripts = {v: k for k, v in _unicode_subscripts.items()}
+    terms_ascii = []
+    for term in exponent.split("⁄"):
+        term_ascii = ""
+        for char in term:
+            if char == "⁻":
+                term_ascii += "-"
+            elif char in inverse_superscripts:
+                term_ascii += str(inverse_superscripts[char])
+            elif char in inverse_subscripts:
+                term_ascii += str(inverse_subscripts[char])
+        terms_ascii.append(term_ascii)
+    print(terms_ascii)
+    if len(terms_ascii) == 2:
+        return frac(int(terms_ascii[0]), int(terms_ascii[1]))
+    elif len(terms_ascii) == 1:
+        return int(terms_ascii[0])
+        

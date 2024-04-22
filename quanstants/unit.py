@@ -2,31 +2,13 @@ from collections import namedtuple
 from decimal import Decimal as dec
 from fractions import Fraction as frac
 
-from .config import QuanstantsConfig
+from .config import quanfig
 from .quantity import Quantity
+from .unitreg import UnitReg
 from .unicode import generate_superscript
 
 
-class UnitAlreadyDefinedError(Exception):
-    pass
-
-# Namespace class to contain all the units, making them useable with unit.m notation
-class UnitReg:
-    def __init__(self):
-        self.total_names = 0
-        self.total_units = 0
-        self.total_prefixed = 0
-    def add(self, name: str, unit: "Unit"):
-        if hasattr(self, name):
-            raise UnitAlreadyDefinedError(f"{name} is already defined!")
-        if hasattr(unit, "prefix") and unit not in self.__dict__.values():
-            self.total_prefixed += 1
-        else:
-            self.total_names += 1
-            if unit not in self.__dict__.values():
-                self.total_units += 1
-        setattr(self, name, unit)
-
+# Instantiate the main unit registry, which all units will be added to
 unit_reg = UnitReg()
 
 # Create a named tuple that is used to hold a unit with its exponent
@@ -36,7 +18,7 @@ Factor = namedtuple("Factor", ["unit", "exponent"])
 def generate_symbol(
     components: tuple[Factor, ...],
     sort_by="sign",
-    inverse=QuanstantsConfig.INVERSE_UNIT,
+    inverse=quanfig.INVERSE_UNIT,
 ) -> str:
     # Create symbol as concatenation of symbols of components, with spaces
     terms = []
@@ -169,15 +151,14 @@ class Unit:
     def __str__(self):
         return f"Unit({self.symbol})"
 
-    # Only allow num * Unit, not Unit * num
-    # Quantity * Unit is defined by Quantity.__mul__()
+    # Units must always come at the end of expressions, so do not define Unit * num or Unit / num
+    # Operations with Quantity are defined in the Quantity class
     def __rmul__(self, other):
         if isinstance(other, (str, int, float, dec)):
             return Quantity(other, self)
         else:
             return NotImplemented
 
-    # Just define for Unit * otherUnit or Unit * UnitlessUnit, not Unit * num
     def __mul__(self, other):
         if isinstance(other, Unitless):
             return self
@@ -186,15 +167,12 @@ class Unit:
         else:
             return NotImplemented
 
-    # Only allow num / Unit, not Unit / num
-    # Quantity / Unit is defined by Quantity.__div__()
     def __rtruediv__(self, other):
         if isinstance(other, (str, int, float, dec)):
             return Quantity(other, self.inverse())
         else:
             return NotImplemented
         
-    # Just define for Unit / otherUnit and Unit / Unitless
     def __truediv__(self, other):
         if isinstance(other, Unitless):
             return self
@@ -212,7 +190,6 @@ class Unit:
             new_components = tuple((Factor(component.unit, component.exponent * other) for component in self.components),)
             return CompoundUnit(new_components)
         elif isinstance(other, str):
-            # Tuple comprehensions don't exist so make a tuple from a generator
             new_components = tuple((Factor(component.unit, component.exponent * frac(other)) for component in self.components),)
             return CompoundUnit(new_components)
         else:
@@ -366,7 +343,7 @@ class CompoundUnit(Unit):
             add_to_reg: bool = False,
             alt_names: list | None = None,
             symbol_sort: str = "sign",
-            symbol_inverse: str = QuanstantsConfig.INVERSE_UNIT,
+            symbol_inverse: str = quanfig.INVERSE_UNIT,
             combine_symbol: bool = True,
         ):
         # If no components passed, first get components from list of units

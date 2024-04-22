@@ -3,7 +3,7 @@ from decimal import localcontext
 from fractions import Fraction as frac
 import math
 
-from .config import QuanstantsConfig
+from .config import quanfig
 
 class MismatchedUnitsError(Exception):
     pass
@@ -101,14 +101,14 @@ class Quantity:
         # the user *thinks* the float is, not of the actual binary float value e.g. str(5.2) gives 
         # "5.2" but dec(5.2) gives Decimal('5.20000000000000017763568394002504646778106689453125')
         # and we want to give the user what they think they have -- Decimal('5.2')
-        if QuanstantsConfig.CONVERT_FLOAT_AS_STR:
+        if quanfig.CONVERT_FLOAT_AS_STR:
             self._number = dec(str(number))
         else:
             self._number = dec(number)
         self._unit = unit
         if (uncertainty is None) or (uncertainty == "(exact)"):
             self._uncertainty = "(exact)"
-        elif QuanstantsConfig.CONVERT_FLOAT_AS_STR:
+        elif quanfig.CONVERT_FLOAT_AS_STR:
             self._uncertainty = dec(str(uncertainty))
         else:
             self._uncertainty = dec(uncertainty)
@@ -291,14 +291,14 @@ class Quantity:
         
         By default, rounds to the specified number of decimal places.
 
-        Calls one of the other rounding methods depending on the value of `QuanstantsConfig.ROUND_TO`:
+        Calls one of the other rounding methods depending on the value of `quanfig.ROUND_TO`:
         "PLACES" (default) ⇒ `Quantity.places()`
         "FIGURES" ⇒ `Quantity.sigfigs()`
         "UNCERTAINTY" ⇒ `Quantity.round_to_uncertainty()`
         """
-        if QuanstantsConfig.ROUND_TO == "FIGURES":
+        if quanfig.ROUND_TO == "FIGURES":
             return self.sigfigs(ndigits)
-        elif QuanstantsConfig.ROUND_TO == "UNCERTAINTY":
+        elif quanfig.ROUND_TO == "UNCERTAINTY":
             return self.round_to_uncertainty(ndigits)
         else:
             return self.places(ndigits)
@@ -311,7 +311,7 @@ class Quantity:
         to nearest with ties going away from zero.
 
         Like siunitx, by default extra zeroes will be added to a short number to reach the desired
-        number of decimal places. This can be turned off by changing `QuanstantsConfig.ROUND_PAD`.
+        number of decimal places. This can be turned off by changing `quanfig.ROUND_PAD`.
 
         Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
         specified by `quanstants.ROUNDING_MODE` does not override the current `decimal.Context()`
@@ -320,28 +320,28 @@ class Quantity:
         """
         current_places = self.number.as_tuple().exponent * -1
         # Don't round if padding is turned off and the number doesn't have enough places
-        if (not QuanstantsConfig.ROUND_PAD) and (current_places < ndigits):
+        if (not quanfig.ROUND_PAD) and (current_places < ndigits):
             return self
         # Set decimal rounding to the specified method, which by default is the traditionally
         # expected behaviour
         # Use in a local context so that user's context isn't overwritten
         with localcontext() as ctx:
-            ctx.rounding=QuanstantsConfig.ROUNDING_MODE
+            ctx.rounding=quanfig.ROUNDING_MODE
             rounded = Quantity(round(self.number, ndigits), self.unit)
         return rounded
     
     def sigfigs(self, nsigfigs=1):
         """Return the quantity with the numerical part rounded to the specified number of significant figures.
         
-        The method used for rounding is that specified by `QuanstantsConfig.ROUNDING_MODE`, which takes
+        The method used for rounding is that specified by `quanfig.ROUNDING_MODE`, which takes
         any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`, i.e. to 
         nearest with ties going away from zero.
 
         Like siunitx, by default extra zeroes will be added to a short number to reach the desired
-        number of significant figures. This can be turned off by changing `QuanstantsConfig.ROUND_PAD`.
+        number of significant figures. This can be turned off by changing `quanfig.ROUND_PAD`.
 
         Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
-        specified by `QuanstantsConfig.ROUNDING_MODE` does not override the current `decimal.Context()`
+        specified by `quanfig.ROUNDING_MODE` does not override the current `decimal.Context()`
         and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
         which by default uses `"ROUND_HALF_EVEN"`.
         """
@@ -356,7 +356,7 @@ class Quantity:
             # expected behaviour
             # Use in a local context so that user's context isn't overwritten
             with localcontext() as ctx:
-                ctx.rounding=QuanstantsConfig.ROUNDING_MODE
+                ctx.rounding=quanfig.ROUNDING_MODE
                 rounded_significand = round(significand, nsigfigs - 1)
             return Quantity(rounded_significand * dec(f"1E{exponent}"), self.unit)
         elif nsigfigs > len(digits):
@@ -371,17 +371,17 @@ class Quantity:
     def round_to_uncertainty(self, nsigfigs=1):
         """Round the uncertainty to the specified number of digits, then return the quantity with the numerical part rounded to the same precision.
         
-        The method used for rounding is that specified by `QuanstantsConfig.ROUNDING_MODE`, which takes
+        The method used for rounding is that specified by `quanfig.ROUNDING_MODE`, which takes
         any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`, i.e. to 
         nearest with ties going away from zero.
 
         Like siunitx, by default extra zeroes will be added to a short number to reach the same number
-        of digits as the uncertainty. This can be turned off by changing `QuanstantsConfig.ROUND_PAD`.
+        of digits as the uncertainty. This can be turned off by changing `quanfig.ROUND_PAD`.
         However, no padding is applied to the uncertainty, so the rounded quantity will never have a
         precision greater than the original uncertainty.
 
         Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
-        specified by `QuanstantsConfig.ROUNDING_MODE` does not override the current `decimal.Context()`
+        specified by `quanfig.ROUNDING_MODE` does not override the current `decimal.Context()`
         and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
         which by default uses `"ROUND_HALF_EVEN"`.
         """
@@ -398,7 +398,7 @@ class Quantity:
             # expected behaviour
             # Use in a local context so that user's context isn't overwritten
             with localcontext() as ctx:
-                ctx.rounding=QuanstantsConfig.ROUNDING_MODE
+                ctx.rounding=quanfig.ROUNDING_MODE
                 rounded_significand = round(significand, nsigfigs - 1)
             rounded_uncertainty = rounded_significand * dec(f"1E{exponent}")
         # Now round the number to the same precision

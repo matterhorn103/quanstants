@@ -4,6 +4,7 @@ from decimal import Decimal as dec
 from .unit import BaseUnit, DerivedUnit, unitless
 from .quantity import Quantity
 from . import temperature
+from .temperature import TemperatureUnit
 
 # fmt: off
 
@@ -50,7 +51,7 @@ siemens = DerivedUnit("S", "siemens", Quantity(1, kg**-1 * m**-2 * s**3 * A**2),
 weber = DerivedUnit("Wb", "weber", Quantity(1, kg * m**2 * s**-2 * A**-1), canon_symbol=True)
 tesla = DerivedUnit("T", "tesla", Quantity(1, kg * s**-2 * A**-1), canon_symbol=True)
 henry = DerivedUnit("H", "henry", Quantity(1, kg * m**2 * s**-2 * A**-2), canon_symbol=True)
-degreeCelsius = temperature.degreeCelsius
+degreeCelsius = TemperatureUnit( "°C", "degreeCelsius", "1", "273.15", add_to_reg=True, canon_symbol=True, alt_names=["degree_Celsius", "degreeC", "celsius", "degreeCentigrade", "degree_Centigrade", "centigrade"])
 lumen = DerivedUnit("lm", "lumen", Quantity(1, cd * sr), canon_symbol=True)
 lux = DerivedUnit("lx", "lux", Quantity(1, cd * sr * m**-2), canon_symbol=True)
 becquerel = DerivedUnit("Bq", "becquerel", Quantity(1, s**-1), canon_symbol=True)
@@ -68,9 +69,9 @@ day = DerivedUnit("d", "day", Quantity(86400, s), canon_symbol=True)
 #decibel TODO
 degree = DerivedUnit("°", "degree", Quantity(dec(math.pi)/180, rad), canon_symbol=True)
 electronvolt = DerivedUnit("eV", "electronvolt", Quantity("1.602176634e-19", joule), canon_symbol=True)
-hectare = DerivedUnit("ha", "hectare", Quantity("1E4", m**2), canon_symbol=True)
+hectare = DerivedUnit("ha", "hectare", Quantity("1e4", m**2), canon_symbol=True)
 hour = DerivedUnit("h", "hour", Quantity(3600, s), canon_symbol=True)
-litre = DerivedUnit("L", "litre", Quantity("1E-3", m**3), canon_symbol=True, alt_names=["liter"])
+litre = DerivedUnit("L", "litre", Quantity("1e-3", m**3), canon_symbol=True, alt_names=["liter"])
 minute = DerivedUnit("min", "minute", Quantity(60, s), canon_symbol=True)
 #neper TODO
 tonne = DerivedUnit("t", "tonne", Quantity(1000, kg), canon_symbol=True)

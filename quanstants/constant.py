@@ -118,6 +118,9 @@ class Constant(Quantity):
         if add_to_reg:
             self.add_to_reg(reg=reg, add_symbol=canon_symbol)
     
+    # Always access properties via self.x not self._x for consistency
+    # self._x is slightly faster, but even for time-critical operations it makes v little difference
+    # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 µs)
     @property
     def symbol(self):
         return self._symbol
@@ -139,7 +142,7 @@ class Constant(Quantity):
 
     def __str__(self):
         value_as_string = super().__str__()
-        if self.name is not None:
+        if self._name is not None:
             return f"{self.name} = {value_as_string}"
         else:
             return f"{self.symbol} = {value_as_string}"

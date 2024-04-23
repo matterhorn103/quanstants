@@ -535,6 +535,9 @@ class DerivedUnit(Unit):
             alt_names=alt_names,
         )
 
+    # Always access properties via self.x not self._x for consistency
+    # self._x is slightly faster, but even for time-critical operations it makes v little difference
+    # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 µs)
     @property
     def value(self):
         return self._value

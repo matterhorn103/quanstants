@@ -1,7 +1,6 @@
 from .prefix import Prefix, PrefixedUnit
 
 from .si import *
-from .metric import watthour
 
 
 # fmt: off
@@ -91,8 +90,6 @@ for p in common_prefixes[2:7]:
 
 for p in common_prefixes[3:9]:
     PrefixedUnit(p, watt, add_to_reg=True)
-
-PrefixedUnit(kilo, watthour, add_to_reg=True)
 
 for p in common_prefixes[3:8]:
     PrefixedUnit(p, joule, add_to_reg=True)

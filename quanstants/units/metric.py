@@ -1,6 +1,8 @@
-from .unit import DerivedUnit
-from .quantity import Quantity
-from .si import *
+from ..unit import DerivedUnit
+from ..prefix import PrefixedUnit
+from ..prefix_defs import kilo
+from ..quantity import Quantity
+from ..si import *
 
 # fmt: off
 
@@ -20,6 +22,7 @@ parts_per_quadrillion = DerivedUnit("ppq", "parts_per_quadrillion", Quantity("1e
 
 # Other
 watthour = DerivedUnit("Wh", "watthour", Quantity("3.6E6", joule), canon_symbol=True)
+kilowatthour = PrefixedUnit(kilo, watthour, add_to_reg=True)
 
 # Temperature
 #celsius

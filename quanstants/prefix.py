@@ -25,6 +25,8 @@ class Prefix:
     """An object representing a (usually metric) prefix.
     
     Combines with a `BaseUnit` or `DerivedUnit` to form a new `PrefixedUnit`.
+    Prefixes are automatically added under both symbol and name to the default prefix registry, which
+    is accessible via `quanstants.prefixes`.
     """
     def __init__(
         self,

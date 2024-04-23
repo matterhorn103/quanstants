@@ -1,7 +1,7 @@
 import math
 from decimal import Decimal as dec
 
-from .unit import Unitless, BaseUnit, DerivedUnit
+from .unit import BaseUnit, DerivedUnit, unitless
 from .quantity import Quantity
 from . import temperature
 
@@ -30,11 +30,6 @@ mol = mole
 cd = candela
 rad = radian
 sr = steradian
-
-
-# Special unitless dimensionless unit
-# TODO: consider moving somewhere else, but no obvious place for it
-unitless = Unitless(add_to_reg=True)
 
 
 # Derived units

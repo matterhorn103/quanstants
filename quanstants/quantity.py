@@ -2,14 +2,17 @@ from decimal import Decimal as dec
 from decimal import localcontext
 from fractions import Fraction as frac
 import math
+from typing import Self
 
 from .config import quanfig
+from .uncertainties import get_uncertainty
 from .unitreg import unit_reg
+
 
 class MismatchedUnitsError(Exception):
     pass
 
-class NotUnitlessError(Exception):
+class NotDimensionlessError(Exception):
     pass
 
 class Quantity:
@@ -24,7 +27,18 @@ class Quantity:
     `uncertainty` is not specified or given as the string `"(exact)"` or `None` (default), the
     quantity`s uncertainty is set to `"(exact)"`.
 
-    If only a single string is provided, it will be parsed and split into the appropriate strings.
+    Normally, `number` and `unit` are both required. To create a unitless quantity, the special unitless
+    unit (found in the main registry i.e. under `quanstants.units.unitless`) should be provided.
+
+    Alternatively, all three may be left as `None` and `value` maybe specified instead as either a
+    string or another `Quantity`. Passing a string simply invokes `Quantity.parse(value)`.
+
+    If only a single string is passed to `number`, and no unit is provided, the string will be parsed
+    by `Quantity.parse()`, so if it contains both a number and a unit, an appropriate `Quantity` will
+    be created.
+
+    However, while both the above work, the preferred method for quantity creation from a single string
+    is to call `Quantity.parse(string)`.
 
     Both `number` and `uncertainty` are stored internally as `Decimal` objects and provided values are
     first converted to `Decimal`. By making `Decimal` the default, quantities behave as the user would
@@ -34,32 +48,39 @@ class Quantity:
     * quantities round according to users' expectations (see `Quantity.round()`).
 
     Mathematical operations are in general performed with the quantity considered to be the product of
-    its number and unit. The implementation of arithmetic on the numerical part is typically that of
+    its number and unit. The implementation of arithmetic on the numerical part(s) is typically that of
     the `Decimal` type.
 
-    Arithmetic with instances of `Quantity` can be performed in the usual way with the operators `*` and
-    `/`. The results will posess the correct number to the correct precision, the correct compound
-    `+ - * / **`. Addition and subtraction will raise a `MismatchedUnitsError` if the units of the two
+    Arithmetic with instances of `Quantity` can be performed in the usual way with the operators
+    `+ - * / **`. The results will posess the correct number to the correct precision, the correct
+    compound unit, and the correct uncertainty.
+
+    Addition and subtraction will raise a `MismatchedUnitsError` if the units of the two
     do not match, which serves as a useful sanity check. Quantities with the same dimension,
     however, can be added and subtracted, and the result will have the unit of the first of the two
     values:
 
-    ```
-    >>> (4 * units.metre) + (50 * units.centimetre)
+    ```python
+    >>> from quanstants import units as qu
+    >>> (4 * qu.metre) + (50 * qu.centimetre)
     Quantity(4.5, m)
-    >>> (50 * units.centimetre) + (4 * units.metre)
+    >>> (50 * qu.centimetre) + (4 * qu.metre)
     Quantity(450, cm)
-    >>> (4 * units.metre) + (3 * units.kilogram)
+    >>> (4 * qu.metre) + (3 * qu.kilogram)
     quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
     ```
 
     Similarly, (in)equalities between quantities with the same dimension are supported.
 
+    Quantities can be raised to either integer or fractional powers (with `fractions.Fraction`).
+    Quantities are not themselves valid exponents unless they are dimensionless.
+
+    As is the case for `Decimal`, the mathematical functions `.sqrt()`, `.exp()`, `.ln()`, and
+    `.log10()` are available. Once again, however, these can only be used on dimensionless quantities.
+    Whether a quantity is dimensionless can be checked with `.is_dimensionless()`.
+
     Rounding can be performed either to an integer, a given number of decimal places, or a given number
     of significant figures.
-
-    As for `Decimal`, the mathematical functions `.sqrt()`, `.exp()`, `.ln()`, and `.log10()` are
-    available.
 
     By default, units of the results of arithmetic with quantities are not cancelled out automatically.
     This can be done on demand using `.cancel()`.
@@ -68,20 +89,28 @@ class Quantity:
     SI base units, `.base()` is provided.
     
     `.canonical()` returns the quantity with its units in a set, reproducible order.
-    
-    If `quanstants.CONVERT_FLOAT_AS_STR` is `True`, as it is by default, a provided `float` is first
-    converted to a `str`, then to a `Decimal`. The result is that providing `number=5.2` gives a
-    `Quantity` with the exact numerical value 5.2, as the user likely expects, as opposed to the true
-    decimal representation of the binary float 5.2, which they likely don't:
 
-    ```
-    >>> 5.2 * units.kilogram
+    Note that when uncertainties are calculated automatically it is done under the assumption that two
+    quantities are completely uncorrelated with correlation = covariance = 0. This can lead to errors.
+    If you know the correlation between two quantities, you can get the correct uncertainty by calling
+    the appropriate dunder method directly and passing the correlation as a second, optional argument
+    e.g. if `a` and `b` are correlated quantities and you want `c = a * b`, use `c = a.__mul__(b, 0.9)`
+    instead.
+    
+    If `quanstants.quanfig.CONVERT_FLOAT_AS_STR` is `True`, as it is by default, all provided `float`
+    values are first converted to `str`, then to `Decimal`. The result is that providing `number=5.2`
+    gives a `Quantity` with the exact numerical value 5.2, as the user likely expects, as opposed to
+    the true decimal representation of the binary float 5.2, which they likely don't:
+
+    ```python
+    >>> from quanstants import units as qu, Quantity
+    >>> 5.2 * qu.kilogram
     Quantity(5.2, kg)
-    >>> Quantity(5.2, units.kilogram)
+    >>> Quantity(5.2, qu.kilogram)
     Quantity(5.2, kg)
-    >>> Quantity(5.2, units.kilogram).number
+    >>> Quantity(5.2, qu.kilogram).number
     Decimal('5.2')
-    >>> Decimal(5.2)
+    >>> Decimal(5.2) # Compare with the above
     Decimal('5.20000000000000017763568394002504646778106689453125')
     >>> Decimal("5.2")
     Decimal('5.2')
@@ -91,21 +120,27 @@ class Quantity:
 
     This behaviour lowers the barrier to entry for non-expert users. However, if for whatever reason it
     should be desirable to have floats be converted directly to decimals, set
-    `quanstants.CONVERT_FLOAT_AS_STR=False`.
+    `quanstants.quanfig.CONVERT_FLOAT_AS_STR=False`.
     """
     def __init__(
         self,
-        number: str | int | float | dec,
+        number: str | int | float | dec | None = None,
         unit = None,
         uncertainty: str | int | float | dec | None = None,
+        value: str | Self | None = None,
     ):
-        # Use Decimal type internally, exclusively
-        # By default convert to string then to dec so that the resulting dec is the same as what
-        # the user *thinks* the float is, not of the actual binary float value e.g. str(5.2) gives 
-        # "5.2" but dec(5.2) gives Decimal('5.20000000000000017763568394002504646778106689453125')
-        # and we want to give the user what they think they have -- Decimal('5.2')
-        if isinstance(number, str) and unit is None and uncertainty is None:
-            number, unit, uncertainty = self._parse(number)
+        # Making a Quantity from a single string should be done with `Quantity.parse()`, but allow for the
+        # fact that people might also just try to pass a string straight to `Quantity()`
+        if (isinstance(number, str)) and (unit is None) and (uncertainty is None) and (value is None):
+            parsed = self.parse(number)
+            number, unit, uncertainty = parsed.number, parsed.unit, parsed.uncertainty
+        # Accept a string or other Quantity
+        if (number is None) and (unit is None) and (value is not None):
+            if isinstance(value, str):
+                parsed = self.parse(value)
+                number, unit, uncertainty = parsed.number, parsed.unit, parsed.uncertainty
+            else:
+                number, unit, uncertainty = value.number, value.unit, value.uncertainty
         if quanfig.CONVERT_FLOAT_AS_STR:
             self._number = dec(str(number))
         else:
@@ -147,14 +182,14 @@ class Quantity:
             
     def __int__(self):
         if not self.is_dimensionless():
-            raise NotUnitlessError("Cannot cast a non-dimensionless quantity to an integer!")
+            raise NotDimensionlessError("Cannot cast a non-dimensionless quantity to an integer!")
         else:
             dimensionless_quant = self.base().cancel()
             return int(dimensionless_quant.number)
     
     def __float__(self):
         if not self.is_dimensionless():
-            raise NotUnitlessError("Cannot cast a non-dimensionless quantity to a float!")
+            raise NotDimensionlessError("Cannot cast a non-dimensionless quantity to a float!")
         else:
             dimensionless_quant = self.base().cancel()
             return float(dimensionless_quant.number)
@@ -185,18 +220,23 @@ class Quantity:
         else:
             return NotImplemented
 
-    def __mul__(self, other):
+    def __mul__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
             return Quantity(self.number * dec(str(other)), self.unit)
         elif isinstance(other, Quantity):
-            return Quantity(self.number * other.number, self.unit * other.unit)
+            if (self.uncertainty is None) and (other.uncertainty is None):
+                return Quantity(self.number * other.number, self.unit * other.unit)
+            else:
+                new_number = self.number * other.number
+                new_uncertainty = get_uncertainty(new_number, "mul", self, other, correlation)
+                return Quantity(new_number, self.unit * other.unit, new_uncertainty)
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
             return Quantity(self.number, self.unit * other)
         else:
             return NotImplemented
     
-    def __rmul__(self, other):
+    def __rmul__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
             return Quantity(dec(str(other)) * self.number, self.unit)
         # Check if it's a unit with duck typing
@@ -205,7 +245,7 @@ class Quantity:
         else:
             return NotImplemented
     
-    def __truediv__(self, other):
+    def __truediv__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
             return Quantity(self.number / dec(str(other)), self.unit)
         elif isinstance(other, Quantity):
@@ -216,7 +256,7 @@ class Quantity:
         else:
             return NotImplemented
     
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
             return Quantity(dec(str(other)) / self.number, self.unit.inverse())
         # Check if it's a unit with duck typing
@@ -235,9 +275,9 @@ class Quantity:
             return NotImplemented
     
     # Can only use a Quantity as an exponent if it is unitless
-    def __rpow__(self, other):
+    def __rpow__(self, other, correlation=0):
         if not self.is_dimensionless():
-            raise NotUnitlessError("Cannot raise to the power of a non-dimensionless quantity!")
+            raise NotDimensionlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
             return other ** (dimensionless_quant.number)
@@ -419,7 +459,7 @@ class Quantity:
     def exp(self):
         """Return the value of e raised to the power of the quantity, for dimensionless quantities only."""
         if not self.is_dimensionless():
-            raise NotUnitlessError("Cannot raise to the power of a non-dimensionless quantity!")
+            raise NotDimensionlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
             return dimensionless_quant.number.exp()
@@ -427,7 +467,7 @@ class Quantity:
     def ln(self):
         """Return the natural logarithm of the quantity, for dimensionless quantities only."""
         if not self.is_dimensionless():
-            raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
+            raise NotDimensionlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
             return dimensionless_quant.number.ln()
@@ -435,7 +475,7 @@ class Quantity:
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
         if not self.is_dimensionless():
-            raise NotUnitlessError("Cannot take the logarithm of a non-dimensionless quantity!")
+            raise NotDimensionlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
             return dimensionless_quant.number.log10()
@@ -479,8 +519,20 @@ class Quantity:
             result = (self.base() / other.base()).cancel()
             return Quantity(result.number, result.unit._mul_with_concat(other))
 
-    def _parse(self, string):
+    @classmethod
+    def parse(cls, string: str):
+        """Take a string of a number and unit, and optionally an uncertainty, and convert to an appropriate `Quantity` object.
+
+        The string should take the form "<number> <unit>", with number and unit separated by whitespace.
+        After separation, the number string is turned directly into a `Decimal`, so it can be any string that
+        `Decimal()` accepts.
+        The unit string is parsed by `quanstants.units.parse()` (where `quanstants.units` is the main
+        instance of `quanstants.unitreg.UnitReg`), so it must follow the same rules as for that.
+        """
         # Split at first whitespace into number part and unit part
         # TODO parse uncertainty too
         split_string = string.split(maxsplit=1)
-        return (split_string[0], split_string[1], None)
+        if len(split_string) < 2:
+            raise ValueError("String must contain both a number and a unit, separated by whitespace.")
+        else:
+            return cls(split_string[0], split_string[1], None)

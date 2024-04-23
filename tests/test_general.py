@@ -74,11 +74,11 @@ class TestQuantityCreation:
 
 class TestUnitsAndPrefixes:
     def test_imperial(self):
-        from quanstants import imperial
+        from quanstants.units import imperial
         q = 6 * qu.foot
         assert str(q) == "6 ft"
         
     def test_us(self):
-        from quanstants import us
+        from quanstants.units import us
         q = 20 * qu.us_fluid_ounce
         assert str(q) == "20 fl oz"

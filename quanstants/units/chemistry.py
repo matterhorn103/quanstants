@@ -1,10 +1,10 @@
 import math
 from decimal import Decimal as dec
 
-from .unit import Unitless, BaseUnit, CompoundUnit, DerivedUnit, Factor
-from .quantity import Quantity
-from .si import *
-from .prefix_defs import centimetre
+from ..unit import Unitless, BaseUnit, CompoundUnit, DerivedUnit, Factor
+from ..quantity import Quantity
+from ..si import *
+from ..prefix_defs import centimetre
 
 # fmt: off
 

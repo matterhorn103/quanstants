@@ -1,6 +1,6 @@
-from .unit import DerivedUnit
-from .quantity import Quantity
-from .si import *
+from ..unit import DerivedUnit
+from ..quantity import Quantity
+from ..si import *
 
 # fmt: off
 

@@ -17,7 +17,7 @@ class UnitReg:
         Names in the registry's namespace cannot be overwritten in this way, and attempting to add a unit
         under a name that is already defined will raise a `UnitAlreadyDefinedError`.
         If it is necessary to redefine a name, do it by setting the attribute in the normal way i.e.
-        `UnitReg().already_assigned_name = new_value`.
+        `UnitReg.already_assigned_name = new_value`.
         """
         if hasattr(self, name):
             raise UnitAlreadyDefinedError(f"{name} is already defined!")
@@ -225,5 +225,5 @@ class UnitReg:
             return len(self.list_units(include_prefixed, prefixed_only))
 
 
-# Instantiate the main unit registry, which all units will be added to
+# Instantiate the main unit registry, which all units will be added to by default
 unit_reg = UnitReg()

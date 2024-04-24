@@ -315,6 +315,10 @@ class Unitless(Unit):
             return other.inverse()
         else:
             return NotImplemented
+    
+    # Unitless is basically equal to 1, so if raised to the power of something else, return self
+    def __pow__(self, other):
+        return self
 
     def base(self):
         """Return unity as a unitless Quantity."""

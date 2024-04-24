@@ -24,8 +24,9 @@ class Quantity:
     `unit` is any `BaseUnit` or `DerivedUnit`, or any `CompoundUnit` formed by multiplication thereof,
     or any instance of the special `Unitless` unit.
     `uncertainty` is also any type that can be converted to `Decimal`, including strings, however if
-    `uncertainty` is not specified or given as the string `"(exact)"` or `None` (default), the
-    quantity`s uncertainty is set to `"(exact)"`.
+    `uncertainty` is not specified or given as `0` or `None` (default) or anything else "falsy" then
+    the quantity`s uncertainty is set to `0`.
+    `uncertainty` may also be a `Quantity` itself, which is useful if it was calculated separately.
 
     Normally, `number` and `unit` are both required. To create a unitless quantity, the special unitless
     unit (found in the main registry i.e. under `quanstants.units.unitless`) should be provided.
@@ -126,7 +127,7 @@ class Quantity:
         self,
         number: str | int | float | dec | None = None,
         unit = None,
-        uncertainty: str | int | float | dec | None = None,
+        uncertainty: str | int | float | dec | Self | None = None,
         value: str | Self | None = None,
     ):
         # Making a Quantity from a single string should be done with `Quantity.parse()`, but allow for the
@@ -147,10 +148,19 @@ class Quantity:
             self._number = dec(number)
         if isinstance(unit, str):
             self._unit = unit_reg.parse(unit)
+        elif unit is None:
+            # Have to do the import here to avoid circular import
+            from .unit import unitless
+            self._unit = unitless
         else:
             self._unit = unit
-        if (uncertainty is None) or (uncertainty == "(exact)"):
-            self._uncertainty = "(exact)"
+        if not uncertainty:
+            self._uncertainty = 0
+        elif isinstance(uncertainty, Quantity):
+            if uncertainty.unit != self._unit:
+                self._uncertainty = uncertainty.to(self._unit).number
+            else:
+                self._uncertainty = uncertainty.number
         elif quanfig.CONVERT_FLOAT_AS_STR:
             self._uncertainty = dec(str(uncertainty))
         else:
@@ -167,21 +177,23 @@ class Quantity:
     def unit(self):
         return self._unit
     
+    # Note that the uncertainty is returned to the user as a Quantity, while internally usually the
+    # decimal value should be accessed with _uncertainty
     @property
     def uncertainty(self):
-        return self._uncertainty
+        return Quantity(self._uncertainty, self._unit)
 
     def __repr__(self):
-        if self.uncertainty == "(exact)":
+        if not self._uncertainty:
             return f"Quantity({self.number}, {self.unit.symbol})"
         else:
-            return f"Quantity({self.number}, {self.unit.symbol}, uncertainty={self.uncertainty})"
+            return f"Quantity({self.number}, {self.unit.symbol}, uncertainty={self._uncertainty})"
 
     def __str__(self):
-        if self.uncertainty == "(exact)":
+        if not self._uncertainty:
             return f"{self.number} {self.unit.symbol}"
         else:
-            return f"{self.number}({''.join([str(n) for n in self.uncertainty.as_tuple().digits])}) {self.unit.symbol}"
+            return f"{self.number}({''.join([str(n) for n in self._uncertainty.as_tuple().digits])}) {self.unit.symbol}"
             
     def __int__(self):
         if not self.is_dimensionless():
@@ -225,34 +237,58 @@ class Quantity:
 
     def __mul__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
-            return Quantity(self.number * dec(str(other)), self.unit)
+            other = dec(str(other))
+            new_number = self.number * other
+            new_uncertainty = get_uncertainty(new_number, "mul", self, numberx=other, correlation=correlation)
+            return Quantity(new_number, self.unit, new_uncertainty)
         elif isinstance(other, Quantity):
-            if (self.uncertainty is None) and (other.uncertainty is None):
-                return Quantity(self.number * other.number, self.unit * other.unit)
+            new_number = self.number * other.number
+            new_uncertainty = get_uncertainty(new_number, "mul", self, quantityB=other, correlation=correlation)
+            result = Quantity(new_number, self.unit * other.unit, new_uncertainty)
+            if quanfig.AUTO_CANCEL:
+                return result.cancel()
             else:
-                new_number = self.number * other.number
-                new_uncertainty = get_uncertainty(new_number, "mul", self, other, correlation)
-                return Quantity(new_number, self.unit * other.unit, new_uncertainty)
+                return result
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
-            return Quantity(self.number, self.unit * other)
+            result = Quantity(self.number, self.unit * other)
+            if quanfig.AUTO_CANCEL:
+                return result.cancel()
+            else:
+                return result
         else:
             return NotImplemented
     
     def __rmul__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
-            return Quantity(dec(str(other)) * self.number, self.unit)
+            other = dec(str(other))
+            new_number = other * self.number
+            new_uncertainty = get_uncertainty(new_number, "mul", self, numberx=other, correlation=correlation)
+            return Quantity(new_number, self.unit, new_uncertainty)
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
-            return Quantity(self.number, other * self.unit)
+            result = Quantity(self.number, other * self.unit)
+            if quanfig.AUTO_CANCEL:
+                return result.cancel()
+            else:
+                return result
         else:
             return NotImplemented
     
     def __truediv__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
-            return Quantity(self.number / dec(str(other)), self.unit)
+            other = dec(str(other))
+            new_number = self.number / other
+            new_uncertainty = get_uncertainty(new_number, "truediv", self, numberx=other, correlation=correlation)
+            return Quantity(new_number, self.unit, new_uncertainty)
         elif isinstance(other, Quantity):
-            return Quantity(self.number / other.number, self.unit / other.unit)
+            new_number = self.number / other.number
+            new_uncertainty = get_uncertainty(new_number, "truediv", self, quantityB=other, correlation=correlation)
+            result = Quantity(new_number, self.unit / other.unit, new_uncertainty)
+            if quanfig.AUTO_CANCEL:
+                return result.cancel()
+            else:
+                return result
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
             return Quantity(self.number, self.unit / other)
@@ -261,7 +297,10 @@ class Quantity:
     
     def __rtruediv__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
-            return Quantity(dec(str(other)) / self.number, self.unit.inverse())
+            other = dec(str(other))
+            new_number = other / self.number
+            new_uncertainty = get_uncertainty(new_number, "rtruediv", self, numberx=other, correlation=correlation)
+            return Quantity(new_number, self.unit.inverse(), new_uncertainty)
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
             return Quantity(1 / self.number, other / self.unit)
@@ -271,9 +310,14 @@ class Quantity:
     # For now Unit only supports integer or fractional exponents
     def __pow__(self, other):
         if isinstance(other, int):
-            return Quantity(self.number ** other, self.unit ** other)
+            new_number = self.number ** other
+            new_uncertainty = get_uncertainty(new_number, "pow", self, numberx=other)
+            return Quantity(new_number, self.unit ** other, new_uncertainty)
         elif isinstance(other, frac):
-            return Quantity(self.number ** dec(str(float(other))), self.unit ** other)
+            frac_as_dec = dec(str(float(other)))
+            new_number = self.number ** frac_as_dec
+            new_uncertainty = get_uncertainty(new_number, "pow", self, numberx=frac_as_dec)
+            return Quantity(new_number, self.unit ** other, new_uncertainty)
         else:
             return NotImplemented
     
@@ -283,7 +327,17 @@ class Quantity:
             raise NotDimensionlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
-            return other ** (dimensionless_quant.number)
+        if isinstance(other, (str, int, float, dec)):
+            other = dec(str(other))
+            new_number = other ** dimensionless_quant.number
+            new_uncertainty = get_uncertainty(new_number, "rpow", self, numberx=other, correlation=correlation)
+            return Quantity(new_number, None, new_uncertainty)
+        elif isinstance(other, Quantity):
+            # For now don't support as Unit only supports integer or fractional exponents, and the
+            # chances of dimensionless_quant.number being those is very low
+            return NotImplemented
+        else:
+            return NotImplemented
     
     def __eq__(self, other):
         if isinstance(other, Quantity):
@@ -295,6 +349,9 @@ class Quantity:
                 return True
             else:
                 return False
+        elif other == 0:
+            if self.number == 0:
+                return True
         else:
             return NotImplemented
     
@@ -435,15 +492,18 @@ class Quantity:
         and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
         which by default uses `"ROUND_HALF_EVEN"`.
         """
+        # Check that the quantity even has an uncertainty
+        if not self._uncertainty:
+            return self
         # First round the uncertainty
-        digits = self.uncertainty.as_tuple().digits
+        digits = self._uncertainty.as_tuple().digits
         # Sanity check for requested number of sigfigs
         # Also don't allow increasing the precision of the uncertainty
         if (nsigfigs < 1) or (nsigfigs > len(digits)):
             return self
         else:
-            exponent = math.floor(self.uncertainty.log10())
-            significand = self.uncertainty / dec(f"1E{exponent}")
+            exponent = math.floor(self._uncertainty.log10())
+            significand = self._uncertainty / dec(f"1E{exponent}")
             # Set decimal rounding to the specified method, which by default is the traditionally
             # expected behaviour
             # Use in a local context so that user's context isn't overwritten
@@ -490,6 +550,14 @@ class Quantity:
     def dimension(self):
         """Return the dimension as a nice string."""
         return self.unit.dimension()
+
+    def with_uncertainty(self, uncertainty):
+        """Return a new quantity with the provided uncertainty."""
+        return Quantity(self.number, self.unit, uncertainty)
+    
+    def plusminus(self, uncertainty):
+        """Alias for `.with_uncertainty()`."""
+        return self.with_uncertainty(uncertainty)
 
     def base(self):
         """Return the quantity expressed in terms of base units."""

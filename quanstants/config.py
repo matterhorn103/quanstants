@@ -29,6 +29,12 @@ Options: "PLACES", "FIGURES", "UNCERTAINTY".
 """Whether floats should be converted to Decimal via str or directly."""
         ),
     },
+    "AUTO_CANCEL":{
+        "default": False,
+        "doc": (
+"""Whether identical units should be cancelled and combined automatically after arithmetic."""
+        ),
+    },
     "UNIT_SEPARATOR": {
         "default": " ",
         "doc": (

@@ -30,7 +30,7 @@ Options: "PLACES", "FIGURES", "UNCERTAINTY".
         ),
     },
     "AUTO_CANCEL":{
-        "default": False,
+        "default": True,
         "doc": (
 """Whether identical units should be cancelled and combined automatically after arithmetic."""
         ),

@@ -1,5 +1,6 @@
 from ..unit import DerivedUnit
 from ..quantity import Quantity
+from ..temperature import TemperatureUnit
 from ..si import *
 
 # fmt: off
@@ -40,5 +41,8 @@ us_fathom = DerivedUnit("ftm", "us_fathom", Quantity("1.8288", m))
 us_cable = DerivedUnit(None, "us_cable", Quantity("219.456", m))
 from .imperial import nautical_mile
 from .imperial import knot
+
+# Temperature
+degreeFahrenheit = TemperatureUnit( "°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", add_to_reg=True, canon_symbol=True, alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"])
 
 # fmt: on

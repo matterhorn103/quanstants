@@ -580,17 +580,26 @@ class Quantity:
     def to(self, other):
         """Express the quantity in terms of another unit."""
         if isinstance(other, str):
-            # Allow parsing of unit string
+            # Allow parsing of unit string first
             other = unit_reg.parse(other)
-        # If trying to convert to a non-kelvin temperature, let the `TemperatureUnit` handle it
-        # Note that only temperatures in kelvin are normal Quantities, temperatures on other scales
-        # are instances of `quanstants.temperature.Temperature`, which handles its own conversion
-        if hasattr(other, "from_temperature"):
-            return other.from_temperature(self)
+        if self.number == 0:
+            return Quantity(0, other)
         else:
             # Convert both args to quantities in base units, then divide, then cancel to get ratio
             result = (self.base() / other.base()).cancel()
+        if not self._uncertainty:
             return Quantity(result.number, result.unit._mul_with_concat(other))
+        else:
+            return Quantity(result.number, result.unit._mul_with_concat(other), self.uncertainty.to(other))
+
+    def on_scale(self, other):
+        """Convert an absolute quantity to a point on a relative scale.
+        
+        For example, express an absolute temperature in kelvin as a relative temperature on a scale with a
+        different zero point.
+        Defers to the argument's implementation of `.from_absolute()`.
+        """
+        return other.from_absolute(self)
 
     @classmethod
     def parse(cls, string: str):

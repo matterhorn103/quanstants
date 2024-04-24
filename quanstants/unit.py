@@ -132,23 +132,23 @@ class Unit:
             self.add_to_reg(reg=reg, add_symbol=canon_symbol)
 
     @property
-    def symbol(self):
+    def symbol(self) -> str:
         return self._symbol
     
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
     
     @property
-    def dimensional_exponents(self):
+    def dimensional_exponents(self) -> dict:
         return self._dimensional_exponents
     
     @property
-    def components(self):
+    def components(self) -> tuple[Factor, ...]:
         return self._components
 
     @property
-    def alt_names(self):
+    def alt_names(self) -> list[str]:
         return self._alt_names
 
     def __str__(self):
@@ -251,13 +251,13 @@ class Unit:
         if (add_symbol) and (self.symbol != self.name):
             reg.add(self.symbol, self)
 
-    def is_dimensionless(self):
+    def is_dimensionless(self) -> bool:
         if self.dimensional_exponents == {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}:
             return True
         else:
             return False
         
-    def dimension(self):
+    def dimension(self) -> str:
         """Return the dimension as a nice string."""
         if self.is_dimensionless():
             return "(dimensionless)"
@@ -543,7 +543,7 @@ class DerivedUnit(Unit):
     # self._x is slightly faster, but even for time-critical operations it makes v little difference
     # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 µs)
     @property
-    def value(self):
+    def value(self) -> Quantity:
         return self._value
 
     def base(self):

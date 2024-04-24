@@ -352,6 +352,8 @@ class Quantity:
         elif other == 0:
             if self.number == 0:
                 return True
+            else:
+                return False
         else:
             return NotImplemented
     

@@ -66,7 +66,6 @@ scruple = DerivedUnit("℈", "scruple", Quantity("0.001295962", kg))
 drachm = DerivedUnit("ʒ", "drachm", Quantity("0.003887886", kg))
 ounce_apothecaries = DerivedUnit("℥", "ounce_apothecaries", Quantity("0.031103088", kg))
 
-
 # Nautical units
 fathom_practical = DerivedUnit(None, "fathom_practical", Quantity("1.8288", m)) # According to Wiki, the Admiralty used 1 ftm = 6 ft in practice
 british_fathom = DerivedUnit("br ftm", "british_fathom", Quantity("1.853184", m)) # 1/1000 nmi
@@ -77,5 +76,8 @@ british_nautical_mile = DerivedUnit("br nmi", "british_nautical_mile", Quantity(
 nautical_mile = DerivedUnit("nmi", "nautical_mile", Quantity("1852", m)) # International definition
 british_knot = DerivedUnit("br kn", "british_knot", Quantity("1853.184", m * hour**-1))
 knot = DerivedUnit("kn", "knot", Quantity("1852", m * hour**-1))
+
+# Temperature
+from .temperatures import degreeFahrenheit
 
 # fmt: on

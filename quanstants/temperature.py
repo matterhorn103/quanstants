@@ -163,10 +163,8 @@ class Temperature(Quantity):
         )
     
     def __repr__(self):
-        if not self._uncertainty:
-            return f"Temperature({self.number}, {self.unit.symbol})"
-        else:
-            return f"Temperature({self.number}, {self.unit.symbol}, uncertainty={self._uncertainty})"
+        as_quantity = super().__repr__()
+        return as_quantity.replace("Quantity", "Temperature")
 
     def _to_kelvin(self):
         """Return the temperature as a normal `Quantity` object with units of kelvin.

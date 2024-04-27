@@ -5,6 +5,7 @@ import math
 from typing import Self
 
 from .config import quanfig
+from .format import group_digits
 from .uncertainties import get_uncertainty
 from .unitreg import unit_reg
 
@@ -185,15 +186,15 @@ class Quantity:
 
     def __repr__(self):
         if not self._uncertainty:
-            return f"Quantity({self.number}, {self.unit.symbol})"
+            return f"Quantity({group_digits(self.number)}, {self.unit.symbol})"
         else:
-            return f"Quantity({self.number}, {self.unit.symbol}, uncertainty={self._uncertainty})"
+            return f"Quantity({group_digits(self.number)}, {self.unit.symbol}, uncertainty={group_digits(self._uncertainty)})"
 
     def __str__(self):
         if not self._uncertainty:
-            return f"{self.number} {self.unit.symbol}"
+            return f"{group_digits(self.number)} {self.unit.symbol}"
         else:
-            return f"{self.number}({''.join([str(n) for n in self._uncertainty.as_tuple().digits])}) {self.unit.symbol}"
+            return f"{group_digits(self.number)}({''.join([str(n) for n in self._uncertainty.as_tuple().digits])}) {self.unit.symbol}"
             
     def __int__(self):
         if not self.is_dimensionless():

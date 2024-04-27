@@ -59,12 +59,37 @@ Options: "NEGATIVE_SUPERSCRIPT", "SLASH".
 """Whether exponents of units should be formatted with Unicode superscript characters."""
         ),
     },
+    "GROUP_DIGITS": {
+        "default": False,
+        "doc": (
+"""Whether numbers should be printed with separators between groups of digits."""
+        ),
+    },
+    "GROUP_DIGITS_STYLE": {
+        "default": "all",
+        "doc": (
+"""Whether to group digits before (`"integer"`) the decimal point, after (`"decimal"`), or both (`"all"`)."""
+        ),
+    },
+    "GROUP_SEPARATOR": {
+        "default": " ",
+        "doc": (
+"""The Unicode character which should be put between groups of digits.
+
+The default is the U+2009 " " "THIN SPACE", which matches `siunitx`.
+Naturally this will appear as a normal-width space in a monospaced font.
+
+Other typical options include a normal space " ", a comma ",", a full stop ".",
+or an underscore "_".
+"""
+        ),
+    },
     "PRETTYPRINT": {
         "default": True,
         "doc": (
 """Whether to format printed strings in a nice way.
 
-Changing this setting also changes `UNICODE_SUPERSCRIPTS` to match.
+Changing this setting also changes various other settings to match.
 """
         ),
     },
@@ -90,6 +115,7 @@ class QuanstantsConfig:
         if hasattr(self, f"_{name}"):
             if name == "PRETTYPRINT":
                 self._UNICODE_SUPERSCRIPTS = value
+                self._GROUP_DIGITS = value
                 self._PRETTYPRINT = value
             else:
                 super().__setattr__(f"_{name}", value)

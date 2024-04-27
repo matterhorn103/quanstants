@@ -43,6 +43,6 @@ from .imperial import nautical_mile
 from .imperial import knot
 
 # Temperature
-degreeFahrenheit = TemperatureUnit( "°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", add_to_reg=True, canon_symbol=True, alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"])
+from .temperatures import degreeFahrenheit
 
 # fmt: on

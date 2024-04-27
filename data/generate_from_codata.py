@@ -17,7 +17,7 @@ def parse(file):
             unit = " * ".join(unit_raw)
         else:
             unit = "unitless"
-        definition = f'{name} = Constant(None, "{name}", Quantity("{number}", {unit}), uncertainty="{uncertainty}", canon_symbol=False)\n'
+        definition = f'{name} = Constant(None, "{name}", "{number}", {unit}, uncertainty="{uncertainty}", canon_symbol=False)\n'
         output.append(definition)
     print(output)
     return output

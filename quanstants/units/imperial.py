@@ -7,15 +7,15 @@ from ..si import *
 # Imperial units get the right to use the simple name, whereas US customary units are prefixed
 # with "us" e.g. "us_foot"
 # However, since US customary units are probably more likely to be used these days, US customary
-# units are given canon symbols and imperial units aren't (unless there is no US cus. equivalent,
-# or they are identical in both systems)
+# units are given canon symbols and imperial units aren't (unless there is no US cus. equivalent)
+# Units identical in both systems are defined here and imported by `us.py`.
 
 # Imperial (from the international yard and pound agreement and the Weights and Measures Act 1985)
 # Length
 twip = DerivedUnit(None, "twip", Quantity("0.0000176389", m))
 thou = DerivedUnit("th", "thou", Quantity("0.0000254", m))
 barleycorn = DerivedUnit(None, "barleycorn", Quantity("0.0084667", m))
-inch = DerivedUnit("in", "inch", Quantity("0.0254", m)) # Can't add in as it is Python keyword
+inch = DerivedUnit("in", "inch", Quantity("0.0254", m)) # Can't add `in` to namespace as it is Python keyword
 hand = DerivedUnit("hh", "hand", Quantity("0.1016", m))
 foot = DerivedUnit("ft", "foot", Quantity("0.3048", m))
 yard = DerivedUnit("yd", "yard", Quantity("0.9144", m))

@@ -9,8 +9,8 @@ What makes `quanstants` different?
 An emphasis on the [principle of least astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment).
 Importantly, applied from the perspective of a non-programmer in the natural sciences.
 
-`quanstants` is particularly suited to situations where it is desirable to have the result match exactly that which you would produce yourself, and less suited to large numbers of complex calculations.
-For example, it works very well to replace an electronic calculator, or to produce nicely formatted text or LaTeX code.
+`quanstants` is particularly suited to situations where it is desirable to have the result match exactly that which you would produce yourself, and less suited to huge numbers of complex calculations.
+For example, the implicit sanity checking that comes with tracking units helps to ensure calculations are being done correctly, and it works very well for programmatically producing nicely formatted text or LaTeX code for presentation of calculation results in e.g. a scientific publication.
 
 `quanstants` makes life easy by providing the following:
 
@@ -21,8 +21,12 @@ For example, it works very well to replace an electronic calculator, or to produ
   * Addition/subtraction of quantities with the same dimensions but different units works, via conversion
 * A large library of units including SI, metric, imperial, and non-standard units
   * Easy creation of quantities through arithmetic between numbers and units
-  * Easy expression of quantities in alternative units
-* A large library of physical constants covering various fields, not just physics
+  * Easy unit conversion/expression of quantities in alternative units
+  * Robust parsing of string input for quantity creation
+  * Only a small core selection is loaded by default, but further unit modules are very easy to load (see examples below)
+  * Support for temperatures on non-absolute scales such as Celsius and Fahrenheit, and sensible, unsurprising behaviour of those temperatures in calculations
+* A large library of constants covering various fields, not just physics
+  * Easy definition of custom constants
 * Default behaviours for numbers that align with non-programmers' expectations, rather than Python defaults
   * 5.2 * m gives exactly 5.2 m, not 5.2000000000000001776356... m
   * 0.1 m + 0.2 m is exactly equal to 0.3 m (whereas in Python, `0.1 + 0.2 == 0.3` returns `False`)
@@ -30,7 +34,9 @@ For example, it works very well to replace an electronic calculator, or to produ
   * Rounding gives the same result as most scientists would write if rounding manually: 1.75 m ⇒ 1.8 m, 1.65 m ⇒ 1.7 m, and -1.65 m ⇒ -1.7 m ("round half away from zero", whereas the Python default is "round half to even")
   * Rounding to a certain number of significant figures is easy
 * Use of the `Decimal` type under the hood to avoid the [quirks of binary floating point](https://docs.python.org/3/tutorial/floatingpoint.html#tut-fp-issues), which as well as enabling the above, avoids imprecision arising from rounding errors
-  * Most mathematical operations and functions are delegated to [Python's `Decimal`](https://docs.python.org/3/library/decimal.html), which in turn follows the General Decimal Arithmetic Specification and thus indirectly IEEE 754. `quanstants` simply tracks units and uncertainties on top, and aims to support all operations on `Quantity` that are supported by `Decimal`.
+  * Most mathematical operations and functions are delegated to [Python's `Decimal`](https://docs.python.org/3/library/decimal.html), which in turn follows the General Decimal Arithmetic Specification and thus indirectly IEEE 754. `quanstants` simply tracks units and uncertainties on top, and aims to support all operations on `Quantity` that are supported by `Decimal`
+* Customization of various options including the rounding behaviour, automatic cancellation of units, and many elements of printing formatting
+  * Configuration via a `.toml` file in the current directory or system-wide basis
 
 ## Basic usage
 
@@ -160,10 +166,10 @@ Quantity(1.27, ct)
 
 Other systems and categories of units are easily accessed by importing the appropriate module, which adds the units within to `quanstants.units`:
 ```python
->>> from quanstants import imperial
+>>> from quanstants.units import imperial
 >>> 6 * qu.foot
 Quantity(6, ft)
->>> from quanstants import us
+>>> from quanstants.units import us
 >>> 20 * qu.us_fluid_ounce
 Quantity(20, fl oz)
 >>> 32 * qu.nautical_mile
@@ -294,9 +300,8 @@ For inexperienced programmers, the behaviour of binary floating point is often p
 This package aims to alleviate this confusion.
 
 
-
-Using `Quantity` objects in complex or extensive calculations, as opposed to binary floats or even decimal floats, will of course have an associated cost.
-`quanstants` is not intended for this usage.
+Using `Quantity` objects in complex or extensive calculations, as opposed to binary floats or even decimal floats, will of course have a not-unsubstantial associated overhead.
+`quanstants` is not intended for this usage; though, after all, neither is Python, and in many cases other advantages win out over pure speed and computational efficiency.
 
 ## Standards and naming
 
@@ -319,6 +324,9 @@ In comparison to `pint`, quantities are immutable by design -- any function or o
 
 ## TODO
 
-* Complex quantities
-* Uncertainty calculations
-* Discard uncertainties on rounding
+* Support for complex numbers
+* Support for logarithmic units
+* Discard uncertainties on rounding/generally make sure precision of numbers and uncertainties agree
+* Adjustment of prefixes (either automatically or on request) so that e.g. 2000 kJ becomes 2 MJ
+* Complete (>95%) test coverage
+* Documentation beyond this readme

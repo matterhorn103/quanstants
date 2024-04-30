@@ -1,6 +1,7 @@
 import math
 from decimal import Decimal as dec
 
+from .config import quanfig
 from .unit import BaseUnit, DerivedUnit, unitless
 from .quantity import Quantity
 from . import temperature
@@ -71,7 +72,7 @@ degree = DerivedUnit("°", "degree", Quantity(dec(math.pi)/180, rad), canon_symb
 electronvolt = DerivedUnit("eV", "electronvolt", Quantity("1.602176634e-19", joule), canon_symbol=True)
 hectare = DerivedUnit("ha", "hectare", Quantity("1e4", m**2), canon_symbol=True)
 hour = DerivedUnit("h", "hour", Quantity(3600, s), canon_symbol=True)
-litre = DerivedUnit("L", "litre", Quantity("1e-3", m**3), canon_symbol=True, alt_names=["liter"])
+litre = DerivedUnit(quanfig.LITRE_SYMBOL, "litre", Quantity("1e-3", m**3), canon_symbol=True, alt_names=["liter"])
 minute = DerivedUnit("min", "minute", Quantity(60, s), canon_symbol=True)
 #neper TODO
 tonne = DerivedUnit("t", "tonne", Quantity(1000, kg), canon_symbol=True)

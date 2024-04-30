@@ -193,8 +193,12 @@ class Quantity:
     def __str__(self):
         if not self._uncertainty:
             return f"{group_digits(self.number)} {self.unit.symbol}"
-        else:
+        # Check that uncertainty is not more precise than the number via the exponent
+        # More negative (smaller) exponent means more precise
+        elif (self.number.as_tuple().exponent <= self._uncertainty.as_tuple().exponent) and (quanfig.UNCERTAINTY_STYLE == "PARENTHESES"):
             return f"{group_digits(self.number)}({''.join([str(n) for n in self._uncertainty.as_tuple().digits])}) {self.unit.symbol}"
+        else:
+            return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit.symbol}"
             
     def __int__(self):
         if not self.is_dimensionless():
@@ -210,29 +214,35 @@ class Quantity:
             dimensionless_quant = self.base().cancel()
             return float(dimensionless_quant.number)
     
-    def __add__(self, other):
+    def __add__(self, other, correlation=0):
         if isinstance(other, Quantity):
             if self.unit == other.unit:
-                return Quantity(self.number + other.number, self.unit)
+                new_number = self.number + other.number
+                new_uncertainty = get_uncertainty(new_number, "add", self, quantityB=other, correlation=correlation)
             # Allow mixed units with the same dimension
             elif self.unit.dimensional_exponents == other.unit.dimensional_exponents:
                 converted = other.to(self.unit)
-                return Quantity(self.number + converted.number, self.unit)
+                new_number = self.number + converted.number
+                new_uncertainty = get_uncertainty(new_number, "add", self, quantityB=converted, correlation=correlation)
             else:
                 raise MismatchedUnitsError(f"Can't add quantity in {other.unit} to quantity in {self.unit}.")
+            return Quantity(new_number, self.unit, new_uncertainty)
         else:
             return NotImplemented
     
-    def __sub__(self, other):
+    def __sub__(self, other, correlation=0):
         if isinstance(other, Quantity):
             if self.unit == other.unit:
-                return Quantity(self.number - other.number, self.unit)
+                new_number = self.number - other.number
+                new_uncertainty = get_uncertainty(new_number, "sub", self, quantityB=other, correlation=correlation)
             # Allow mixed units with the same dimension
             elif self.unit.dimensional_exponents == other.unit.dimensional_exponents:
                 converted = other.to(self.unit)
-                return Quantity(self.number - converted.number, self.unit)
+                new_number = self.number - converted.number
+                new_uncertainty = get_uncertainty(new_number, "sub", self, quantityB=converted, correlation=correlation)
             else:
                 raise MismatchedUnitsError(f"Can't subtract quantity in {other.unit} from quantity in {self.unit}.")
+            return Quantity(new_number, self.unit, new_uncertainty)
         else:
             return NotImplemented
 
@@ -387,7 +397,7 @@ class Quantity:
             return NotImplemented
 
     def __neg__(self):
-        return Quantity(-1 * self.number, self.unit)
+        return Quantity(-1 * self.number, self.unit, -1 * self._uncertainty)
     
     def __pos__(self):
         return self
@@ -528,7 +538,9 @@ class Quantity:
             raise NotDimensionlessError("Cannot raise to the power of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
-            return dimensionless_quant.number.exp()
+            new_number = dimensionless_quant.number.exp()
+            new_uncertainty = get_uncertainty(new_number, "exp", self)
+            return (new_number, dimensionless_quant.unit, new_uncertainty)
     
     def ln(self):
         """Return the natural logarithm of the quantity, for dimensionless quantities only."""
@@ -536,7 +548,9 @@ class Quantity:
             raise NotDimensionlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
-            return dimensionless_quant.number.ln()
+            new_number = dimensionless_quant.number.ln()
+            new_uncertainty = get_uncertainty(new_number, "ln", self)
+            return (new_number, dimensionless_quant.unit, new_uncertainty)
     
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
@@ -544,7 +558,9 @@ class Quantity:
             raise NotDimensionlessError("Cannot take the logarithm of a non-dimensionless quantity!")
         else:
             dimensionless_quant = self.base().cancel()
-            return dimensionless_quant.number.log10()
+            new_number = dimensionless_quant.number.log10()
+            new_uncertainty = get_uncertainty(new_number, "log10", self)
+            return (new_number, dimensionless_quant.unit, new_uncertainty)
     
     def is_dimensionless(self):
         """Check if unit is dimensionless."""
@@ -564,19 +580,28 @@ class Quantity:
 
     def base(self):
         """Return the quantity expressed in terms of base units."""
-        return self.number * self.unit.base()
+        if not self._uncertainty:
+            return self.number * self.unit.base()
+        else:
+            return (self.number * self.unit.base()).with_uncertainty(self.uncertainty.base().number)
     
     def cancel(self):
         """Combine any like terms in the unit."""
-        return self.number * self.unit.cancel()
+        return (self.number * self.unit.cancel()).with_uncertainty(self.uncertainty.number)
     
     def fully_cancel(self):
         """Combine any like terms in the unit, with units of the same dimension converted and combined."""
-        return self.number * self.unit.fully_cancel()
+        if not self._uncertainty:
+            return self.number * self.unit.fully_cancel()
+        else:
+            return (self.number * self.unit.fully_cancel()).with_uncertainty(self.uncertainty.fully_cancel().number)
     
     def canonical(self):
         """Express the quantity with its units in a canonical order."""
-        return self.number * self.unit.canonical()
+        if not self._uncertainty:
+            return self.number * self.unit.canonical()
+        else:
+            return (self.number * self.unit.canonical()).with_uncertainty(self.uncertainty.canonical().number)
     
     def to(self, other):
         """Express the quantity in terms of another unit."""
@@ -584,14 +609,14 @@ class Quantity:
             # Allow parsing of unit string first
             other = unit_reg.parse(other)
         if self.number == 0:
-            return Quantity(0, other)
+            return Quantity(0, other, self.uncertainty.to(other))
         else:
             # Convert both args to quantities in base units, then divide, then cancel to get ratio
             result = (self.base() / other.base()).cancel()
-        if not self._uncertainty:
-            return Quantity(result.number, result.unit._mul_with_concat(other))
-        else:
-            return Quantity(result.number, result.unit._mul_with_concat(other), self.uncertainty.to(other))
+            if not self._uncertainty:
+                return Quantity(result.number, result.unit._mul_with_concat(other))
+            else:
+                return Quantity(result.number, result.unit._mul_with_concat(other), self.uncertainty.to(other))
 
     def on_scale(self, other):
         """Convert an absolute quantity to a point on a relative scale.

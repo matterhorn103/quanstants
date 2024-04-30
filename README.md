@@ -28,15 +28,15 @@ For example, the implicit sanity checking that comes with tracking units helps t
 * A large library of constants covering various fields, not just physics
   * Easy definition of custom constants
 * Default behaviours for numbers that align with non-programmers' expectations, rather than Python defaults
-  * 5.2 * m gives exactly 5.2 m, not 5.2000000000000001776356... m
-  * 0.1 m + 0.2 m is exactly equal to 0.3 m (whereas in Python, `0.1 + 0.2 == 0.3` returns `False`)
-  * Significant figures are maintained: 1.30 m does not become 1.3 m, and 0.15 m - 0.05 m = 0.10 m, not 0.1 m
-  * Rounding gives the same result as most scientists would write if rounding manually: 1.75 m ⇒ 1.8 m, 1.65 m ⇒ 1.7 m, and -1.65 m ⇒ -1.7 m ("round half away from zero", whereas the Python default is "round half to even")
+  * `5.2 * m` gives _exactly_ `5.2 m`, _not_ `5.2000000000000001776356... m`
+  * `0.1 m + 0.2 m` is _exactly_ equal to `0.3 m` (whereas in Python, `0.1 + 0.2 == 0.3` returns `False`)
+  * Significant figures are maintained: `1.30 m` does _not_ become `1.3 m`, and `0.15 m - 0.05 m` ⇒ `0.10 m`, _not_ `0.1 m`
+  * Rounding gives the same result as most scientists would write if rounding manually: `1.75 m` ⇒ `1.8 m`, `1.65 m` ⇒ `1.7 m`, and `-1.65 m` ⇒ `-1.7 m` ("round half away from zero", whereas the Python default is "round half to even")
   * Rounding to a certain number of significant figures is easy
 * Use of the `Decimal` type under the hood to avoid the [quirks of binary floating point](https://docs.python.org/3/tutorial/floatingpoint.html#tut-fp-issues), which as well as enabling the above, avoids imprecision arising from rounding errors
   * Most mathematical operations and functions are delegated to [Python's `Decimal`](https://docs.python.org/3/library/decimal.html), which in turn follows the General Decimal Arithmetic Specification and thus indirectly IEEE 754. `quanstants` simply tracks units and uncertainties on top, and aims to support all operations on `Quantity` that are supported by `Decimal`
 * Customization of various options including the rounding behaviour, automatic cancellation of units, and many elements of printing formatting
-  * Configuration via a `.toml` file in the current directory or system-wide basis
+  * Configuration via a `.toml` file -- autodetected in the current directory, but can also be manually loaded
 
 ## Basic usage
 
@@ -96,6 +96,8 @@ Numbers can be given as `int`, `float`, `str`, or `Decimal`, and the quantity wi
 Quantity(4010, m³)
 >>> 4.01 * qu.volt
 Quantity(4.01, V)
+>>> "4010" * qu.coulomb                 # Python's Decimal assumes all figures are significant
+Quantity(4010, C)
 >>> "4.01e3" * qu.coulomb
 Quantity(4.01E+3, C)
 >>> from decimal import Decimal
@@ -180,7 +182,7 @@ Quantity(32, nmi)
 False
 ```
 
-Units are often made available in multiple modules if shared between systems, so you only need to worry about importing the units system of interest:
+Units are often made available in multiple modules if shared between systems, so you only need to worry about importing the unit system of interest:
 ```python
 >>> from quanstants import imperial, us
 >>> imperial.foot is us.foot

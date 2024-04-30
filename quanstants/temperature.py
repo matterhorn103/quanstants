@@ -2,6 +2,7 @@ from decimal import Decimal as dec
 import types
 
 from .config import quanfig
+from .uncertainties import get_uncertainty
 from .unit import Unit, Factor
 from .unitreg import unit_reg, UnitReg
 from .quantity import Quantity
@@ -183,52 +184,39 @@ class Temperature(Quantity):
                 self.uncertainty.to(kelvin),
             )
 
-    def __add__(self, other):
+    # For addition and subtraction, convert to quantities in kelvin to do the maths as
+    # then the uncertainty will be taken care of by `Quantity`'s dunder methods
+    # Then convert back to a Temperature but only if appropriate
+    def __add__(self, other, correlation=0):
         # Allow the addition of non-kelvin temperatures but return in kelvin to make it clear that
         # two absolute temperatures have been summed
         if isinstance(other, Temperature):
-            return self._to_kelvin() + other._to_kelvin()
+            return self._to_kelvin().__add__(other._to_kelvin(), correlation=correlation)
         # Allow Quantity with dimension of temperature to be added to Temperature
         elif isinstance(other, Quantity):
-            if self.unit == other.unit:
-                return Temperature(self.number + other.number, self.unit)
-            elif other.unit == kelvin:
-                converted = other.number / self.unit.value.number
-                return Temperature(self.number + converted, self.unit)
-            elif isinstance(other.unit, TemperatureUnit):
-                converted = other.to(kelvin).number / self.unit.value.number
-                return Temperature(self.number + converted, self.unit)
+            if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
+                return (self._to_kelvin().__add__(other.to(kelvin), correlation=correlation)).on_scale(self.unit)
             else:
                 raise NotATemperatureError(f"Can't add quantity in {other.unit} to temperature in {self.unit}.")
         else:
             return NotImplemented
     
-    def __sub__(self, other):
+    def __sub__(self, other, correlation=0):
         # Allow finding the difference between two temperatures
         # Unlike for __add__(), it is clear to the user here that a temperature difference has been
         # calculated, not a temperature
         if isinstance(other, Temperature):
-            if self.unit == other.unit:
-                difference = self.number - other.number
-            else:
-                difference = (self._to_kelvin() - other._to_kelvin()).number / self.unit.value.number
-            return Quantity(difference, self.unit)
+            return (self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)).to(self.unit)
         # Allow Quantity with dimension of temperature to be subtracted from Temperature
         elif isinstance(other, Quantity):
-            if self.unit == other.unit:
-                return Temperature(self.number - other.number, self.unit)
-            elif other.unit == kelvin:
-                converted = other.number / self.unit.value.number
-                return Temperature(self.number - converted, self.unit)
-            elif isinstance(other.unit, TemperatureUnit):
-                converted = other.to(kelvin).number / self.unit.value.number
-                return Temperature(self.number - converted, self.unit)
+            if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
+                return (self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)).on_scale(self.unit)
             else:
                 raise NotATemperatureError(f"Can't subtract quantity in {other.unit} from temperature in {self.unit}.")
         else:
             return NotImplemented
         
-    # For other mathematical functions, need to first convert to kelvin
+    # For other mathematical operations, convert to kelvin and leave in kelvin
     def __mul__(self, other):
         return self._to_kelvin() * other
     

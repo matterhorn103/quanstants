@@ -457,7 +457,8 @@ class CompoundUnit(Unit):
         new_components = tuple(factor for factor in new_components_list if factor.exponent != 0)
         if len(new_components) == 0:
             return 1 * Unitless()
-        return 1 * CompoundUnit(new_components)
+        else:
+            return 1 * CompoundUnit(new_components)
     
     def fully_cancel(self):
         """Combine any like terms, with units of the same dimension converted and also combined."""

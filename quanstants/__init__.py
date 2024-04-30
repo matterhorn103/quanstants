@@ -6,6 +6,7 @@ from decimal import Decimal as dec
 
 # Setup configuration first in case the user's preferences affect initial setup
 from .config import quanfig
+quanfig.find_config()
 
 # Import unit first because the other classes rely on it
 from . import unit

@@ -1,3 +1,5 @@
+import __main__
+from pathlib import Path
 import tomllib
 
 # Define available options, their default values, and the respective docstring
@@ -33,6 +35,30 @@ Options: "PLACES", "FIGURES", "UNCERTAINTY".
         "default": True,
         "doc": (
 """Whether identical units should be cancelled and combined automatically after arithmetic."""
+        ),
+    },
+    "LITRE_SYMBOL":{
+        "default": "L",
+        "doc": (
+"""Whether to use a lowercase l or uppercase L as the symbol for the litre."""
+        ),
+    },
+    "PRETTYPRINT": {
+        "default": True,
+        "doc": (
+"""Whether to format printed strings in a nice way.
+
+Changing this setting also changes various other settings to match.
+"""
+        ),
+    },
+    "UNCERTAINTY_STYLE": {
+        "default": "PARENTHESES",
+        "docs": (
+"""How uncertainties of quantities should be formatted.
+
+Options: "PARENTHESES", "PLUSMINUS".
+"""
         ),
     },
     "UNIT_SEPARATOR": {
@@ -84,15 +110,6 @@ or an underscore "_".
 """
         ),
     },
-    "PRETTYPRINT": {
-        "default": True,
-        "doc": (
-"""Whether to format printed strings in a nice way.
-
-Changing this setting also changes various other settings to match.
-"""
-        ),
-    },
 }
 
 class QuanstantsConfig:
@@ -125,7 +142,7 @@ class QuanstantsConfig:
     def read_config(self, file):
         """Read configuration from a TOML file.
         
-        Options should be specified as key-value pairs at the top level (i.e. not in a table).
+        Options should be specified as key-value pairs at the top level (not in a table).
         For example:
 
         ```toml
@@ -137,6 +154,33 @@ class QuanstantsConfig:
             config = tomllib.load(f)
         for key, value in config.items():
             setattr(self, key, value)
+    
+    def find_config(self):
+        """Look for a configuration file called `quanstants.toml` in a couple of set locations.
+        
+        Currently, the following locations are checked in the given order:
+
+        1. The directory of the main script, from `__main__.__file__`
+        2. The current working directory, from `pathlib.Path.cwd()`
+
+        Any options specified in the first file found will override the defaults.
+        Other files with lower priority in the above list will be completely ignored.
+        """
+        paths_to_check = []
+        try:
+            paths_to_check.append(Path(__main__.__file__).parent)
+        except AttributeError:
+            pass
+        paths_to_check.append(Path.cwd())
+        while toml_path := None is None:
+            for path in paths_to_check:
+                if (path / "quanstants.toml").exists():
+                    toml_path = (path / "quanstants.toml")
+                else:
+                    continue
+        if toml_path:
+            self.read_config(toml_path)
+        
 
 # Create instance of config class that will be passed around to other modules
 # The user should interact with the instance (which is added to the main namespace in __init__.py),

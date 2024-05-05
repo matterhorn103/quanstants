@@ -83,7 +83,7 @@ def get_uncertainty(
         sigma_c = abs(sigma_a / A)
     # C = log10(A)
     elif operation == "log10":
-        sigma_c = abs(sigma_a/(dec(10).ln()))
+        sigma_c = abs(sigma_a/(dec(10).ln() * A))
     # C = e**A
     elif operation == "exp":
         sigma_c = abs(C) * abs(sigma_a)

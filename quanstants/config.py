@@ -54,7 +54,7 @@ Changing this setting also changes various other settings to match.
     },
     "UNCERTAINTY_STYLE": {
         "default": "PARENTHESES",
-        "docs": (
+        "doc": (
 """How uncertainties of quantities should be formatted.
 
 Options: "PARENTHESES", "PLUSMINUS".
@@ -172,12 +172,13 @@ class QuanstantsConfig:
         except AttributeError:
             pass
         paths_to_check.append(Path.cwd())
-        while toml_path := None is None:
+        while (toml_path := None) is None:
             for path in paths_to_check:
                 if (path / "quanstants.toml").exists():
                     toml_path = (path / "quanstants.toml")
                 else:
                     continue
+            break
         if toml_path:
             self.read_config(toml_path)
         

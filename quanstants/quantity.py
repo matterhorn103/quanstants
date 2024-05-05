@@ -555,7 +555,7 @@ class Quantity:
             dimensionless_quant = self.base().cancel()
             new_number = dimensionless_quant.number.exp()
             new_uncertainty = get_uncertainty(new_number, "exp", self)
-            return (new_number, dimensionless_quant.unit, new_uncertainty)
+            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
     
     def ln(self):
         """Return the natural logarithm of the quantity, for dimensionless quantities only."""
@@ -565,7 +565,7 @@ class Quantity:
             dimensionless_quant = self.base().cancel()
             new_number = dimensionless_quant.number.ln()
             new_uncertainty = get_uncertainty(new_number, "ln", self)
-            return (new_number, dimensionless_quant.unit, new_uncertainty)
+            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
     
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
@@ -575,7 +575,7 @@ class Quantity:
             dimensionless_quant = self.base().cancel()
             new_number = dimensionless_quant.number.log10()
             new_uncertainty = get_uncertainty(new_number, "log10", self)
-            return (new_number, dimensionless_quant.unit, new_uncertainty)
+            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
     
     def is_dimensionless(self):
         """Check if unit is dimensionless."""

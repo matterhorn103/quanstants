@@ -248,7 +248,10 @@ class Quantity:
 
     def __mul__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
-            other = dec(str(other))
+            if quanfig.CONVERT_FLOAT_AS_STR:
+                other = dec(str(other))
+            else:
+                other = dec(other)
             new_number = self.number * other
             new_uncertainty = get_uncertainty(new_number, "mul", self, numberx=other, correlation=correlation)
             return Quantity(new_number, self.unit, new_uncertainty)
@@ -272,7 +275,10 @@ class Quantity:
     
     def __rmul__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
-            other = dec(str(other))
+            if quanfig.CONVERT_FLOAT_AS_STR:
+                other = dec(str(other))
+            else:
+                other = dec(other)
             new_number = other * self.number
             new_uncertainty = get_uncertainty(new_number, "mul", self, numberx=other, correlation=correlation)
             return Quantity(new_number, self.unit, new_uncertainty)
@@ -288,7 +294,10 @@ class Quantity:
     
     def __truediv__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
-            other = dec(str(other))
+            if quanfig.CONVERT_FLOAT_AS_STR:
+                other = dec(str(other))
+            else:
+                other = dec(other)
             new_number = self.number / other
             new_uncertainty = get_uncertainty(new_number, "truediv", self, numberx=other, correlation=correlation)
             return Quantity(new_number, self.unit, new_uncertainty)
@@ -308,7 +317,10 @@ class Quantity:
     
     def __rtruediv__(self, other, correlation=0):
         if isinstance(other, (str, int, float, dec)):
-            other = dec(str(other))
+            if quanfig.CONVERT_FLOAT_AS_STR:
+                other = dec(str(other))
+            else:
+                other = dec(other)
             new_number = other / self.number
             new_uncertainty = get_uncertainty(new_number, "rtruediv", self, numberx=other, correlation=correlation)
             return Quantity(new_number, self.unit.inverse(), new_uncertainty)
@@ -339,7 +351,10 @@ class Quantity:
         else:
             dimensionless_quant = self.base().cancel()
         if isinstance(other, (str, int, float, dec)):
-            other = dec(str(other))
+            if quanfig.CONVERT_FLOAT_AS_STR:
+                other = dec(str(other))
+            else:
+                other = dec(other)
             new_number = other ** dimensionless_quant.number
             new_uncertainty = get_uncertainty(new_number, "rpow", self, numberx=other, correlation=correlation)
             return Quantity(new_number, None, new_uncertainty)

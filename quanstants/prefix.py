@@ -1,5 +1,6 @@
 from decimal import Decimal as dec
 
+from .config import quanfig
 from .quantity import Quantity
 from .unit import BaseUnit, DerivedUnit
 from .si import kilogram
@@ -36,7 +37,10 @@ class Prefix:
     ):
         self._symbol = symbol
         self._name = name
-        self._multiplier = dec(str(multiplier))
+        if quanfig.CONVERT_FLOAT_AS_STR:
+            self._multiplier = dec(str(multiplier))
+        else:
+            self._multiplier = dec(multiplier)
         prefix_reg.add(symbol, self)
         prefix_reg.add(name, self)
     

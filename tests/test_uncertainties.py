@@ -36,3 +36,6 @@ class TestUncertaintyArithmetic:
 
     def test_log_base10(self):
         assert round(((self.q1 / self.q2).log10()).uncertainty, 5) == round("0.08441167440582" * qu.unitless, 5)
+    
+    def test_exp(self):
+        assert round(((self.q1 / self.q2).exp()).uncertainty, 5) == round("0.25238096660761" * qu.unitless, 5)

@@ -127,7 +127,7 @@ class TemperatureUnit(Unit):
             raise NotATemperatureError("Temperatures can only be converted from quantities with units of temperature.")
         
         if not other.uncertainty:
-            new_uncertainty = 0
+            new_uncertainty = dec("0")
         else:
             new_uncertainty = other.uncertainty.to(self)
         return Temperature(new_number, self, new_uncertainty)
@@ -175,7 +175,7 @@ class Temperature(Quantity):
         `Temperature.to(kelvin)` without an issue, as it goes via conversion of the temperature to kelvin
         with `Temperature.base()`.
         """
-        if not self.uncertainty:
+        if not self._uncertainty:
             return Quantity(self.unit._to_kelvin(self.number), kelvin)
         else:
             return Quantity(
@@ -233,6 +233,10 @@ class Temperature(Quantity):
         return self._to_kelvin() ** other
     
     # Equality functions of `Quantity` call `.base()` anyway, so are handled fine by super
+
+    def with_uncertainty(self, uncertainty):
+        """Return a new quantity with the provided uncertainty."""
+        return Temperature(self.number, self.unit, uncertainty)
 
     def base(self):
         """Return the temperature as a Quantity expressed in kelvin."""

@@ -25,7 +25,7 @@ def get_uncertainty(
     if quantityB:
         B, sigma_b = quantityB.number, quantityB._uncertainty
     else:
-        B, sigma_b = None, 0
+        B, sigma_b = None, dec("0")
     C = numerical_result
     x = numberx
     sigma_ab = correlation * sigma_a * sigma_b

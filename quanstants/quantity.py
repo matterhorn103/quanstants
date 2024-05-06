@@ -156,7 +156,7 @@ class Quantity:
         else:
             self._unit = unit
         if not uncertainty:
-            self._uncertainty = 0
+            self._uncertainty = dec("0")
         elif isinstance(uncertainty, Quantity):
             if uncertainty.unit != self._unit:
                 self._uncertainty = uncertainty.to(self._unit).number
@@ -624,7 +624,10 @@ class Quantity:
             # Allow parsing of unit string first
             other = unit_reg.parse(other)
         if self.number == 0:
-            return Quantity(0, other, self.uncertainty.to(other))
+            if self._uncertainty == 0:
+                return Quantity(0, other)
+            else:
+                return Quantity(0, other, self.uncertainty.to(other))
         else:
             # Convert both args to quantities in base units, then divide, then cancel to get ratio
             result = (self.base() / other.base()).cancel()

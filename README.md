@@ -461,10 +461,8 @@ Quantity(1.503277615985125705245525892E-10, kg m² s⁻², uncertainty=4.5836514
 
 Constants can be used as units by calling the `as_unit()` method, which creates a unit with the same value:
 ```python
->>> E.to((qp.M * qu.eV)/qc.c**2)  # TODO needs fixing
-Quantity(938.2720881604903652873556338, m² s⁻² MeV m⁻² s²)
->>> E.to((qp.M * qu.eV)/qc.c**2).cancel()  # TODO needs fixing
-Quantity(938.2720881604903652873556338, MeV)
+>>> qc.proton_mass.to((qp.M * qu.eV)/qc.c.as_unit()**2)
+Quantity(938.2720881604903652873556334, MeV c⁻², uncertainty=2.860890187940270488303725942E-7)
 ```
 
 ### Rounding

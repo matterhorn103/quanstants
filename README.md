@@ -55,7 +55,7 @@ Units are also available under their symbol:
 ```python
 >>> 4 * qu.m
 Quantity(4, m)
->>> qu.m is qu.metre                    # Both refer to same object
+>>> qu.m is qu.metre  # Both refer to same object
 True
 ```
 
@@ -82,11 +82,11 @@ Quantity(4, m s⁻¹)
 
 But watch out for Python's order of operations, which still applies as normal:
 ```python
->>> 8 * qu.J * qu.mol**-1 * qu.kg**-1   # Exponention takes priority over multiplication
+>>> 8 * qu.J * qu.mol**-1 * qu.kg**-1  # Exponention takes priority over multiplication
 Quantity(8, J mol⁻¹ kg⁻¹)
->>> 8 * qu.J / qu.mol * qu.kg           # Evaluated left to right as ((8 * J) / mol) * kg
+>>> 8 * qu.J / qu.mol * qu.kg  # Evaluated left to right as ((8 * J) / mol) * kg
 Quantity(8, J kg mol⁻¹)
->>> 8 * qu.J / (qu.mol * qu.kg)         # Terms in parentheses evaluated first
+>>> 8 * qu.J / (qu.mol * qu.kg)  # Terms in parentheses evaluated first
 Quantity(8, J mol⁻¹ kg⁻¹)
 ```
 
@@ -154,7 +154,7 @@ Various common prefixed units are pre-generated and available within `quanstants
 Quantity(50, µm)
 >>> 50 * qu.micron
 Quantity(50, µm)
->>> "99.7" * qu.megahertz               # qu.MHz raises AttributeError
+>>> "99.7" * qu.megahertz  # qu.MHz raises AttributeError
 Quantity(99.7, MHz)
 ```
 
@@ -176,7 +176,7 @@ Quantity(6, ft)
 Quantity(20, fl oz)
 >>> 32 * qu.nautical_mile
 Quantity(32, nmi)
->>> 32 * (qp.nano * qu.mile)            # Nothing to stop you doing this
+>>> 32 * (qp.nano * qu.mile)  # Nothing to stop you doing this
 Quantity(32, nmi)
 >>> 32 * qu.nautical_mile == 32 * (qp.nano * qu.mile)
 False
@@ -241,7 +241,7 @@ Note the case-sensitivity: constants named after a person or other proper noun a
 ```python
 >>> qc.Bohr_radius
 Quantity(5.29177210903E-11, m, uncertainty=8.0E-21)
->>> 16 * qu.tesla                       # Incidentally, the magnetic field required to levitate a frog
+>>> 16 * qu.tesla  # Incidentally, the magnetic field required to levitate a frog
 Quantity(16, T)
 ```
 

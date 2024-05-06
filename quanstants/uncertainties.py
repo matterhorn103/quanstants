@@ -1,15 +1,13 @@
 from decimal import Decimal as dec
 
+from .config import quanfig
+
 def get_uncertainty(
-        numerical_result,
-        operation,
-        quantityA,
-        quantityB=None,
-        numberx=None,
-        correlation=0):
+    numerical_result, operation, quantityA, quantityB=None, numberx=None, correlation=0
+):
     """Find the uncertainty in the result of an operation on a quantity.
-    
-    Some operations require 
+
+    Some operations require
     For a given mathematical operation f, as chosen from a few options with `operation`,
     calculates the uncertainty sigma_c in the result of either QuantityC = f(QuantityA, QuantityB),
     QuantityC = f(QuantityA, numberx), or QuantityC = f(QuantityA) where:
@@ -18,7 +16,7 @@ def get_uncertainty(
         sigma_a, sigma_b, sigma_c are their respective uncertainties
         sigma_ab is the covariance = rho_ab * sigma_a * sigma_b, where
         rho_ab is the correlation between A and B
-    
+
     Uncertainties are then calculated as follows according to the value of `operation`:
     """
     A, sigma_a = quantityA.number, quantityA._uncertainty
@@ -28,6 +26,10 @@ def get_uncertainty(
         B, sigma_b = None, dec("0")
     C = numerical_result
     x = numberx
+    if quanfig.CONVERT_FLOAT_AS_STR:
+        correlation = dec(str(correlation))
+    else:
+        correlation = dec(correlation)
     sigma_ab = correlation * sigma_a * sigma_b
 
     # Ideally this would all be implemented using the `uncertainties` package but it unfortunately
@@ -46,17 +48,29 @@ def get_uncertainty(
     # C = AB and C = xA
     elif operation == "mul":
         if B:
-            sigma_c = abs(C) * (((sigma_a/A)**2) + ((sigma_b/B)**2) + (2 * (sigma_ab/C))).sqrt()
+            sigma_c = (
+                abs(C)
+                * (
+                    ((sigma_a / A) ** 2) + ((sigma_b / B) ** 2) + (2 * (sigma_ab / C))
+                ).sqrt()
+            )
         elif x:
             sigma_c = x * sigma_a
         else:
-            raise TypeError("Operation 'mul' is only supported for Q * Q, x * Q, and Q * x.")
+            raise TypeError(
+                "Operation 'mul' is only supported for Q * Q, x * Q, and Q * x."
+            )
     # C = A/B and C = A/x
     elif operation == "truediv":
         if B:
-            sigma_c = abs(C) * (((sigma_a/A)**2) + ((sigma_b/B)**2) - (2 * (sigma_ab/C))).sqrt()
+            sigma_c = (
+                abs(C)
+                * (
+                    ((sigma_a / A) ** 2) + ((sigma_b / B) ** 2) - (2 * (sigma_ab / C))
+                ).sqrt()
+            )
         elif x:
-            sigma_c = (1/x) * sigma_a
+            sigma_c = (1 / x) * sigma_a
         else:
             raise TypeError("Operation 'truediv' is only supported for Q/Q and Q/x.")
     # C = x/A
@@ -69,13 +83,27 @@ def get_uncertainty(
     # C = A**B and C = A**x
     elif operation == "pow":
         if B:
-            sigma_c = abs(C) * (((B / A) * sigma_a)**2 + (A.ln() * sigma_b)**2 + (2 * ((B * A.ln()) / A) * sigma_ab)).sqrt()
+            sigma_c = (
+                abs(C)
+                * (
+                    ((B / A) * sigma_a) ** 2
+                    + (A.ln() * sigma_b) ** 2
+                    + (2 * ((B * A.ln()) / A) * sigma_ab)
+                ).sqrt()
+            )
         elif x:
             sigma_c = abs((C * x * sigma_a) / A)
     # C = B**A and C = x**A
     elif operation == "rpow":
         if B:
-            sigma_c = abs(C) * (((A / B) * sigma_b)**2 + (B.ln() * sigma_a)**2 + (2 * ((A * B.ln()) / B) * sigma_ab)).sqrt()
+            sigma_c = (
+                abs(C)
+                * (
+                    ((A / B) * sigma_b) ** 2
+                    + (B.ln() * sigma_a) ** 2
+                    + (2 * ((A * B.ln()) / B) * sigma_ab)
+                ).sqrt()
+            )
         elif x:
             sigma_c = abs(C) * abs(x.ln() * sigma_a)
     # C = ln(A)
@@ -83,12 +111,11 @@ def get_uncertainty(
         sigma_c = abs(sigma_a / A)
     # C = log10(A)
     elif operation == "log10":
-        sigma_c = abs(sigma_a/(dec(10).ln() * A))
+        sigma_c = abs(sigma_a / (dec(10).ln() * A))
     # C = e**A
     elif operation == "exp":
         sigma_c = abs(C) * abs(sigma_a)
-    
+
     # Need a better way to ensure a sensible precision in the uncertainty, but for now this removes all trailing zeroes
     sigma_c = dec(str(float(str(sigma_c))))
     return sigma_c
-    

@@ -11,9 +11,10 @@ from quanstants import (
     quanfig,
 )
 
+
 class TestParser:
     def test_single_unit(self):
         assert qu.parse("m") == qu.metre
-    
+
     def test_compound_unit(self):
         assert qu.parse("kg s") == qu.kilogram * qu.second

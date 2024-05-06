@@ -1,5 +1,6 @@
 import sys
 
+
 def parse(file):
     output = []
     with open(file) as f:
@@ -9,7 +10,14 @@ def parse(file):
     for line in lines:
         parts = [part.strip() for part in line.split("  ")]
         parts = [part for part in parts if len(part) > 0]
-        name = "_".join(parts[0].split()).replace("-", "_").replace("/", "_in_").replace(".", "").replace("(", "").replace(")", "")
+        name = (
+            "_".join(parts[0].split())
+            .replace("-", "_")
+            .replace("/", "_in_")
+            .replace(".", "")
+            .replace("(", "")
+            .replace(")", "")
+        )
         number = "".join(parts[1].split())
         uncertainty = "".join(parts[2].split())
         if len(parts) > 3:

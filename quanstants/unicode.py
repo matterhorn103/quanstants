@@ -24,7 +24,7 @@ _unicode_superscripts = {
     -7: "⁻⁷",
     -8: "⁻⁸",
     -9: "⁻⁹",
-    }
+}
 
 _unicode_subscripts = {
     1: "₁",
@@ -46,7 +46,8 @@ _unicode_subscripts = {
     -7: "₋₇",
     -8: "₋₈",
     -9: "₋₉",
-    }
+}
+
 
 def multidigit(number: int, sub=False):
     result = ""
@@ -63,9 +64,10 @@ def multidigit(number: int, sub=False):
                 result += _unicode_superscripts[int(char)]
     return result
 
+
 def generate_superscript(exponent: int | frac) -> str:
     """Generate a superscipt string from an integer or fraction.
-    
+
     This is used to generate symbols for compound units and therefore to prepare their printed
     representation.
     Using Unicode superscript characters to represent exponents can be turned off by setting
@@ -80,14 +82,19 @@ def generate_superscript(exponent: int | frac) -> str:
     elif (abs(exponent) <= 9) and (isinstance(exponent, int) or exponent.is_integer()):
         superscript = _unicode_superscripts[int(exponent)]
     elif isinstance(exponent, frac):
-        superscript = multidigit(exponent.numerator) + "⁄" + multidigit(exponent.denominator, sub=True)
+        superscript = (
+            multidigit(exponent.numerator)
+            + "⁄"
+            + multidigit(exponent.denominator, sub=True)
+        )
     else:
         superscript = multidigit(exponent)
     return superscript
 
+
 def exponent_parser(exponent: str) -> int | frac:
     """Generate an integer or fraction as appropriate from a string of Unicode representing an exponent.
-    
+
     Does the reverse of `generate_superscript()`.
     """
     # First try the simple case, where the string is normal ASCII
@@ -120,4 +127,3 @@ def exponent_parser(exponent: str) -> int | frac:
         return frac(int(terms_ascii[0]), int(terms_ascii[1]))
     elif len(terms_ascii) == 1:
         return int(terms_ascii[0])
-        

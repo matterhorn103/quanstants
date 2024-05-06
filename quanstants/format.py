@@ -2,10 +2,11 @@ from textwrap import wrap
 
 from .config import quanfig
 
+
 def group_digits(number):
-    if not quanfig.GROUP_DIGITS:
-        return number
     number_string = str(number)
+    if not quanfig.GROUP_DIGITS:
+        return number_string
     # Split into pre and post decimal point
     parts = number_string.split(".")
     # Split off exponential part if there is one
@@ -43,4 +44,3 @@ def group_digits(number):
     if not parts[-1].isnumeric():
         formatted = "E".join([formatted, parts[-1]])
     return formatted
-        

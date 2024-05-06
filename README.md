@@ -38,7 +38,7 @@ For example, the implicit sanity checking that comes with tracking units helps t
 * Customization of various options including the rounding behaviour, automatic cancellation of units, and many elements of printing formatting
   * Configuration via a `.toml` file -- autodetected in the current directory, but can also be manually loaded
 
-## Basic usage
+## Usage
 
 ### Quantity creation
 
@@ -96,7 +96,7 @@ Numbers can be given as `int`, `float`, `str`, or `Decimal`, and the quantity wi
 Quantity(4010, m³)
 >>> 4.01 * qu.volt
 Quantity(4.01, V)
->>> "4010" * qu.coulomb                 # Python's Decimal assumes all figures are significant
+>>> "4010" * qu.coulomb  # Python's Decimal assumes all figures are significant
 Quantity(4010, C)
 >>> "4.01e3" * qu.coulomb
 Quantity(4.01E+3, C)
@@ -198,64 +198,277 @@ With all unit submodules imported, >117 (unprefixed) units are defined under >21
 This compares to ~950 defined names in a default `pint` `UnitRegistry()`.
 `astropy.units` contains >3900 defined names, but most are just prefixed units, so the total number of unique unprefixed units is more like 70 to 80.
 
-### Basic arithmetic
+### Uncertainties
+
+The numerical value of a quantity can be most conveniently given an associated uncertainty using the provided method:
 ```python
->>> (4 * qu.metre) * (3 * qu.second**-1)
-Quantity(12, m s⁻¹)
->>> (4 * qu.metre) + (50 * qu.centimetre)
-Quantity(4.5, m)
->>> (4 * qu.metre) + (3 * qu.kilogram)
-quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
+>>> from quanstants import units as qu
+>>> gravity = ("6.67430e-11" * qu.newton * qu.metre**2 * qu.kilogram**-2).with_uncertainty("0.00015e-11")
+Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)
+```
+The uncertainty can be given as a number with the same units as the quantity, or as a `Quantity` itself:
+```python
+>>> ("4.2" * qu.m).plusminus("0.2")  # Alias for with_uncertainty()
+Quantity(4.2, m, uncertainty=0.2)
+>>> ("4.2" * qu.metre).plusminus("20" * qu.centimetre)
+Quantity(4.2, m, uncertainty=0.20)
+```
+When printed, uncertainties are shown by parentheses if possible, or with `±` as a fallback:
+```
+>>> print(("6.67430e-11" * qu.newton * qu.metre**2 * qu.kilogram**-2).with_uncertainty("0.00015e-11"))
+6.67430(15)E-11 N m² kg⁻²
+>>> print(("4.2" * qu.metre).plusminus("20" * qu.centimetre))  # Precisions don't match
+4.2 ± 0.20 m
+```
+The use of ± at all times can be forced by setting `UNCERTAINTY_STYLE` (see Config below).
+
+The uncertainty can also be passed to `Quantity()` directly:
+```python
+>>> from quanstants import units as qu, Quantity
+>>> density = Quantity(0.99704702, qu.kg/qu.L, uncertainty=0.00000083)
+>>> print(density)
+0.99704702(83) kg L⁻¹
+```
+
+A request for the uncertainty of a quantity returns it as another `Quantity`:
+```python
+>>> density.uncertainty
+Quantity(8.3E-7, kg L⁻¹)
+```
+
+### Parsing strings
+
+Though not generally the preferred option for quantity creation, quantities can also be created by passing a single string as an argument to the `Quantity` class with the number and unit separated by a space:
+
+```python
+>>> Quantity("4 m")
+Quantity(4, m)
+>>> Quantity("4 metre")
+Quantity(4, m)
+>>> Quantity("741.60 g mol-1")
+Quantity(741.60, g mol⁻¹)
+>>> Quantity("0.997e3 g/L")
+Quantity(997, g L⁻¹)
+```
+
+Uncertainties can also be specified in the string, in either of two usual forms:
+```python
+>>> Quantity("6.67430(15)E-11 N m² kg⁻²")
+Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)
+>>> Quantity("8.293 ± 0.010 V")
+Quantity(8.293, V, uncertainty=0.010)
+>>> Quantity("8.293 +/- 0.010 V")  # Also acceptable
+Quantity(8.293, V, uncertainty=0.010)
+```
+
+### Arithmetic
+
+Mathematical operations are in general performed with the quantity considered to be the product of its number and unit.
+The implementation of arithmetic on the numerical part(s) is typically that of the `Decimal` type.
+
+Quantities can be multiplied and divided by other quantities or by numbers, and the results will possess the correct number to the correct precision, and the correct units:
+```python
+>>> (4 * qu.metre * qu.second**-1) * (6 * qu.second)
+Quantity(24, m)
+>>> ("3.20" * qu.W) * "16.90"
+Quantity(54.0800, W)
+>>> (200 * qu.megajoule) / (70 * qu.kilogram)
+Quantity(2.857142857142857142857142857, MJ kg⁻¹)
+```
+
+Raising to the power of a number is also supported for integer and fractional powers:
+```python
 >>> (3 * qu.watt)**2
 Quantity(9, W²)
+>>> from fractions import Fraction
+>>> (20 * qu.metre**2)**Fraction(1, 2)
+Quantity(4.472135954999579392818347337, m)
 ```
+
+Addition and subtraction is possible when it makes physical sense i.e. when the units of the two quantities are the same or have the same dimension:
+```python
+>>> (4 * qu.metre) + (0.5 * qu.metre)
+Quantity(4.5, m)
+>>> (4 * qu.metre) - (50 * qu.centimetre)
+Quantity(3.50, m)
+>>> from quanstants.units import us
+>>> (4 * qu.metre) + (2 * qu.foot)
+Quantity(4.6096, m)
+```
+
+If the units do not match, a `MismatchedUnitsError` will be raised, which serves as a useful sanity check:
+```python
+>>> (4 * qu.metre) + (3 * qu.kilogram)
+quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
+```
+
+Similarly, equalities are implemented between quantities of the same dimension:
+```python
+TODO
+```
+
+Quantities can be used as exponents themselves, and have the same `sqrt()`, `exp()`, `ln()`, and `log10()` functions implemented as `Decimal` does:
+```python
+>>> a = 100 * qu.m
+>>> b = 25 * qu.m
+>>> a/b
+Quantity(4, (unitless))
+>>> 2**(a/b)
+Quantity(16, (unitless))
+>>> (a/b).sqrt()
+Quantity(2.000000000000000000000000000, (unitless))
+>>> (a/b).exp()
+Quantity(54.59815003314423907811026120, (unitless))
+>>> (a/b).ln()
+Quantity(1.386294361119890618834464243, (unitless))
+>>> (a/b).log10()
+Quantity(0.6020599913279623904274777894, (unitless))
+>>> a.log10()
+quanstants.quantity.NotDimensionlessError: Cannot take the logarithm of a non-dimensionless quantity!
+```
+
+You can easily check whether a quantity is dimensionless:
+```python
+>>> (a/b).is_dimensionless()
+True
+```
+
+Uncertainties are kept track of correctly across arithmetic operations using uncertainty propagation rules:
+```python
+>>> a = (3 * qu.m).plusminus(0.1)
+>>> b = (2 * qu.m).plusminus(0.2)
+>>> a + b
+Quantity(5, m, uncertainty=0.22360679774997896)
+>>> a - b
+Quantity(1, m, uncertainty=0.22360679774997896)
+>>> a * b
+Quantity(6, m², uncertainty=0.6324555320336759)
+>>> a / b
+Quantity(1.5, (unitless), uncertainty=0.15811388300841897)
+>>> 2**(a/b)
+Quantity(2.828427124746190097603377448, (unitless), uncertainty=0.3099848428288717)
+```
+
+By default, the correlation between two quantities is assumed to be zero.
+Uncertainties in the results of operations on two correlated quantities can also be obtained, however, by accessing the corresponding dunder method of the quantity directly and giving the correlation:
+```python
+>>> a.__add__(b, correlation=0.7)
+Quantity(5, m, uncertainty=0.2792848008753788)
+>>> a.__sub__(b, correlation=1)
+Quantity(1, m, uncertainty=0.1)
+```
+
 ### Conversion
+
+Expressing a quantity in other units is done easily:
+```python
+>>> (2 * qu.metre).to(qu.millimetre)
+Quantity(2E+3, mm)
+>>> (6 * qu.foot).to(qu.metre)
+Quantity(1.8288, m)
+>>> (6 * qu.hour).to(qu.s)
+Quantity(21600, s)
+>>> from quanstants import prefixes as qp
+>>> ((3 * qp.kilo * qu.watt) * (1 * qu.day)).to(qu.joule)
+Quantity(2.59200E+8, J)
+```
+
+Use the `base()` function to express a quantity in terms of SI base units:
 ```python
 >>> (50 * qu.joule).base()
 Quantity(50, kg m² s⁻²)
->>> a = 1 * ((qp.kilo * qu.Watt) * qu.hour)
-Quantity(1, kW h)
->>> a.to(qu.joule)
-Quantity(3.600E+6, J)
->>> (6 * qu.foot).to(qu.metre)
-Quantity(1.8288, m)
+```
+
+Use the `cancel()` function to combine like terms in the unit after a calculation:
+```python
 >>> speed = 3 * qu.m * qu.s**-1
 >>> time = 15 * qu.s
->>> distance = speed * time
-Quantity(45, m s⁻¹ s)
+>>> distance = 45 * (qu.m * qu.s * qu.s**-1)
+Quantity(45, m s s⁻¹)
 >>> distance.cancel()
 Quantity(45, m)
 ```
-### Constants
+Note that by default `AUTO_CANCEL` is set to `True` (see Config below), in which case cancelling happens automatically after arithmetic operations:
 ```python
->>> from quanstants import units as u, prefixes as p, constants as c
+>>> speed * time
+Quantity(45, m)
+```
+
+Use `fully_cancel()` to additionally combine units with the same dimensionality:
+```python
+>>> x = (30 * qu.kilowatt * qu.s) / (200 * qu.s * qu.watt**-1)
+>>> x.cancel()
+Quantity(0.15, kW W)
+>>> x.fully_cancel()
+Quantity(0.00015, kW²)
+>>> length = (3000 * qu.metre**2) / (20 * qu.foot)
+>>> length.cancel()
+Quantity(150, m² ft⁻¹)
+>>> length.fully_cancel()
+Quantity(492.1259842519685039370078740, m)
+```
+
+The presentation of compound units is dependent on the order of mathematical operations.
+While this doesn't affect (in)equalities, it may sometimes be useful to get a canonical, reproducible representation of a quantity and its units, for which the `canonical()` method is available:
+```python
+>>> mass = 20 * qu.kilogram
+>>> acceleration = 3 * qu.metre * qu.second**-2
+>>> mass * acceleration
+Quantity(60, kg m s⁻²)
+>>> acceleration * mass
+Quantity(60, m kg s⁻²)
+>>> (mass * acceleration).canonical()
+Quantity(60, s⁻² m kg)
+>>> (acceleration * mass).canonical()
+Quantity(60, s⁻² m kg)
+```
+
+### Constants
+
+In a similar fashion to units and prefixes, physical constants are available in the constants registry under various names and symbols:
+```python
+>>> from quanstants import units as qu, prefixes as qp, constants as qc
 >>> qc.Planck_constant
-Quantity(6.62607015E-34, J s)
+Constant(Planck_constant = 6.62607015E-34 J s)
 >>> qc.h
-Quantity(6.62607015E-34, J s)
->>> qc.Planck
-Quantity(6.62607015E-34, J s)
+Constant(Planck_constant = 6.62607015E-34 J s)
+>>> qc.Planck  # Anything ending with "constant" is available under the truncated form too
+Constant(Planck_constant = 6.62607015E-34 J s)
+```
+
+Only a small selection is imported initially, but further sets of constants can be added to the constants registry in a way analogous to units:
+```python
+>>> from quanstants.constants import codata2018
+>>> qc.vacuum_electric_permittivity
+Constant(vacuum_electric_permittivity = 8.8541878128(13)E-12 F m⁻¹)
 ```
 
 Note the case-sensitivity: constants named after a person or other proper noun are capitalized, whereas units named after people are not (as per SI style):
 ```python
 >>> qc.Bohr_radius
-Quantity(5.29177210903E-11, m, uncertainty=8.0E-21)
+Constant(Bohr_radius = 5.29177210903(80)E-11 m)
 >>> 16 * qu.tesla  # Incidentally, the magnetic field required to levitate a frog
 Quantity(16, T)
 ```
 
+Mostly, constants behave like quantities:
 ```python
 >>> qc.proton_mass
-Quantity(1.67262192369E-27, kg, uncertainty=5.1E-37)
+Constant(proton_mass = 1.67262192369(51)E-27 kg)
 >>> E = qc.proton_mass * qc.speed_of_light**2
-Quantity(1.503277615985125705245525892E-10, kg m² s⁻²)
->>> E.to((qp.M * qu.eV)/qc.c**2)
+Quantity(1.503277615985125705245525892E-10, kg m² s⁻², uncertainty=4.58365141155777E-20)
+```
+
+Constants can be used as units by calling the `as_unit()` method, which creates a unit with the same value:
+```python
+>>> E.to((qp.M * qu.eV)/qc.c**2)  # TODO needs fixing
 Quantity(938.2720881604903652873556338, m² s⁻² MeV m⁻² s²)
->>> E.to((qp.M * qu.eV)/qc.c**2).cancel()
+>>> E.to((qp.M * qu.eV)/qc.c**2).cancel()  # TODO needs fixing
 Quantity(938.2720881604903652873556338, MeV)
 ```
+
 ### Rounding
+
 ```python
 >>> a = (324.9 * qu.J) * (1.674 * qu.mol**-1)
 Quantity(543.8826, J mol⁻¹)
@@ -267,6 +480,13 @@ Quantity(543.88, J mol⁻¹)
 Quantity(543.9, J mol⁻¹)
 >>> a.sigfig(2)
 Quantity(5.4E+2, J mol⁻¹)
+```
+
+### Temperatures
+
+```python
+>>> 0 @ qu.celsius
+Temperature(0, °C)
 ```
 
 ## Why Decimal?

@@ -9,6 +9,7 @@ from .si import kilogram
 class PrefixAlreadyDefinedError(Exception):
     pass
 
+
 # Namespace class to contain all the prefixes, making them useable with prefix.n notation
 class PrefixReg:
     def add(self, name, prefix):
@@ -16,19 +17,22 @@ class PrefixReg:
             raise PrefixAlreadyDefinedError
         setattr(self, name, prefix)
 
+
 prefix_reg = PrefixReg()
 
 
 class AlreadyPrefixedError(Exception):
     pass
 
+
 class Prefix:
     """An object representing a (usually metric) prefix.
-    
+
     Combines with a `BaseUnit` or `DerivedUnit` to form a new `PrefixedUnit`.
     Prefixes are automatically added under both symbol and name to the default prefix registry, which
     is accessible via `quanstants.prefixes`.
     """
+
     def __init__(
         self,
         symbol,
@@ -43,19 +47,19 @@ class Prefix:
             self._multiplier = dec(multiplier)
         prefix_reg.add(symbol, self)
         prefix_reg.add(name, self)
-    
+
     @property
     def symbol(self):
         return self._symbol
-    
+
     @property
     def name(self):
         return self._name
-    
+
     @property
     def multiplier(self):
         return self._multiplier
-    
+
     def __mul__(self, other):
         if isinstance(other, (BaseUnit, DerivedUnit)):
             # Special behaviour for kilo + gram
@@ -77,10 +81,11 @@ class Prefix:
 
 class PrefixedUnit(DerivedUnit):
     """A unit created through the combination of a `BaseUnit` or `DerivedUnit` with a `Prefix`.
-    
+
     For now acts almost exactly like a `DerivedUnit` except that it cannot be prefixed.
     TODO: automatically adjust the prefix upon request (so that e.g. 2000 kJ becomes 2 MJ).
     """
+
     def __init__(
         self,
         prefix: Prefix,
@@ -91,7 +96,7 @@ class PrefixedUnit(DerivedUnit):
     ):
         self._prefix = prefix
         self._unit = unit
-    
+
         # Create prefixed symbol and name
         concat_symbol = prefix.symbol + unit.symbol
         if (prefix.name is not None) and (unit.name is not None):
@@ -114,11 +119,11 @@ class PrefixedUnit(DerivedUnit):
             canon_symbol=canon_symbol,
             alt_names=concat_alt_names,
         )
-    
+
     @property
     def prefix(self):
         return self._prefix
-    
+
     @property
     def unit(self):
         return self._unit

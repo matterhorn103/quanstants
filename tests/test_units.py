@@ -11,4 +11,4 @@ from quanstants import (
     quanfig,
 )
 
-#kWh
+# kWh

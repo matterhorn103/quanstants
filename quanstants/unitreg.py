@@ -5,14 +5,16 @@ from .unicode import exponent_parser
 class UnitAlreadyDefinedError(Exception):
     pass
 
+
 class ParsingError(Exception):
     pass
+
 
 # Namespace class to contain all the units, making them useable with unit.m notation
 class UnitReg:
     def add(self, name: str, unit):
         """Add a `Unit` object to the registry under the provided name.
-        
+
         This method provides a safe way to add units to the registry.
         Names in the registry's namespace cannot be overwritten in this way, and attempting to add a unit
         under a name that is already defined will raise a `UnitAlreadyDefinedError`.
@@ -22,10 +24,10 @@ class UnitReg:
         if hasattr(self, name):
             raise UnitAlreadyDefinedError(f"{name} is already defined!")
         setattr(self, name, unit)
-    
+
     def list_names(self, include_prefixed=True, prefixed_only=False):
         """Return a list of all unit names in the namespace, in human-readable format i.e. as strings.
-        
+
         By specifying the appropriate options, prefixed units can be included or filtered out, or only
         prefixed units can be requested.
         Essentially just return the value of `self.__dict__.keys()` but with anything that isn't a unit
@@ -35,17 +37,19 @@ class UnitReg:
         if it has `canon_symbol=True`.
         """
         filtered_names = {name for name in self.__dict__.keys() if name[0] != "_"}
-        prefixed = {name for name in filtered_names if hasattr(getattr(self, name), "prefix")}
+        prefixed = {
+            name for name in filtered_names if hasattr(getattr(self, name), "prefix")
+        }
         if prefixed_only:
             return list(prefixed)
         elif include_prefixed:
             return list(filtered_names)
         else:
             return list(filtered_names - prefixed)
-    
+
     def list_units(self, include_prefixed=True, prefixed_only=False):
         """Return a list of all `Unit` objects currently in the registry.
-        
+
         By specifying the appropriate options, prefixed units can be included or filtered out, or only
         prefixed units can be requested.
         Unlike `list_names()`, the values are `Unit` objects not strings, and each unit is only listed
@@ -57,7 +61,7 @@ class UnitReg:
 
     def search(self, search_string: str) -> dict:
         """Return all unit names in the namespace for which the provided search string is found in its metadata.
-        
+
         The results are returned as a dictionary, with each item being the results of each search method
         separated into lists of exact matches and substring matches.
         For now the function just searches in each unit's symbol and name.
@@ -113,7 +117,7 @@ class UnitReg:
 
     def parse(self, string: str):
         """Take a string of unit symbols or names and digits and convert to an appropriate Unit object.
-        
+
         Units may be specified by their symbols (which may be non-ASCII Unicode) or by one of their
         defined names in the registry (which consist of ASCII letters, numbers, and underscores "_" only).
 
@@ -153,7 +157,16 @@ class UnitReg:
         * by normal ASCII integers separated by a normal slash e.g. `"-1/2"` - this is the same as the
         style printed by `str(Fraction(-1, 2))`
         """
-        multiplication_chars = [".", "·", "⋅", "•", "∙", "*", "∗", quanfig.UNIT_SEPARATOR]
+        multiplication_chars = [
+            ".",
+            "·",
+            "⋅",
+            "•",
+            "∙",
+            "*",
+            "∗",
+            quanfig.UNIT_SEPARATOR,
+        ]
         division_chars = ["/", "⁄", "∕"]
         exponent_chars = ["^"]
         minus_chars = ["-", "⁻", "−"]
@@ -195,7 +208,7 @@ class UnitReg:
                 continue
             else:
                 current_unit += char
-        
+
         # Make sure final working unit gets parsed too
         final_term = self._create_term(current_unit, current_exponent)
         if final_term is not None:
@@ -213,10 +226,10 @@ class UnitReg:
                 divisor_unit *= term
             parsed_unit = parsed_unit / divisor_unit
         return parsed_unit
-    
+
     def get_total(self, request: str, include_prefixed=True, prefixed_only=False):
         """Return the total number of defined names, units, or prefixed units according to the request.
-        
+
         `request` should be "names", "units", or "prefixed".
         """
         if request == "names":

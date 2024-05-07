@@ -8,8 +8,11 @@ from quanstants import (
     quanfig,
 )
 
+class TestRounding:
+    def test_round_default(self):
+        q = (123.456789 * qu.m).plusminus(0.000543)
 
-class TestQuantity:
+class TestParser:
     def test_parser(self):
         number = "3.25"
         unit = qu.m * qu.s**-2

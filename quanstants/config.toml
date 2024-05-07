@@ -1,0 +1,102 @@
+[rounding.ROUNDING_MODE]
+default = "ROUND_HALF_UP"
+doc = "Set the rounding behaviour for internal Decimal objects."
+
+[rounding.ROUND_TO_IF_UNCERTAINTY]
+default = "UNCERTAINTY"
+doc = """Controls the default behaviour of round(Quantity) and Quantity.round() for quantities with an uncertainty.
+
+Options: \"PLACES\", \"FIGURES\", \"UNCERTAINTY\"."""
+
+[rounding.ROUND_TO_IF_EXACT]
+default = "FIGURES"
+doc = """Controls the default behaviour of round(Quantity) and Quantity.round() for exact quantities.
+
+Options: \"PLACES\", \"FIGURES\", \"UNCERTAINTY\"."""
+
+[rounding.NDIGITS_PLACES]
+default = 2
+doc = "The default value of ndigits to use with `round_to_places()`."
+
+[rounding.NDIGITS_FIGURES]
+default = 3
+doc = "The default value of ndigits to use with `round_to_figures()`."
+
+[rounding.NDIGITS_UNCERTAINTY]
+default = 1
+doc = """The default value of ndigits to use with `round_to_uncertainty()`.
+
+This determines the number of significant figures the uncertainty is rounded to.
+The number is then rounded to the same precision."""
+
+[rounding.ROUND_PAD]
+default = true
+doc = "Like siunitx, determines if extra zeroes should be added to reach desired number of digits."
+
+[arithmetic.AUTO_CANCEL]
+default = true
+doc = "Whether identical units should be cancelled and combined automatically after arithmetic."
+
+[conversion.CONVERT_FLOAT_AS_STR]
+default = true
+doc = "Whether floats should be converted to Decimal via str or directly."
+
+[printing.PRETTYPRINT]
+default = true
+doc = """Whether to format printed strings in a nice way.
+
+Changing this setting also changes various of the other settings below to match."""
+
+[printing.ROUND_BEFORE_PRINT]
+default = false
+doc = """Whether the string form of quantities should be rounded or kept unrounded.
+
+When enabled, the quantity itself is not changed, but `print()`, `str()`, or anything else that
+calls `__str__` on the quantity will return a rounded representation.
+
+The rounding is that of `Quantity.round()` with the default parameters."""
+
+[printing.UNCERTAINTY_STYLE]
+default = "PARENTHESES"
+doc = """How uncertainties of quantities should be formatted.
+
+Options: \"PARENTHESES\", \"PLUSMINUS\"."""
+
+[printing.UNIT_SEPARATOR]
+default = " "
+doc = """Unicode character used to separate unit terms.
+
+Default is a normal space."""
+
+[printing.INVERSE_UNIT]
+default = "NEGATIVE_SUPERSCRIPT"
+doc = """How units with negative exponents should be formatted.
+
+Options: \"NEGATIVE_SUPERSCRIPT\", \"SLASH\"."""
+
+[printing.UNICODE_SUPERSCRIPTS]
+default = true
+doc = "Whether exponents of units should be formatted with Unicode superscript characters."
+
+[printing.GROUP_DIGITS]
+default = false
+doc = "Whether numbers should be printed with separators between groups of digits."
+
+[printing.GROUP_DIGITS_STYLE]
+default = "all"
+doc = "Whether to group digits before (`\"integer\"`) the decimal point, after (`\"decimal\"`), or both (`\"all\"`)."
+
+[printing.GROUP_SEPARATOR]
+default = " "
+doc = """The Unicode character which should be put between groups of digits.
+
+The default is the U+2009 \" \" \"THIN SPACE\", which matches `siunitx`.
+Naturally this will just appear as a normal-width space in a monospaced font.
+
+A normal space \" \" would be the alternative if only ASCII characters are desired.
+A comma \",\" or a full stop \".\" are commonly used, but are discouraged by the SI.
+Python itself often allows or makes use of an underscore \"_\"."""
+
+[misc.LITRE_SYMBOL]
+default = "L"
+doc = "Whether to use a lowercase l or uppercase L as the symbol for the litre."

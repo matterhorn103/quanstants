@@ -3,7 +3,7 @@ from itertools import combinations
 import math
 
 import pytest
-from uncertainties import ufloat
+from uncertainties import ufloat, umath
 import sigfig
 
 from quanstants import (
@@ -89,7 +89,7 @@ class TestAgainstUncertaintiesPackage:
                 # Turn each number to a Decimal first and round to 8 dp using
                 # Decimal's rounding to ensure equality
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = combo[0] + combo[1]
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -107,7 +107,7 @@ class TestAgainstUncertaintiesPackage:
             try:
                 result_u = u0 - u1
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = combo[0] - combo[1]
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -124,7 +124,7 @@ class TestAgainstUncertaintiesPackage:
             try:
                 result_u = u0 * u1
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = combo[0] * combo[1]
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -141,7 +141,7 @@ class TestAgainstUncertaintiesPackage:
             try:
                 result_u = u0 / u1
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = combo[0] / combo[1]
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -158,7 +158,7 @@ class TestAgainstUncertaintiesPackage:
             try:
                 result_u = u1 / u0
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = combo[1] / combo[0]
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -174,7 +174,7 @@ class TestAgainstUncertaintiesPackage:
             try:
                 result_u = u0 ** 5
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = q ** 5
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -191,7 +191,7 @@ class TestAgainstUncertaintiesPackage:
             try:
                 result_u = 5 ** (u1 / u0)
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = 5 ** (combo[1] / combo[0])
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -206,9 +206,9 @@ class TestAgainstUncertaintiesPackage:
             u0 = ufloat(float(combo[0].number), float(combo[0]._uncertainty))
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
-                result_u =  math.log(u1 / u0)
+                result_u =  umath.log(u1 / u0)
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = (combo[1] / combo[0]).ln()
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -223,9 +223,9 @@ class TestAgainstUncertaintiesPackage:
             u0 = ufloat(float(combo[0].number), float(combo[0]._uncertainty))
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
-                result_u =  math.log10(u1 / u0)
+                result_u =  umath.log10(u1 / u0)
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = (combo[1] / combo[0]).log10()
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
@@ -240,9 +240,9 @@ class TestAgainstUncertaintiesPackage:
             u0 = ufloat(float(combo[0].number), float(combo[0]._uncertainty))
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
-                result_u =  math.exp(u1 / u0)
+                result_u =  umath.exp(u1 / u0)
                 results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
-            except:
+            except:  # pragma: no cover
                 continue
             result_q = (combo[1] / combo[0]).exp()
             results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))

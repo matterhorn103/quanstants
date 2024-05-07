@@ -37,17 +37,17 @@ def get_uncertainty(
 
     # C = A + B
     if operation == "add":
-        if not B:
+        if B is None:
             raise TypeError("Operation 'add' is only supported for Q + Q.")
         sigma_c = ((sigma_a**2) + (sigma_b**2) + (2 * sigma_ab)).sqrt()
     # C = A - B
     elif operation == "sub":
-        if not B:
+        if B is None:
             raise TypeError("Operation 'sub' is only supported for Q - Q.")
         sigma_c = ((sigma_a**2) + (sigma_b**2) - (2 * sigma_ab)).sqrt()
     # C = AB and C = xA
     elif operation == "mul":
-        if B:
+        if B is not None:
             sigma_c = (
                 abs(C)
                 * (
@@ -62,7 +62,7 @@ def get_uncertainty(
             )
     # C = A/B and C = A/x
     elif operation == "truediv":
-        if B:
+        if B is not None:
             sigma_c = (
                 abs(C)
                 * (
@@ -75,14 +75,14 @@ def get_uncertainty(
             raise TypeError("Operation 'truediv' is only supported for Q/Q and Q/x.")
     # C = x/A
     elif operation == "rtruediv":
-        if B:
+        if B is not None:
             raise TypeError("Operation is only supported for x/Q.")
         elif x:
             # Work out uncertainty as if it was C = xA**-1 - ends up just being the relative error times the result
             sigma_c = abs((C * -1 * sigma_a) / A)
     # C = A**B and C = A**x
     elif operation == "pow":
-        if B:
+        if B is not None:
             sigma_c = (
                 abs(C)
                 * (
@@ -95,7 +95,7 @@ def get_uncertainty(
             sigma_c = abs((C * x * sigma_a) / A)
     # C = B**A and C = x**A
     elif operation == "rpow":
-        if B:
+        if B is not None:
             sigma_c = (
                 abs(C)
                 * (

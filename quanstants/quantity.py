@@ -365,6 +365,12 @@ class Quantity:
             new_number = dimensionless_quant.number.ln()
             new_uncertainty = get_uncertainty(new_number, "ln", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
+    
+    def log(self, base=None):
+        if base is None:
+            return self.ln()
+        else:
+            raise NotImplementedError
 
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""

@@ -9,6 +9,8 @@
 
 -e file:.
 coverage==7.4.4
+future==1.0.0
+    # via uncertainties
 iniconfig==2.0.0
     # via pytest
 packaging==24.0
@@ -16,3 +18,7 @@ packaging==24.0
 pluggy==1.4.0
     # via pytest
 pytest==8.1.1
+sigfig==1.3.3
+sortedcontainers==2.4.0
+    # via sigfig
+uncertainties==3.1.7

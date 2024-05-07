@@ -83,10 +83,7 @@ class Quantity:
         if isinstance(unit, str):
             self._unit = unit_reg.parse(unit)
         elif unit is None:
-            # Have to do the import here to avoid circular import
-            from .unit import unitless
-
-            self._unit = unitless
+            self._unit = unit_reg.unitless
         else:
             self._unit = unit
 
@@ -383,6 +380,14 @@ class Quantity:
             new_number = dimensionless_quant.number.log10()
             new_uncertainty = get_uncertainty(new_number, "log10", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
+
+    #def __hash__(self, other):
+    #    canonical = self.base().cancel().canonical()
+    #    if canonical.number == 0:
+    #        return 0
+    #    elif canonical.unit == 
+    #        
+    #        return hash((canonical.number, canonical.unit, canonical.uncertainty))
 
     def __eq__(self, other):
         if isinstance(other, Quantity):

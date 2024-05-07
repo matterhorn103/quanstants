@@ -348,16 +348,28 @@ class Unitless(Unit):
 
     # Make sure that Unitless * Unit and Unitless / Unit return just the other Unit
     def __mul__(self, other):
-        if isinstance(other, Unit):
+        if isinstance(other, (Unit, Quantity)):
             return other
         else:
-            return NotImplemented
+            return super().__mul__(other)
+    
+    def __rmul__(self, other):
+        if isinstance(other, (Unit, Quantity)):
+            return other
+        else:
+            return super().__rmul__(other)
 
     def __truediv__(self, other):
-        if isinstance(other, Unit):
+        if isinstance(other, (Unit, Quantity)):
             return other.inverse()
         else:
-            return NotImplemented
+            return super().__truediv__(other)
+    
+    def __rtruediv__(self, other):
+        if isinstance(other, (Unit, Quantity)):
+            return other
+        else:
+            return super().__rtruediv__(other)
 
     # Unitless is basically equal to 1, so if raised to the power of something else, return self
     def __pow__(self, other):
@@ -507,7 +519,7 @@ class CompoundUnit(Unit):
             factor for factor in new_components_list if factor.exponent != 0
         )
         if len(new_components) == 0:
-            return 1 * Unitless()
+            return 1 * unitless
         else:
             return 1 * CompoundUnit(new_components)
 

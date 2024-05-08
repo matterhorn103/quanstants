@@ -539,6 +539,8 @@ Absolute temperatures in kelvin are normal quantities like any other:
 Quantity(200, K)
 >>> 2 * T
 Quantity(400, K)
+>>> (1600 * qu.joule) / T
+Quantity(8, J K⁻¹)
 ```
 
 ```python

@@ -8,9 +8,11 @@ from quanstants import (
     quanfig,
 )
 
+
 class TestRounding:
     def test_round_default(self):
         q = (123.456789 * qu.m).plusminus(0.000543)
+
 
 class TestParser:
     def test_parser(self):
@@ -30,7 +32,7 @@ class TestParser:
         unit_string = "m s-2"
         string_to_parse = number + " " + unit_string
         assert Quantity(number, unit) == Quantity(string_to_parse)
-    
+
     def test_parser_with_uncertainty(self):
         number = "1.234"
         unit = qu.m * qu.s**-2
@@ -44,14 +46,14 @@ class TestParser:
         uncertainty = "0.056"
         string_to_parse = "1.234 ± 0.056 m s-2"
         assert Quantity(number, unit, uncertainty) == Quantity(string_to_parse)
-    
+
     def test_parser_with_uncertainty_plusminus_unicode_nospaces(self):
         number = "1.234"
         unit = qu.m * qu.s**-2
         uncertainty = "0.056"
         string_to_parse = "1.234±0.056 m s-2"
         assert Quantity(number, unit, uncertainty) == Quantity(string_to_parse)
-    
+
     def test_parser_with_uncertainty_plusminus_ascii(self):
         number = "1.234"
         unit = qu.m * qu.s**-2

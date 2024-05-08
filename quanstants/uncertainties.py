@@ -2,6 +2,7 @@ from decimal import Decimal as dec
 
 from .config import quanfig
 
+
 def get_uncertainty(
     numerical_result, operation, quantityA, quantityB=None, numberx=None, correlation=0
 ):

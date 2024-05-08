@@ -1,8 +1,25 @@
+"""A simple script to turn NIST's text files of constant definitions into Constant definitions.
+
+NIST publish the CODATA recommended values of fundamental physical constants at:
+https://physics.nist.gov/cuu/Constants/Table/allascii.txt
+as a simple ASCII text file.
+This script roughly parses it and creates Python code defining Constant objects. The
+parsing is not perfect, so manual tweaks to the output are both expected and necessary.
+"""
+
 import sys
 
 
 def parse(file):
-    output = []
+    # Add imports to begin with
+    output = [
+        "from ..constant import Constant\n",
+        "from ..unit import unit_reg as qu\n",
+        "from ..prefix import prefix_reg as qp\n",
+        "\n",
+        "# fmt: off\n",
+        "\n",
+    ]
     with open(file) as f:
         lines = f.read().splitlines()
     lines = [line for line in lines if len(line) > 0]
@@ -21,12 +38,17 @@ def parse(file):
         number = "".join(parts[1].split())
         uncertainty = "".join(parts[2].split())
         if len(parts) > 3:
-            unit_raw = [f"u.{x}".replace("^", "**") for x in parts[3].split()]
+            unit_raw = [f"qu.{x}".replace("^", "**") for x in parts[3].split()]
             unit = " * ".join(unit_raw)
         else:
-            unit = "unitless"
-        definition = f'{name} = Constant(None, "{name}", "{number}", {unit}, uncertainty="{uncertainty}", canon_symbol=False)\n'
+            unit = "qu.unitless"
+        # eV is the only commonly prefixed unit
+        if "eV" in unit and unit[:5] != "qu.eV":
+            unit = "(qp." + unit[3] + " * " + "qu.eV)" + unit[6:]
+        definition = f'{name} = Constant(None, "{name}", "{number}", {unit}, {uncertainty}, canon_symbol=False)\n'
         output.append(definition)
+    output.append("\n")
+    output.append("# fmt: on\n")
     print(output)
     return output
 

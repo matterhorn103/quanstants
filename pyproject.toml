@@ -27,3 +27,6 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["quanstants"]
+
+[tool.ruff]
+extend-exclude = ["data"]

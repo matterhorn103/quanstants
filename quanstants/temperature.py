@@ -59,6 +59,8 @@ class TemperatureUnit(Unit):
     ```
     """
 
+    __slots__ = ("_value", "_zero_point")
+
     def __init__(
         self,
         symbol: str,
@@ -162,6 +164,8 @@ class Temperature(Quantity):
     As most scales have a different zero point, a temperature is first converted internally to kelvin
     before it can be manipulated mathematically.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,

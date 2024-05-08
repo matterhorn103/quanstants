@@ -1,5 +1,7 @@
 from ..temperature import TemperatureUnit
 
+# fmt: off
+
 # TODO
 degreeFahrenheit = TemperatureUnit(
     "°F",
@@ -19,3 +21,5 @@ degreeReaumur = TemperatureUnit(
     canon_symbol=True,
     alt_names=["degree_Reaumur", "degreeRe", "reaumur"],
 )
+
+# fmt: on

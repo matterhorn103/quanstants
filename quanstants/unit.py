@@ -111,6 +111,12 @@ class Unit:
     The default unit registry is accessible as `quanstants.units`.
     """
 
+    # Using slots keeps the memory footprint down as there is no __dict__
+    # It also helps immutability as users can't add attributes
+    __slots__ = (
+        "_symbol", "_name", "_dimensional_exponents", "_components", "_alt_names"
+    )
+
     def __init__(
         self,
         symbol: str | None,
@@ -339,6 +345,8 @@ class Unit:
 class Unitless(Unit):
     """Special unitless unit."""
 
+    __slots__ = ()
+
     def __init__(self, reg: UnitReg = unit_reg, add_to_reg=False):
         super().__init__(
             symbol="(unitless)",
@@ -357,7 +365,7 @@ class Unitless(Unit):
             return other
         else:
             return super().__mul__(other)
-    
+
     def __rmul__(self, other):
         if isinstance(other, (Unit, Quantity)):
             return other
@@ -369,7 +377,7 @@ class Unitless(Unit):
             return other.inverse()
         else:
             return super().__truediv__(other)
-    
+
     def __rtruediv__(self, other):
         if isinstance(other, (Unit, Quantity)):
             return other
@@ -379,7 +387,7 @@ class Unitless(Unit):
     # Unitless is basically equal to 1, so if raised to the power of something else, return self
     def __pow__(self, other):
         return self
-    
+
     # Unitless also needs to evaluate to equal to 1, because it hashes to 1 (it is
     # unique in this respect, no other units are equal to a numerical value)
     def __eq__(self, other):
@@ -404,6 +412,8 @@ unitless = Unitless(add_to_reg=True)
 
 class BaseUnit(Unit):
     """SI base units and other base units that are not defined in terms of other units."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -450,6 +460,8 @@ class CompoundUnit(Unit):
     Alternatively, a list of `Unit` objects can be passed and the `components` attributes of each will
     be combined automatically.
     """
+
+    __slots__ = ("_defined_in_base")
 
     def __init__(
         self,
@@ -593,7 +605,7 @@ class CompoundUnit(Unit):
         ordered_components = tuple(sorted(self.components, key=get_priority))
         # Now that the components have the canonical order, make sure the order of units in the
         # generated symbol is the same by passing appropriate settings
-        return  1 * CompoundUnit(
+        return 1 * CompoundUnit(
             ordered_components,
             symbol_sort="unsorted",
             symbol_inverse="NEGATIVE_SUPERSCRIPT",
@@ -611,6 +623,8 @@ class DerivedUnit(Unit):
     will raise an error).
     The `dimensional_exponents` are set to that of the provided value's unit(s).
     """
+
+    __slots__ = ("_value")
 
     def __init__(
         self,

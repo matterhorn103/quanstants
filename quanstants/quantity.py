@@ -45,10 +45,12 @@ class Quantity:
     is to call `Quantity.parse(string)`.
     """
 
+    __slots__ = ("_number", "_unit", "_uncertainty")
+
     def __init__(
         self,
         number: str | int | float | dec | None = None,
-        unit = None,
+        unit=None,
         uncertainty: str | int | float | dec | Self | None = None,
         value: str | Self | None = None,
     ):
@@ -133,10 +135,14 @@ class Quantity:
             self.number.as_tuple().exponent <= self._uncertainty.as_tuple().exponent
         ) and (quanfig.UNCERTAINTY_STYLE == "PARENTHESES"):
             number_string = group_digits(self.number)
-            bracketed_uncertainty = f"({''.join([str(n) for n in self._uncertainty.as_tuple().digits])})"
+            bracketed_uncertainty = (
+                f"({''.join([str(n) for n in self._uncertainty.as_tuple().digits])})"
+            )
             # Insert before exponential if present
             if any(x in number_string for x in ["E", "e"]):
-                number_string = number_string.replace("E", f"{bracketed_uncertainty}E").replace("e", f"{bracketed_uncertainty}e")
+                number_string = number_string.replace(
+                    "E", f"{bracketed_uncertainty}E"
+                ).replace("e", f"{bracketed_uncertainty}e")
             else:
                 number_string = number_string + bracketed_uncertainty
             return f"{number_string} {self.unit.symbol}"
@@ -230,7 +236,9 @@ class Quantity:
             new_uncertainty = get_uncertainty(
                 new_number, "mul", self, quantityB=other, correlation=correlation
             )
-            return Quantity(new_number, self.unit * other.unit, new_uncertainty)._auto_cancel()
+            return Quantity(
+                new_number, self.unit * other.unit, new_uncertainty
+            )._auto_cancel()
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
             return Quantity(self.number, self.unit * other)
@@ -270,7 +278,9 @@ class Quantity:
             new_uncertainty = get_uncertainty(
                 new_number, "truediv", self, quantityB=other, correlation=correlation
             )
-            return Quantity(new_number, self.unit / other.unit, new_uncertainty)._auto_cancel()
+            return Quantity(
+                new_number, self.unit / other.unit, new_uncertainty
+            )._auto_cancel()
         # Check if it's a unit with duck typing
         elif hasattr(other, "base") and hasattr(other, "components"):
             return Quantity(self.number, self.unit / other)
@@ -334,7 +344,7 @@ class Quantity:
             return NotImplemented
         else:
             return NotImplemented
-    
+
     def sqrt(self):
         """Return the square root of the quantity, equivalent to `Quantity**Fraction(1, 2)`."""
         return self ** frac(1, 2)
@@ -362,7 +372,7 @@ class Quantity:
             new_number = dimensionless_quant.number.ln()
             new_uncertainty = get_uncertainty(new_number, "ln", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
-    
+
     def log(self, base=None):
         if base is None:
             return self.ln()
@@ -389,7 +399,14 @@ class Quantity:
         elif canonical.unit == 1:
             return 1
         else:
-            return hash((canonical.number, canonical.unit.symbol, canonical.unit.name, canonical.unit.dimensional_exponents))
+            return hash(
+                (
+                    canonical.number,
+                    canonical.unit.symbol,
+                    canonical.unit.name,
+                    canonical.unit.dimensional_exponents,
+                )
+            )
 
     def __eq__(self, other):
         if self.number == 0:
@@ -462,9 +479,16 @@ class Quantity:
         """Alias for `Quantity.round()` to allow the use of the in-built `round()`."""
         return self.round(ndigits, mode, pad)
 
-    def round(self, ndigits=None, mode=None, pad=quanfig.ROUND_PAD, mode_if_uncertainty=None, mode_if_exact=None):
+    def round(
+        self,
+        ndigits=None,
+        mode=None,
+        pad=quanfig.ROUND_PAD,
+        mode_if_uncertainty=None,
+        mode_if_exact=None,
+    ):
         """Return the quantity with the numerical part rounded by the set method.
-        
+
         Calls one of `Quantity`'s other rounding methods depending on the value of `mode`:
         `"PLACES"` ⇒ `Quantity.round_to_places()`
         `"FIGURES"` ⇒ `Quantity.round_to_figures()`
@@ -485,10 +509,22 @@ class Quantity:
         precision.
         """
         if self._uncertainty:
-            selected_mode = mode_if_uncertainty if mode_if_uncertainty else mode if mode else quanfig.ROUND_TO_IF_UNCERTAINTY
+            selected_mode = (
+                mode_if_uncertainty
+                if mode_if_uncertainty
+                else mode
+                if mode
+                else quanfig.ROUND_TO_IF_UNCERTAINTY
+            )
         else:
-            selected_mode = mode_if_exact if mode_if_exact else mode if mode else quanfig.ROUND_TO_IF_EXACT
-        
+            selected_mode = (
+                mode_if_exact
+                if mode_if_exact
+                else mode
+                if mode
+                else quanfig.ROUND_TO_IF_EXACT
+            )
+
         if selected_mode == "PLACES":
             return self.round_to_places(ndigits, pad)
         elif selected_mode == "FIGURES":
@@ -525,7 +561,9 @@ class Quantity:
         # Use in a local context so that user's context isn't overwritten
         with localcontext() as ctx:
             ctx.rounding = quanfig.ROUNDING_MODE
-            rounded = Quantity(round(self.number, ndigits), self.unit, self._uncertainty)
+            rounded = Quantity(
+                round(self.number, ndigits), self.unit, self._uncertainty
+            )
         return rounded
 
     def round_to_figures(self, ndigits=None, pad=quanfig.ROUND_PAD):
@@ -563,7 +601,9 @@ class Quantity:
             with localcontext() as ctx:
                 ctx.rounding = quanfig.ROUNDING_MODE
                 rounded_significand = round(significand, ndigits - 1)
-            return Quantity(rounded_significand * dec(f"1E{exponent}"), self.unit, self._uncertainty)
+            return Quantity(
+                rounded_significand * dec(f"1E{exponent}"), self.unit, self._uncertainty
+            )
         # If request is for more sigfigs than currently, only pad if asked/permitted to do so
         elif (ndigits > current_sigfigs) and (not pad):
             return self
@@ -575,9 +615,11 @@ class Quantity:
                 new_digits.append(0)
             new_exponent = self.number.as_tuple().exponent - n_digits_to_add
             return Quantity(
-                dec((self.number.as_tuple().sign, new_digits, new_exponent)), self.unit, self._uncertainty
+                dec((self.number.as_tuple().sign, new_digits, new_exponent)),
+                self.unit,
+                self._uncertainty,
             )
-    
+
     def round_to_sigfigs(self, ndigits=None, pad=quanfig.ROUND_PAD):
         """Alias for `round_to_figures()`."""
 
@@ -616,8 +658,10 @@ class Quantity:
         rounded_uncertainty = self.uncertainty.round_to_figures(ndigits, pad=False)
         # Now round the number to the same precision
         uncertainty_places = rounded_uncertainty.number.as_tuple().exponent * -1
-        return self.round_to_places(uncertainty_places).with_uncertainty(rounded_uncertainty)
-    
+        return self.round_to_places(uncertainty_places).with_uncertainty(
+            rounded_uncertainty
+        )
+
     def round_uncertainty(self, ndigits=None, mode=None):
         """Round the uncertainty without changing the number.
 
@@ -670,14 +714,14 @@ class Quantity:
             return (self.number * self.unit.fully_cancel()).with_uncertainty(
                 self.uncertainty.fully_cancel().number
             )
-        
+
     def _auto_cancel(self):
         """Apply automatic cancelling if specified by `quanstants.quanfig.AUTO_CANCEL`."""
         if quanfig.AUTO_CANCEL:
             return self.cancel()
         else:
             return self
-        
+
     def canonical(self):
         """Express the quantity with its units in a canonical order."""
         if not self._uncertainty:

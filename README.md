@@ -302,9 +302,14 @@ If the units do not match, a `MismatchedUnitsError` will be raised, which serves
 quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
 ```
 
-Similarly, equalities are implemented between quantities of the same dimension:
+Similarly, (in)equalities are implemented between quantities of the same dimension:
 ```python
-TODO
+>> (0.3 * qu.litre) > (150 * qu.millilitre)
+True
+>>> (0.15 * qu.litre) >= (150 * qu.millilitre)
+True
+>>> (0.3 * qu.litre) > (150 * qu.centimetre**3)
+True
 ```
 
 Quantities can be used as exponents themselves, and have the same `sqrt()`, `exp()`, `ln()`, and `log10()` functions implemented as `Decimal` does:
@@ -527,6 +532,14 @@ Quantity(5.4E+2, J mol⁻¹)
 ```
 
 ### Temperatures
+
+Absolute temperatures in kelvin are normal quantities like any other:
+```python
+>>> T = 200 * qu.kelvin
+Quantity(200, K)
+>>> 2 * T
+Quantity(400, K)
+```
 
 ```python
 >>> 0 @ qu.celsius

@@ -59,6 +59,8 @@ class TemperatureUnit(Unit):
     ```
     """
 
+    __slots__ = ("_value", "_zero_point")
+
     def __init__(
         self,
         symbol: str,
@@ -137,7 +139,7 @@ class TemperatureUnit(Unit):
                 "Temperatures can only be converted from quantities with units of temperature."
             )
 
-        if not other.uncertainty:
+        if not other._uncertainty:
             new_uncertainty = dec("0")
         else:
             new_uncertainty = other.uncertainty.to(self)
@@ -152,8 +154,8 @@ class TemperatureUnit(Unit):
         raise NotImplementedError
 
     def canonical(self):
-        """Order terms into a reproducible order and return as a Unit."""
-        return self
+        """Order terms into a reproducible order and return as a Quantity."""
+        return 1 * self
 
 
 class Temperature(Quantity):
@@ -162,6 +164,8 @@ class Temperature(Quantity):
     As most scales have a different zero point, a temperature is first converted internally to kelvin
     before it can be manipulated mathematically.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,

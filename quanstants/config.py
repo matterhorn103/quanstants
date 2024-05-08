@@ -4,6 +4,7 @@ import tomllib
 
 # Available options, their default values, and their respective docstrings, are contained in config.toml
 
+
 class QuanstantsConfig:
     def __init__(self):
         # Open default options from file

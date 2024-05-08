@@ -111,6 +111,12 @@ class Unit:
     The default unit registry is accessible as `quanstants.units`.
     """
 
+    # Using slots keeps the memory footprint down as there is no __dict__
+    # It also helps immutability as users can't add attributes
+    __slots__ = (
+        "_symbol", "_name", "_dimensional_exponents", "_components", "_alt_names"
+    )
+
     def __init__(
         self,
         symbol: str | None,
@@ -232,9 +238,14 @@ class Unit:
         else:
             return NotImplemented
 
-    # Tests for equality rely on the implementation of the same functions for `Quantity`, at least for now
+    # Hashing and equalities use the implementations of `Quantity`
+    # Units are thus considered equal to quantities that have the same value
+    def __hash__(self):
+        canonical = self.base().cancel().canonical()
+        return hash(canonical)
+
     def __eq__(self, other):
-        if isinstance(other, Unit):
+        if isinstance(other, (Unit, Quantity)):
             # Convert both to base unit representations (Quantities)
             a = self.base().cancel().canonical()
             b = other.base().cancel().canonical()
@@ -244,7 +255,7 @@ class Unit:
             return NotImplemented
 
     def __gt__(self, other):
-        if isinstance(other, Unit):
+        if isinstance(other, (Unit, Quantity)):
             # Convert both to base unit representations (Quantities)
             a = self.base().cancel().canonical()
             b = other.base().cancel().canonical()
@@ -254,7 +265,7 @@ class Unit:
             return NotImplemented
 
     def __ge__(self, other):
-        if isinstance(other, Unit):
+        if isinstance(other, (Unit, Quantity)):
             # Convert both to base unit representations (Quantities)
             a = self.base().cancel().canonical()
             b = other.base().cancel().canonical()
@@ -327,12 +338,14 @@ class Unit:
         return self.cancel()
 
     def canonical(self):
-        """Order terms into a reproducible order and return as a Unit."""
+        """Order terms into a reproducible order and return as a Quantity."""
         raise NotImplementedError
 
 
 class Unitless(Unit):
     """Special unitless unit."""
+
+    __slots__ = ()
 
     def __init__(self, reg: UnitReg = unit_reg, add_to_reg=False):
         super().__init__(
@@ -352,7 +365,7 @@ class Unitless(Unit):
             return other
         else:
             return super().__mul__(other)
-    
+
     def __rmul__(self, other):
         if isinstance(other, (Unit, Quantity)):
             return other
@@ -364,7 +377,7 @@ class Unitless(Unit):
             return other.inverse()
         else:
             return super().__truediv__(other)
-    
+
     def __rtruediv__(self, other):
         if isinstance(other, (Unit, Quantity)):
             return other
@@ -375,6 +388,11 @@ class Unitless(Unit):
     def __pow__(self, other):
         return self
 
+    # Unitless also needs to evaluate to equal to 1, because it hashes to 1 (it is
+    # unique in this respect, no other units are equal to a numerical value)
+    def __eq__(self, other):
+        return 1 == other
+
     def base(self):
         """Return unity as a unitless Quantity."""
         return 1 * self
@@ -384,7 +402,8 @@ class Unitless(Unit):
         return 1 * self
 
     def canonical(self):
-        return self
+        """Return unity as a unitless Quantity."""
+        return 1 * self
 
 
 # Instantiate the special unitless dimensionless unit; typically the only instance required
@@ -393,6 +412,8 @@ unitless = Unitless(add_to_reg=True)
 
 class BaseUnit(Unit):
     """SI base units and other base units that are not defined in terms of other units."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -417,15 +438,16 @@ class BaseUnit(Unit):
         )
 
     def base(self):
-        """Return a Quantity of unity times itself."""
+        """Return a Quantity of unity times the base unit."""
         return 1 * self
 
     def cancel(self):
-        """Return a Quantity of unity times itself."""
+        """Return a Quantity of unity times the base unit."""
         return 1 * self
 
     def canonical(self):
-        return self
+        """Return a Quantity of unity times the base unit."""
+        return 1 * self
 
 
 class CompoundUnit(Unit):
@@ -438,6 +460,8 @@ class CompoundUnit(Unit):
     Alternatively, a list of `Unit` objects can be passed and the `components` attributes of each will
     be combined automatically.
     """
+
+    __slots__ = ("_defined_in_base")
 
     def __init__(
         self,
@@ -577,11 +601,11 @@ class CompoundUnit(Unit):
         return product.cancel()
 
     def canonical(self):
-        """Order terms into a reproducible order and return as a Unit."""
+        """Order terms into a reproducible order and return as a Quantity."""
         ordered_components = tuple(sorted(self.components, key=get_priority))
         # Now that the components have the canonical order, make sure the order of units in the
         # generated symbol is the same by passing appropriate settings
-        return CompoundUnit(
+        return 1 * CompoundUnit(
             ordered_components,
             symbol_sort="unsorted",
             symbol_inverse="NEGATIVE_SUPERSCRIPT",
@@ -599,6 +623,8 @@ class DerivedUnit(Unit):
     will raise an error).
     The `dimensional_exponents` are set to that of the provided value's unit(s).
     """
+
+    __slots__ = ("_value")
 
     def __init__(
         self,
@@ -637,4 +663,4 @@ class DerivedUnit(Unit):
         return 1 * self
 
     def canonical(self):
-        return self
+        return 1 * self

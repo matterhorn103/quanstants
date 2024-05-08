@@ -76,26 +76,36 @@ class TestAgainstUncertaintiesPackage:
     i = ("-7.121e-2" * qu.m).with_uncertainty("0.444e-2")
     quants = [a, b, c, d, e, f, g, h, i]
     quants_no_zero = [q for q in quants if q.number != 0]
-    
+
     def test_addition(self):
         results_uncertainties = ()
         results_quanstants = ()
         for combo in combinations(self.quants, 2):
             u0 = ufloat(float(combo[0].number), float(combo[0]._uncertainty))
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
-            # uncertainties package doesn't actually seem that reliable so don't let it derail our test 
+            # uncertainties package doesn't actually seem that reliable so don't let it derail our test
             try:
                 result_u = u0 + u1
                 # Turn each number to a Decimal first and round to 8 dp using
                 # Decimal's rounding to ensure equality
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = combo[0] + combo[1]
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
         # Round values close to zero to zero
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_subtraction(self):
@@ -106,13 +116,23 @@ class TestAgainstUncertaintiesPackage:
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
                 result_u = u0 - u1
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = combo[0] - combo[1]
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_multiplication(self):
@@ -123,13 +143,23 @@ class TestAgainstUncertaintiesPackage:
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
                 result_u = u0 * u1
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = combo[0] * combo[1]
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_division(self):
@@ -140,13 +170,23 @@ class TestAgainstUncertaintiesPackage:
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
                 result_u = u0 / u1
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = combo[0] / combo[1]
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_division_reversed(self):
@@ -157,13 +197,23 @@ class TestAgainstUncertaintiesPackage:
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
                 result_u = u1 / u0
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = combo[1] / combo[0]
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_exponention(self):
@@ -172,14 +222,24 @@ class TestAgainstUncertaintiesPackage:
         for q in self.quants_no_zero:
             u0 = ufloat(float(q.number), float(q._uncertainty))
             try:
-                result_u = u0 ** 5
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                result_u = u0**5
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
-            result_q = q ** 5
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            result_q = q**5
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_exponention_reverse(self):
@@ -190,13 +250,23 @@ class TestAgainstUncertaintiesPackage:
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
                 result_u = 5 ** (u1 / u0)
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = 5 ** (combo[1] / combo[0])
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_natural_log(self):
@@ -206,14 +276,24 @@ class TestAgainstUncertaintiesPackage:
             u0 = ufloat(float(combo[0].number), float(combo[0]._uncertainty))
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
-                result_u =  umath.log(u1 / u0)
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                result_u = umath.log(u1 / u0)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = (combo[1] / combo[0]).ln()
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_log_base10(self):
@@ -223,14 +303,24 @@ class TestAgainstUncertaintiesPackage:
             u0 = ufloat(float(combo[0].number), float(combo[0]._uncertainty))
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
-                result_u =  umath.log10(u1 / u0)
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                result_u = umath.log10(u1 / u0)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = (combo[1] / combo[0]).log10()
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants
 
     def test_exp(self):
@@ -240,12 +330,22 @@ class TestAgainstUncertaintiesPackage:
             u0 = ufloat(float(combo[0].number), float(combo[0]._uncertainty))
             u1 = ufloat(float(combo[1].number), float(combo[1]._uncertainty))
             try:
-                result_u =  umath.exp(u1 / u0)
-                results_uncertainties += sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False), sigfig.round(dec(str(result_u.std_dev)), 10, warn=False)
+                result_u = umath.exp(u1 / u0)
+                results_uncertainties += (
+                    sigfig.round(dec(str(result_u.nominal_value)), 10, warn=False),
+                    sigfig.round(dec(str(result_u.std_dev)), 10, warn=False),
+                )
             except:  # pragma: no cover
                 continue
             result_q = (combo[1] / combo[0]).exp()
-            results_quanstants += (sigfig.round(result_q.number, 10, warn=False), sigfig.round(result_q._uncertainty, 10, warn=False))
-        results_uncertainties = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties)
-        results_quanstants = tuple(x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants)
+            results_quanstants += (
+                sigfig.round(result_q.number, 10, warn=False),
+                sigfig.round(result_q._uncertainty, 10, warn=False),
+            )
+        results_uncertainties = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_uncertainties
+        )
+        results_quanstants = tuple(
+            x if abs(x) > dec("1e-100") else dec("0") for x in results_quanstants
+        )
         assert results_uncertainties == results_quanstants

@@ -33,6 +33,8 @@ class Prefix:
     is accessible via `quanstants.prefixes`.
     """
 
+    __slots__ = ("_symbol", "_name", "_multiplier")
+
     def __init__(
         self,
         symbol,
@@ -85,6 +87,8 @@ class PrefixedUnit(DerivedUnit):
     For now acts almost exactly like a `DerivedUnit` except that it cannot be prefixed.
     TODO: automatically adjust the prefix upon request (so that e.g. 2000 kJ becomes 2 MJ).
     """
+
+    __slots__ = ("_prefix", "_unit")
 
     def __init__(
         self,

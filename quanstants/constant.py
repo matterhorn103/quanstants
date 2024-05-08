@@ -82,6 +82,8 @@ class Constant(Quantity):
     `300 * (qu.MeV / qc.c.as_unit()**2)`
     """
 
+    __slots__ = ("_symbol", "_name", "_alt_names")
+
     def __init__(
         self,
         symbol: str | None,

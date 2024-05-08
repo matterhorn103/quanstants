@@ -423,6 +423,52 @@ Quantity(60, s⁻² m kg)
 Quantity(60, s⁻² m kg)
 ```
 
+### Equalities
+
+Both units and quantities are (to a large extent) immutable -- once created, their properties are fixed.
+A quantity cannot be changed in-place, and operations on one will return a new `Quantity` object.
+This means units, quantities, and their subclasses are hashable and can be used e.g. as keys in a `dict`.
+
+Quantities with equivalent values will compare equal:
+```python
+>>> 3 * qu.kilometre == 3000 * qu.metre
+True
+```
+
+This is the case even if the quantities have uncertainties, even if the uncertainties are different sizes:
+```python
+>>> 3 * qu.kilometre == (3000 * qu.metre).plusminus(20)
+True
+```
+
+Units are compared based on their value, and are equal to quantities with the same value:
+```python
+>>> qu.watt == qu.joule / qu.second
+True
+>>> qu.watt == 1 * qu.J * qu.s**-1
+True
+```
+
+A quantity with number 0 is still a valid quantity (and it might have an uncertainty!), but quantities with numbers equal to zero are considered themselves equal to 0 (and therefore equal to each other):
+```python
+>>> 0 * qu.m
+Quantity(0, m)
+>>> 0 * qu.m == 0
+True
+>>> 0 * qu.m == 0 * qu.s
+True
+```
+
+Unitless quantities are considered to be equal to their numerical value, and the special unitless unit is considered equal to 1:
+```python
+>>> 2 * qu.unitless
+Quantity(2, (unitless)
+>>> 2 * qu.unitless == 2
+True
+>>> qu.unitless == 1
+True
+```
+
 ### Constants
 
 In a similar fashion to units and prefixes, physical constants are available in the constants registry under various names and symbols:
@@ -540,13 +586,12 @@ Most crucially, neither package makes the same opinionated decisions about numbe
 
 In comparison to `astropy`, the unit and constant selection is far broader than simply those useful for astronomers, and there is no reliance on `numpy`.
 
-In comparison to `pint`, quantities are immutable by design -- any function or operation that would change a `Quantity` returns a new `Quantity`, and likewise for `Unit`. `quanstants` also contains significantly more constant values.
+In comparison to `pint`, quantities are immutable by design -- any function or operation that would change a `Quantity` returns a new `Quantity`, and both units and quantities are hashable. `quanstants` also contains significantly more constant values.
 
 ## TODO
 
 * Support for complex numbers
 * Support for logarithmic units
-* Discard uncertainties on rounding/generally make sure precision of numbers and uncertainties agree
 * Adjustment of prefixes (either automatically or on request) so that e.g. 2000 kJ becomes 2 MJ
 * Complete (>95%) test coverage
 * Documentation beyond this readme

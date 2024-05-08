@@ -1,13 +1,23 @@
 [project]
 name = "quanstants"
 version = "0.1.0"
-description = "Add your description here"
+description = "Intuitive and unastonishing physical quantities, units, constants, and uncertainties in Python"
 authors = [
-    { name = "matterhorn103", email = "matterhorn103@proton.me" }
+    { name = "Matthew J. Milner", email = "matterhorn103@proton.me" }
 ]
 dependencies = []
 readme = "README.md"
 requires-python = ">= 3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://github.com/matterhorn103/quanstants"
+Issues = "https://github.com/matterhorn103/quanstants/issues"
 
 [build-system]
 requires = ["hatchling"]

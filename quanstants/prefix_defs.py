@@ -65,8 +65,9 @@ for p in common_prefixes[1:7]:
 for p in common_prefixes[2:7]:
     PrefixedUnit(p, ampere, add_to_reg=True)
 
-for p in common_prefixes[4:5]:
+for p in common_prefixes[3:6]:
     PrefixedUnit(p, litre, add_to_reg=True)
+PrefixedUnit(centi, litre, add_to_reg=True)
 PrefixedUnit(hecto, litre, add_to_reg=True)
 
 for p in common_prefixes[2:6]:

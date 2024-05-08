@@ -137,7 +137,7 @@ class TemperatureUnit(Unit):
                 "Temperatures can only be converted from quantities with units of temperature."
             )
 
-        if not other.uncertainty:
+        if not other._uncertainty:
             new_uncertainty = dec("0")
         else:
             new_uncertainty = other.uncertainty.to(self)
@@ -152,8 +152,8 @@ class TemperatureUnit(Unit):
         raise NotImplementedError
 
     def canonical(self):
-        """Order terms into a reproducible order and return as a Unit."""
-        return self
+        """Order terms into a reproducible order and return as a Quantity."""
+        return 1 * self
 
 
 class Temperature(Quantity):

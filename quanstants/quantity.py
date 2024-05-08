@@ -87,7 +87,7 @@ class Quantity:
         else:
             self._unit = unit
 
-        if not uncertainty:
+        if uncertainty is None:
             self._uncertainty = dec("0")
         elif isinstance(uncertainty, Quantity):
             if uncertainty.unit != self._unit:
@@ -381,30 +381,35 @@ class Quantity:
             new_uncertainty = get_uncertainty(new_number, "log10", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
 
-    #def __hash__(self, other):
-    #    canonical = self.base().cancel().canonical()
-    #    if canonical.number == 0:
-    #        return 0
-    #    elif canonical.unit == 
-    #        
-    #        return hash((canonical.number, canonical.unit, canonical.uncertainty))
+    def __hash__(self):
+        canonical = self.base().cancel().canonical()
+        if canonical.number == 0:
+            return 0
+        # Check if unitless
+        elif canonical.unit == 1:
+            return 1
+        else:
+            return hash((canonical.number, canonical.unit.symbol, canonical.unit.name, canonical.unit.dimensional_exponents))
 
     def __eq__(self, other):
-        if isinstance(other, Quantity):
+        if self.number == 0:
+            return 0 == other
+        # Check if unitless
+        elif self.unit == 1:
+            return 1 == other
+        elif isinstance(other, Quantity):
             # Convert both to canonical base unit representations
             a = self.base().cancel().canonical()
             b = other.base().cancel().canonical()
-            # Have to use dimension as a sanity check in case different units have the same symbol
+            # Have to use all three of symbol, name, dimension as unique symbols and
+            # names cannot be guaranteed and there may be different base units in
+            # different systems with the same dimension (and number = 1)
             if (
                 (a.number == b.number)
                 and (a.unit.symbol == b.unit.symbol)
+                and (a.unit.name == b.unit.name)
                 and (a.unit.dimensional_exponents == b.unit.dimensional_exponents)
             ):
-                return True
-            else:
-                return False
-        elif other == 0:
-            if self.number == 0:
                 return True
             else:
                 return False

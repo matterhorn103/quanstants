@@ -54,7 +54,7 @@ def get_uncertainty(
                     ((sigma_a / A) ** 2) + ((sigma_b / B) ** 2) + (2 * (sigma_ab / C))
                 ).sqrt()
             )
-        elif x:
+        elif x is not None:
             sigma_c = x * sigma_a
         else:
             raise TypeError(
@@ -69,7 +69,7 @@ def get_uncertainty(
                     ((sigma_a / A) ** 2) + ((sigma_b / B) ** 2) - (2 * (sigma_ab / C))
                 ).sqrt()
             )
-        elif x:
+        elif x is not None:
             sigma_c = (1 / x) * sigma_a
         else:
             raise TypeError("Operation 'truediv' is only supported for Q/Q and Q/x.")
@@ -77,7 +77,7 @@ def get_uncertainty(
     elif operation == "rtruediv":
         if B is not None:
             raise TypeError("Operation is only supported for x/Q.")
-        elif x:
+        elif x is not None:
             # Work out uncertainty as if it was C = xA**-1 - ends up just being the relative error times the result
             sigma_c = abs((C * -1 * sigma_a) / A)
     # C = A**B and C = A**x
@@ -91,7 +91,7 @@ def get_uncertainty(
                     + (2 * ((B * A.ln()) / A) * sigma_ab)
                 ).sqrt()
             )
-        elif x:
+        elif x is not None:
             sigma_c = abs((C * x * sigma_a) / A)
     # C = B**A and C = x**A
     elif operation == "rpow":
@@ -104,7 +104,7 @@ def get_uncertainty(
                     + (2 * ((A * B.ln()) / B) * sigma_ab)
                 ).sqrt()
             )
-        elif x:
+        elif x is not None:
             sigma_c = abs(C) * abs(x.ln() * sigma_a)
     # C = ln(A)
     elif operation == "ln":

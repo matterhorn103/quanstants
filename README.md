@@ -533,19 +533,75 @@ Quantity(5.4E+2, J mol⁻¹)
 
 ### Temperatures
 
+`quanstants` also has full support for temperatures on various scales.
+
+As usual, a variety of temperature units are made available under a variety of names:
+```python
+>>> qu.degree_celsius is qu.celsius
+True
+>>> qu.degree_celsius is qu.degree_centigrade
+True
+>>> from quanstants.units import temperatures
+>>> qu.degree_fahrenheit is qu.fahrenheit
+True
+```
+
 Absolute temperatures in kelvin are normal quantities like any other:
 ```python
->>> T = 200 * qu.kelvin
-Quantity(200, K)
->>> 2 * T
+>>> T = 400 * qu.kelvin
 Quantity(400, K)
+>>> 2 * T
+Quantity(800, K)
+>>> (1600 * qu.joule) / T
+Quantity(4, J K⁻¹)
+```
+
+Note that multiplying a number by a temperature unit other than kelvin also creates a normal `Quantity`, which thus also represents an absolute temperature:
+```python
+>>> T = 25 * qu.celsius
+Quantity(25, °C)
+>>> T.to(qu.kelvin)
+Quantity(25, K)
+```
+
+To instead create a relative temperature on the scale of a `TemperatureUnit`, use the `@` operator, which can be thought of here as standing for "on": 
+```python
+>>> T = 25 @ qu.celsius
+Temperature(25, °C)
+>>> T.to(qu.kelvin)
+Quantity(298.15, K)
+```
+
+Arithmetic with `Temperature` instances works correctly, as they are first converted to absolute temperatures in kelvin:
+```python
+>>> T = 126.85 @ qu.celsius
+Quantity(126.85, °C)
+>>> 2 * T
+Quantity(800, K)
 >>> (1600 * qu.joule) / T
 Quantity(8, J K⁻¹)
 ```
 
+Taking the difference between two temperatures will give the temperature _difference_ as a `Quantity` but in the same unit as the temperature:
 ```python
->>> 0 @ qu.celsius
+>>> (25 @ qu.celsius) - (-5 @ qu.celsius)
+Quantity(30, °C)
+```
+
+This distinction between absolute and relative temperatures proves useful e.g. to increase or decrease a temperature by adding or subtracting a temperature increment:
+```python
+>>> (25 @ qu.celsius) + (25 * qu.celsius)
+Temperature(50, °C)
+>>> (25 @ qu.celsius) - (25 * qu.celsius)
 Temperature(0, °C)
+```
+
+Temperatures can be converted between scales using the `on()` method, and this can also be used with quantities representing absolute temperatures:
+```python
+>>> ((273.15 * qu.kelvin) + (25 * qu.kelvin)).on(qu.celsius)
+Temperature(25, °C)
+>>> (0 @ qu.celsius).on(qu.fahrenheit)
+Temperature(32, °F)
 ```
 
 ## Why Decimal?

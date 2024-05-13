@@ -1,11 +1,10 @@
 from ..unit import DerivedUnit
 from ..quantity import Quantity
-from ..temperature import TemperatureUnit
 from ..si import *
 
 # fmt: off
 
-# Import those units which are common to both systems in-line
+# Import those units which are common to both imperial and US customary systems in-line
 
 # Length
 from .imperial import twip

@@ -1,6 +1,9 @@
 """Simple tests to confirm the user won't have any problems importing anything."""
 
 
+from quanstants.units import default
+
+
 class TestImports:
     def test_init(self):
         import quanstants
@@ -20,8 +23,8 @@ class TestImports:
         from quanstants.units import (
             atomic,
             chemistry,
+            computing,
             imperial,
-            metric,
             natural,
             planck,
             temperatures,

@@ -23,8 +23,8 @@ from . import constant
 from . import si, prefix_defs
 
 # Then import whichever optional unit and constant modules should be provided by default
-from .units import metric
-from .constants import fundamental
+from .units import default
+from .constants import default
 
 # Make the unit, prefix, and constant namespaces available directly in this namespace
 units = unit.unit_reg

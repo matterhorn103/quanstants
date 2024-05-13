@@ -3,15 +3,10 @@ from ..temperature import TemperatureUnit
 # fmt: off
 
 # TODO
-degreeFahrenheit = TemperatureUnit(
-    "°F",
-    "degreeFahrenheit",
-    "0.5555555555555555555555555555555555555555555555555556",
-    "459.67",
-    add_to_reg=True,
-    canon_symbol=True,
-    alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"],
-)
+from ..si import kelvin
+from ..si import degreeCelsius
+from .default import degreeFahrenheit
+
 degreeReaumur = TemperatureUnit(
     "°Re",
     "degreeReaumur",
@@ -21,5 +16,10 @@ degreeReaumur = TemperatureUnit(
     canon_symbol=True,
     alt_names=["degree_Reaumur", "degreeRe", "reaumur"],
 )
+
+#rankine
+#delisle
+#newton
+#romer
 
 # fmt: on

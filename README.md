@@ -220,7 +220,7 @@ When printed, uncertainties are shown by parentheses if possible, or with `±` a
 >>> print(("4.2" * qu.metre).plusminus("20" * qu.centimetre))  # Precisions don't match
 4.2 ± 0.20 m
 ```
-The use of ± at all times can be forced by setting `UNCERTAINTY_STYLE` (see Config below).
+The use of ± at all times can be forced by setting `quanstants.quanfig.UNCERTAINTY_STYLE`.
 
 The uncertainty can also be passed to `Quantity()` directly:
 ```python
@@ -374,7 +374,7 @@ Quantity(1.8288, m)
 >>> (6 * qu.hour).to(qu.s)
 Quantity(21600, s)
 >>> from quanstants import prefixes as qp
->>> ((3 * qp.kilo * qu.watt) * (1 * qu.day)).to(qu.joule)
+>>> ((3 * (qp.kilo * qu.watt)) * (1 * qu.day)).to(qu.joule)
 Quantity(2.59200E+8, J)
 ```
 
@@ -393,7 +393,7 @@ Quantity(45, m s s⁻¹)
 >>> distance.cancel()
 Quantity(45, m)
 ```
-Note that by default `AUTO_CANCEL` is set to `True` (see Config below), in which case cancelling happens automatically after arithmetic operations:
+Note that by default `quanstants.quanfig.AUTO_CANCEL` is set to `True`, in which case cancelling happens automatically after arithmetic operations:
 ```python
 >>> speed * time
 Quantity(45, m)
@@ -518,17 +518,133 @@ Quantity(938.2720881604903652873556334, MeV c⁻², uncertainty=2.86089018794027
 
 ### Rounding
 
+In the sciences it is typically desirable to round to a number of significant figures rather than decimal places.
+`quanstants` provides both via appropriate methods:
 ```python
 >>> a = (324.9 * qu.J) * (1.674 * qu.mol**-1)
 Quantity(543.8826, J mol⁻¹)
+>>> a.round_to_places(3)
+Quantity(543.883, J mol⁻¹)
+>>> a.round_to_figures(4)
+Quantity(543.9, J mol⁻¹)
+>>> a.round_to_figures(2)
+Quantity(5.4E+2, J mol⁻¹)
+>>> a.round_to_sigfigs(2)  # An alias
+Quantity(5.4E+2, J mol⁻¹)
+```
+
+If `ndigits` is not provided, rounding is done to the number of places or figures specified by `quanstants.quanfig.NDIGITS_PLACES` or `quanstants.quanfig.NDIGITS_FIGURES` respectively, which are by default 2 decimal places and 3 significant figures:
+```python
+>>> a.round_to_places()
+Quantity(543.88, J mol⁻¹)
+>>> a.round_to_figures()
+Quantity(544, J mol⁻¹)
+```
+
+Like `siunitx`, if rounding is requested to more decimal places or significant figures than a number has, the default behaviour is to "pad" the number with extra zeroes to reach the desired precision.
+This can be turned off globally by setting `quanstants.quanfig.ROUND_PAD` to `False`, or can be set for a single rounding operation by passing `pad=True` or `pad=False` to the rounding function:
+```python
+>>> a.round_to_places(6)
+Quantity(543.882600, J mol⁻¹)
+>>> a.round_to_places(6, pad=False)
+Quantity(543.8826, J mol⁻¹)
+```
+
+If a quantity has a known uncertainty, it can be useful to round the number off to the same precision as the uncertainty using `round_to_uncertainty()`.
+For this, the uncertainty is first rounded to either a provided number of significant figures, or to the number of significant figures set by `quanstants.quanfig.NDIGITS_UNCERTAINTY`, which is by default 1:
+```python
+>>> b = a.plusminus(0.03)
+Quantity(543.8826, J mol⁻¹, uncertainty=0.03)
+>>> b.round_to_uncertainty()
+Quantity(543.88, J mol⁻¹, uncertainty=0.03)
+>>> (1.2345 * qu.m).plusminus(0.071).round_to_uncertainty(1)
+Quantity(1.23, m, uncertainty=0.07)
+>>> (1.2345 * qu.m).plusminus(0.071).round_to_uncertainty(2)
+Quantity(1.235, m, uncertainty=0.071)
+>>> a.round_to_uncertainty()  # Exact quantities are returned unchanged and remain exact
+Quantity(543.8826, J mol⁻¹)
+```
+
+Here, padding is only done for the number to make its precision match the uncertainty; no padding is done for the uncertainty rounding, as this would imply an increase in precision:
+```python
+>>> (1.23 * qu.m).plusminus(0.0071).round_to_uncertainty(1, pad=True) # Note that True is default
+Quantity(1.230, m, uncertainty=0.007)
+>>> (1.23 * qu.m).plusminus(0.0071).round_to_uncertainty(5, pad=True)
+Quantity(1.2300, m, uncertainty=0.0071)
+```
+
+A general `round()` method is provided, which can take arguments for the rounding mode to use with all quantities or for only those with or without uncertainties:
+```python
+>>> a.round(mode_if_uncertainty="PLACES", mode_if_exact="FIGURES")
+Quantity(544, J mol⁻¹)
+>>> b.round(mode_if_uncertainty="PLACES", mode_if_exact="FIGURES")
+Quantity(543.88, J mol⁻¹, uncertainty=0.03)
+>>> a.round(mode="UNCERTAINTY")
+Quantity(543.8826, J mol⁻¹)
+>>> b.round(mode="UNCERTAINTY")
+Quantity(543.88, J mol⁻¹, uncertainty=0.03)
+```
+`ndigits` and `pad` can also be passed to `round()`, in which case they are passed on to the respective rounding function.
+
+The defaults are set such that calling `round()` without any arguments is a quick and convenient way to get a sensibly rounded number -- exact quantities are rounded to 3 s.f. and quantities with uncertainties have their uncertainty rounded to 1 s.f. and the quantity is then rounded to the same precision.
+```python
 >>> a.round()
 Quantity(544, J mol⁻¹)
->>> a.round(2)
+>>> b.round()
+Quantity(543.88, J mol⁻¹, uncertainty=0.03)
+```
+The modes used can be overruled by setting `quanstants.quanfig.ROUND_TO_IF_UNCERTAINTY` and `quanstants.quanfig.ROUND_TO_IF_EXACT`.
+
+Passing a `Quantity` to Python's built-in `round()` simply calls `Quantity.round()`:
+```python
+>>> round(a, 5)
 Quantity(543.88, J mol⁻¹)
->>> a.sigfig(4)
-Quantity(543.9, J mol⁻¹)
->>> a.sigfig(2)
-Quantity(5.4E+2, J mol⁻¹)
+```
+
+Most of us are taught to round off numbers to the nearest round number, with 5s rounded away from zero ("round half away from zero"), so when rounding to two significant figures 1.23 becomes 1.2, 1.28 becomes 1.3, 1.25 also becomes 1.3, and -1.25 becomes -1.3.
+Python's default behaviour does not match this however -- "tie-breaks", or where the deciding digit is a 5, are rounded such that the final digit of the rounded number is _even_ ("round half to even").
+This means that even when using `Decimal`, rounding results can be unexpected.
+`quanstants` overrides Python and does by default what most users would do themselves, by rounding **half away from zero**:
+```python
+>>> from decimal import Decimal
+>>> round(Decimal("1.25"), 1)
+Decimal('1.2')
+>>> ("1.25" * qu.m).round_to_places(1)
+Quantity(1.3, m)
+```
+
+The rounding mode used for quantities can be chosen by setting `quanstants.quanfig.ROUNDING_MODE` to any of the `decimal` module's [rounding modes](https://docs.python.org/3/library/decimal.html#rounding-modes):
+```python
+>>> from quanstants import quanfig
+>>> ("1.25" * qu.m).round_to_places(1)
+Quantity(1.3, m)
+>>> quanfig.ROUNDING_MODE = "ROUND_HALF_DOWN"
+>>> ("1.25" * qu.m).round_to_places(1)
+Quantity(1.2, m)
+```
+
+The rounding takes place in a `decimal.localcontext()`, meaning that the user's choices of rounding mode for `Decimal` and `quanstants` are kept separate:
+```python
+>>> from decimal import Decimal
+>>> round(Decimal("1.25"), 1)
+Decimal('1.2')
+>>> ("1.25" * qu.m).round_to_places(1)
+Quantity(1.3, m)
+>>> decimal.getcontext().rounding = decimal.ROUND_HALF_UP
+>>> quanfig.ROUNDING_MODE = "ROUND_HALF_DOWN"
+>>> round(Decimal("1.25"), 1)
+Decimal('1.3')
+>>> ("1.25" * qu.m).round_to_places(1)
+Quantity(1.2, m)
+```
+
+Finally, a method is provided to round just the uncertainty of a quantity without changing the number.
+If `ndigits` and `mode` are not specified, they default to `quanstants.quanfig.NDIGITS_<rounding mode>` and `quanstants.quanfig.ROUND_TO_IF_EXACT` respectively (so by default 3 s.f.), and the uncertainty is never padded when rounded in this manner:
+```python
+>>> b.round_uncertainty()
+Quantity(543.8826, J mol⁻¹, uncertainty=0.032)
+>>> b.round_uncertainty(1)
+Quantity(543.8826, J mol⁻¹, uncertainty=0.03)
 ```
 
 ### Temperatures
@@ -537,11 +653,10 @@ Quantity(5.4E+2, J mol⁻¹)
 
 As usual, a variety of temperature units are made available under a variety of names:
 ```python
->>> qu.degree_celsius is qu.celsius
+>>> qu.degreeCelsius is qu.celsius
 True
->>> qu.degree_celsius is qu.degree_centigrade
+>>> qu.degreeCelsius is qu.degreeCentigrade
 True
->>> from quanstants.units import temperatures
 >>> qu.degree_fahrenheit is qu.fahrenheit
 True
 ```
@@ -556,7 +671,7 @@ Quantity(800, K)
 Quantity(4, J K⁻¹)
 ```
 
-Note that multiplying a number by a temperature unit other than kelvin also creates a normal `Quantity`, which thus also represents an absolute temperature:
+Note that multiplying a number by a temperature unit other than kelvin also creates a normal `Quantity`, which thus also represents an _absolute_ temperature:
 ```python
 >>> T = 25 * qu.celsius
 Quantity(25, °C)
@@ -564,7 +679,7 @@ Quantity(25, °C)
 Quantity(25, K)
 ```
 
-To instead create a relative temperature on the scale of a `TemperatureUnit`, use the `@` operator, which can be thought of here as standing for "on": 
+To instead create a _relative_ temperature on the scale of a `TemperatureUnit`, use the `@` operator, which can be thought of here as standing for "on": 
 ```python
 >>> T = 25 @ qu.celsius
 Temperature(25, °C)
@@ -579,7 +694,7 @@ Quantity(126.85, °C)
 >>> 2 * T
 Quantity(800, K)
 >>> (1600 * qu.joule) / T
-Quantity(8, J K⁻¹)
+Quantity(4, J K⁻¹)
 ```
 
 Taking the difference between two temperatures will give the temperature _difference_ as a `Quantity` but in the same unit as the temperature:
@@ -599,46 +714,10 @@ Temperature(0, °C)
 Temperatures can be converted between scales using the `on()` method, and this can also be used with quantities representing absolute temperatures:
 ```python
 >>> ((273.15 * qu.kelvin) + (25 * qu.kelvin)).on(qu.celsius)
-Temperature(25, °C)
+Temperature(25.00, °C)
 >>> (0 @ qu.celsius).on(qu.fahrenheit)
 Temperature(32, °F)
 ```
-
-## Why Decimal?
-
-For the general arguments, see the [documentation for `Decimal`](https://docs.python.org/3/library/decimal.html).
-
-The usual argument *against* the use of `Decimal` is that the precision of `float` is high enough for most applications.
-For calculations, this is certainly true.
-
-For other purposes, however, it does not always suffice, such as in the preparation of documents or for checking more trivial calculations.
-
-By way of example, the original author was motivated originally by their experiences using Python to prepare data for publication in a scientific manuscript.
-In one situation, quantities in two columns were all measured to a precision of 3 significant figures, but this precision would not be carried through.
-Measured values such as `1.260` would be inserted as "1.26".
-Moreover, a third column containing the difference between the first two columns needed to be rounded to two decimal places to reflect the lower precision -- a trivial sum to do by hand, but time-consuming for thousands of data points.
-
-
-First and foremost, it easily allows significance and precision to be preserved.
-
-Second, the lack of exactness of floats, i.e. that `0.1 + 0.1 + 0.1 - 0.3 != 0` and `0.1 + 0.2 != 0.3`.
-
-Third, decimal numbers are what the user believes them to be.
-An inexperienced user thinks that the float `8.7` is 8.7, because that is what is printed by Python, when in reality it is stored as `8.699999999999999289457264239899814128875732421875`.
-
-Fourth, the ease of implementation of the desired rounding behaviours.
-Significant figures are a challenge without the numerical type having a concept of significance.
-
-Fifth, the rounding behaviour is *correct*.
-Even if rounding is configured so that half rounds up, `round(0.35, 1)` will still always give `0.3`, because it is *actually* `0.34999999999999997779553950749686919152736663818359375`, this is just not obvious to the user.
-
-Experienced programmers are likely aware of the pitfalls of working with binary mathematics and can identify when binary floating point suffices and when a switch to decimal is necessary for precision.
-For inexperienced programmers, the behaviour of binary floating point is often perplexing.
-This package aims to alleviate this confusion.
-
-
-Using `Quantity` objects in complex or extensive calculations, as opposed to binary floats or even decimal floats, will of course have a not-unsubstantial associated overhead.
-`quanstants` is not intended for this usage; though, after all, neither is Python, and in many cases other advantages win out over pure speed and computational efficiency.
 
 ## Standards and naming
 
@@ -646,6 +725,7 @@ The primary source of authority is the SI brochure (9th Edition v2.01 in English
 
 Following the SI/ISO example means the names of units are primarily those defined there e.g. metre, litre.
 As far as possible, however, units are also made available under alternative names, particular those common in American English.
+
 For consistency, names of constants are written first and foremost in British/Irish/European English, but should also be available under the American English equivalents.
 
 ## Comparison to astropy and pint
@@ -653,16 +733,52 @@ For consistency, names of constants are written first and foremost in British/Ir
 Both `astropy` (via its modules `constants` and `units`) and `pint` are excellent packages, but both had limitations that inspired the creation of `quanstants`.
 Moreover, while they and various other packages each do some things very well and have some advanced functionality, all met only a subset of my (fairly basic) needs, so `quanstants` aims to take the best of each.
 
-Most crucially, neither package makes the same opinionated decisions about number handling and rounding as `quanstants`: they do not store numbers as `Decimal` by default, or implement the more traditional rounding mode, or allow rounding to significant figures.
+Most crucially, neither package makes the same opinionated decisions about number handling and rounding as `quanstants`: they do not store numbers as `Decimal` by default, or implement the more traditional rounding behaviour, or allow rounding to significant figures.
 
-In comparison to `astropy`, the unit and constant selection is far broader than simply those useful for astronomers, and there is no reliance on `numpy`.
+Specifically in comparison to `astropy`, the unit and constant selection is far broader than simply those useful for astronomers, and there is no reliance on `numpy`.
 
-In comparison to `pint`, quantities are immutable by design -- any function or operation that would change a `Quantity` returns a new `Quantity`, and both units and quantities are hashable. `quanstants` also contains significantly more constant values.
+Specifically in comparison to `pint`, quantities are immutable by design -- any function or operation that would change a `Quantity` returns a new `Quantity`, and both units and quantities are hashable.
+`quanstants` also contains significantly more constant values.
 
-## TODO
+## What is not (yet) supported?
 
-* Support for complex numbers
-* Support for logarithmic units
+The following are aimed for but are not yet implemented:
+
+* Complex numbers
+* Logarithmic units
 * Adjustment of prefixes (either automatically or on request) so that e.g. 2000 kJ becomes 2 MJ
-* Complete (>95%) test coverage
-* Documentation beyond this readme
+* `numpy` `ndarray`s of quantities
+* Use in `polars` dataframes
+
+## Why Decimal?
+
+For the general arguments, see the [documentation for `Decimal`](https://docs.python.org/3/library/decimal.html), but to name a few:
+
+1. It easily allows significance and precision to be preserved.
+
+2. The lack of exactness of floats, i.e. that `0.1 + 0.1 + 0.1 - 0.3 != 0` and `0.1 + 0.2 != 0.3`.
+
+3. Decimal numbers are what the user believes them to be.
+An inexperienced user thinks that the float `8.7` is 8.7, because that is what is printed by Python, when in reality it is stored as `8.699999999999999289457264239899814128875732421875`.
+
+4. The ease of implementation of the desired rounding behaviours.
+Significant figures are a challenge without the numerical type having a concept of significance.
+
+5. The rounding behaviour is *correct*.
+Even if rounding is configured so that half rounds up, `round(0.35, 1)` will still always give `0.3`, because it is *actually* `0.34999999999999997779553950749686919152736663818359375`, this is just not obvious to the user.
+
+Meanwhile, the usual arguments *against* the use of `Decimal` are that the precision of `float` is high enough for most applications, and that using binary floats has a performance advantage.
+
+Using `Quantity` objects in complex or extensive calculations, as opposed to binary floats or even decimal floats, will of course have a not-unsubstantial associated overhead.
+`quanstants` is not intended for this usage; but after all, neither is Python -- in many cases other advantages win out over pure speed and computational efficiency.
+
+And while from a purely numerical perspective, the error in binary floats is of course technically very small and suffices for calculations, the simple fact that most decimals _cannot_ be represented exactly by a binary float makes life difficult for many applications; for example, the preparation of documents, or for checking more trivial calculations.
+
+By way of example, the original author was motivated originally by their experiences using Python to prepare data for publication in a scientific manuscript.
+In one situation, quantities in two columns were all measured to a precision of 3 significant figures, but this precision would not be carried through.
+Measured values such as `1.260` would be inserted as "1.26".
+Moreover, a third column containing the difference between the first two columns needed to be rounded to two decimal places to reflect the lower precision -- a trivial sum to do by hand, but time-consuming for thousands of data points, hence the use of Python in the first place.
+
+Experienced programmers are likely aware of the pitfalls of working with binary mathematics and can identify when binary floating point suffices and when a switch to decimal is necessary for precision.
+For inexperienced programmers, the behaviour of binary floating point is often perplexing.
+One aim of this package is to alleviate this confusion.

@@ -103,7 +103,7 @@ class Quantity:
 
     # Always access properties via self.x not self._x for consistency
     # self._x is slightly faster, but even for time-critical operations it makes v little difference
-    # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 µs)
+    # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 μs)
     @property
     def number(self):
         return self._number
@@ -413,7 +413,7 @@ class Quantity:
             return 0 == other
         # Check if unitless
         elif self.unit == 1:
-            return 1 == other
+            return self.number == other
         elif isinstance(other, Quantity):
             # Convert both to canonical base unit representations
             a = self.base().cancel().canonical()
@@ -470,13 +470,13 @@ class Quantity:
             return NotImplemented
 
     def __neg__(self):
-        return Quantity(-1 * self.number, self.unit, -1 * self._uncertainty)
+        return Quantity(-1 * self.number, self.unit, self._uncertainty)
 
     def __pos__(self):
         return self
 
     def __round__(self, ndigits=None, mode=None, pad=quanfig.ROUND_PAD):
-        """Alias for `Quantity.round()` to allow the use of the in-built `round()`."""
+        """Alias for `Quantity.round()` to allow the use of the built-in `round()`."""
         return self.round(ndigits, mode, pad)
 
     def round(
@@ -561,7 +561,7 @@ class Quantity:
         # Use in a local context so that user's context isn't overwritten
         with localcontext() as ctx:
             ctx.rounding = quanfig.ROUNDING_MODE
-            rounded = Quantity(
+            rounded = type(self)(
                 round(self.number, ndigits), self.unit, self._uncertainty
             )
         return rounded
@@ -601,7 +601,7 @@ class Quantity:
             with localcontext() as ctx:
                 ctx.rounding = quanfig.ROUNDING_MODE
                 rounded_significand = round(significand, ndigits - 1)
-            return Quantity(
+            return type(self)(
                 rounded_significand * dec(f"1E{exponent}"), self.unit, self._uncertainty
             )
         # If request is for more sigfigs than currently, only pad if asked/permitted to do so
@@ -614,7 +614,7 @@ class Quantity:
             for i in n_digits_to_add:
                 new_digits.append(0)
             new_exponent = self.number.as_tuple().exponent - n_digits_to_add
-            return Quantity(
+            return type(self)(
                 dec((self.number.as_tuple().sign, new_digits, new_exponent)),
                 self.unit,
                 self._uncertainty,
@@ -622,6 +622,7 @@ class Quantity:
 
     def round_to_sigfigs(self, ndigits=None, pad=quanfig.ROUND_PAD):
         """Alias for `round_to_figures()`."""
+        return self.round_to_figures(ndigits, pad)
 
     def round_to_uncertainty(self, ndigits=None, pad=quanfig.ROUND_PAD):
         """Round the uncertainty to the specified number of significant figures, then return the quantity with the numerical part rounded to the same precision.
@@ -657,10 +658,13 @@ class Quantity:
         # Never pad the uncertainty as that would be increasing its precision
         rounded_uncertainty = self.uncertainty.round_to_figures(ndigits, pad=False)
         # Now round the number to the same precision
-        uncertainty_places = rounded_uncertainty.number.as_tuple().exponent * -1
-        return self.round_to_places(uncertainty_places).with_uncertainty(
+        return self.round_to_precision_of(rounded_uncertainty, pad=pad).with_uncertainty(
             rounded_uncertainty
         )
+
+    def round_to_precision_of(self, other, pad=quanfig.ROUND_PAD):
+        places = other.number.as_tuple().exponent * -1
+        return self.round_to_places(places, pad=pad)
 
     def round_uncertainty(self, ndigits=None, mode=None):
         """Round the uncertainty without changing the number.
@@ -675,6 +679,10 @@ class Quantity:
         """
         return self.with_uncertainty(self.uncertainty.round(ndigits, mode, pad=False))
 
+    def precision(self):
+        """Return the precision of the quantity, ignoring the uncertainty."""
+        return Quantity(10 ** self.number.as_tuple().exponent, self.unit)
+
     def is_dimensionless(self):
         """Check if unit is dimensionless."""
         return self.unit.is_dimensionless()
@@ -685,7 +693,7 @@ class Quantity:
 
     def with_uncertainty(self, uncertainty):
         """Return a new quantity with the provided uncertainty."""
-        return Quantity(self.number, self.unit, uncertainty)
+        return type(self)(self.number, self.unit, uncertainty)
 
     def plusminus(self, uncertainty):
         """Alias for `with_uncertainty()`."""
@@ -753,7 +761,7 @@ class Quantity:
                     self.uncertainty.to(other),
                 )
 
-    def on_scale(self, other):
+    def on(self, other):
         """Convert an absolute quantity to a point on a relative scale.
 
         For example, express an absolute temperature in kelvin as a relative temperature on a scale with a

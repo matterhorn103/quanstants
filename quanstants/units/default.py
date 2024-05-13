@@ -1,4 +1,4 @@
-from ..unit import DerivedUnit
+from ..unit import DerivedUnit, unitless
 from ..prefix import PrefixedUnit
 from ..prefix_defs import kilo
 from ..quantity import Quantity
@@ -17,28 +17,22 @@ parts_per_billion = DerivedUnit("ppb", "parts_per_billion", Quantity("1e-9", uni
 parts_per_trillion = DerivedUnit("ppt", "parts_per_trillion", Quantity("1e-12", unitless), canon_symbol=True, alt_names=["partspertrillion"])
 parts_per_quadrillion = DerivedUnit("ppq", "parts_per_quadrillion", Quantity("1e-15", unitless), canon_symbol=False, alt_names=["partsperquadrillion"])
 
-# CODATA 2018
-#Angstrom_star = Constant(None, "Angstrom_star", Quantity("1.00001495e-10", m, "0.00000090e-10"), canon_symbol=False)
-
 # Other
 watthour = DerivedUnit("Wh", "watthour", Quantity("3.6E6", joule), canon_symbol=True)
 kilowatthour = PrefixedUnit(kilo, watthour, add_to_reg=True)
 
 # Temperature
-#celsius
-#fahrenheit
-#rankine
-#delisle
-#newton
-#reaumur
-#romer
+degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", add_to_reg=True, canon_symbol=True, alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"])
 
 # Standard states
 # standard atm
 # bar
 # standard pressure
 
-# carat
-# point
+carat = DerivedUnit("ct", "carat", Quantity("0.2", gram), canon_symbol=True)
+point = DerivedUnit(None, "point", Quantity("0.002", gram), canon_symbol=False)
+
+bit = DerivedUnit("bit", "bit", Quantity(1, unitless), canon_symbol=False)
+byte = DerivedUnit("B", "byte", Quantity(8, bit), canon_symbol=True)
 
 # fmt: on

@@ -11,7 +11,7 @@ from . import fundamental
 alpha_particle_mass = Constant("m_α", "alpha_particle_mass", "6.6446573357e-27", qu.kg, "0.0000000020e-27", canon_symbol=False)
 atomic_mass_constant = Constant("m_u", "atomic_mass_constant", "1.66053906660e-27", qu.kg, "0.00000000050e-27", canon_symbol=False)
 Avogadro_constant = fundamental.Avogadro_constant
-Bohr_magneton = Constant("µ_B", "Bohr_magneton", "9.2740100783e-24", qu.J * qu.T**-1, "0.0000000028e-24", canon_symbol=True)
+Bohr_magneton = Constant("μ_B", "Bohr_magneton", "9.2740100783e-24", qu.J * qu.T**-1, "0.0000000028e-24", canon_symbol=True)
 Bohr_radius = Constant("a_0", "Bohr_radius", "5.29177210903e-11", qu.m, "0.00000000080e-11", canon_symbol=True)
 Boltzmann_constant = fundamental.Boltzmann_constant
 characteristic_impedance_of_vacuum = Constant(None, "characteristic_impedance_of_vacuum", "376.730313668", qu.ohm, "0.000000057", canon_symbol=False)
@@ -97,9 +97,5 @@ vacuum_mag_permeability = Constant(None, "vacuum_mag_permeability", "1.256637062
 weak_mixing_angle = Constant(None, "weak_mixing_angle", "0.22290", qu.unitless, "0.00030", canon_symbol=False)
 #Wien_frequency_displacement_law_constant = Constant(None, "Wien_frequency_displacement_law_constant", "5.878925757...e10", qu.Hz * qu.K**-1, 0), canon_symbol=False)
 #Wien_wavelength_displacement_law_constant = Constant(None, "Wien_wavelength_displacement_law_constant", "2.897771955...e-3", qu.m * qu.K, 0), canon_symbol=False)
-
-
-# Others
-
 
 # fmt: on

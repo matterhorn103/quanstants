@@ -64,7 +64,7 @@ katal = DerivedUnit("kat", "katal", Quantity(1, s**-1 * mol), canon_symbol=True)
 arcminute = DerivedUnit("′", "arcminute", Quantity(dec(math.pi)/10800, rad), canon_symbol=True)
 arcsecond = DerivedUnit("″", "arcsecond", Quantity(dec(math.pi)/648000, rad), canon_symbol=True)
 astronomical_unit = DerivedUnit("au", "astronomical_unit", Quantity(149597870700, m), canon_symbol=True)
-#bel TODO
+#bel TODO but set canon_symbol=False, let B be used by byte
 dalton = DerivedUnit("Da", "dalton", Quantity("1.66053906660e-27", kg, "0.00000000050e-27"), canon_symbol=True, alt_names=["atomic_mass_unit", "unified_atomic_mass_unit"])
 day = DerivedUnit("d", "day", Quantity(86400, s), canon_symbol=True)
 #decibel TODO

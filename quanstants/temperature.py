@@ -119,7 +119,7 @@ class TemperatureUnit(Unit):
     def from_absolute(self, other: Quantity):
         """Convert an absolute `Quantity` with temperature units to a relative `Temperature` with this unit.
 
-        When `Quantity.on_scale()` is called on a quantity and the target unit is an instance of
+        When `Quantity.on()` is called on a quantity and the target unit is an instance of
         `TemperatureUnit`, this method of the target unit will be called.
         """
         if other.unit == kelvin:
@@ -143,6 +143,11 @@ class TemperatureUnit(Unit):
             new_uncertainty = dec("0")
         else:
             new_uncertainty = other.uncertainty.to(self)
+        # Make sure precision isn't ridiculous for an otherwise exact conversion
+        if str(new_number)[-5:] == "00000":
+            new_number = dec(str(float(new_number)))
+            if str(new_number)[-2:] == ".0":
+                new_number = dec(int(new_number))
         return Temperature(new_number, self, new_uncertainty)
 
     def base(self):
@@ -213,9 +218,17 @@ class Temperature(Quantity):
         # Allow Quantity with dimension of temperature to be added to Temperature
         elif isinstance(other, Quantity):
             if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
-                return (
+                result = (
                     self._to_kelvin().__add__(other.to(kelvin), correlation=correlation)
-                ).on_scale(self.unit)
+                ).on(self.unit)
+                # Have to round if precision has increased due to conversion to kelvin
+                if result.precision() < self.precision() and result.precision() < other.precision():
+                    if other.precision() < self.precision():
+                        return result.round_to_precision_of(other)
+                    else:
+                        return result.round_to_precision_of(self)
+                else:
+                    return result
             else:
                 raise NotATemperatureError(
                     f"Can't add quantity in {other.unit} to temperature in {self.unit}."
@@ -228,21 +241,40 @@ class Temperature(Quantity):
         # Unlike for __add__(), it is clear to the user here that a temperature difference has been
         # calculated, not a temperature
         if isinstance(other, Temperature):
-            return (
+            result = (
                 self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)
             ).to(self.unit)
+            # Have to round if precision has increased due to conversion to kelvin
+            if result.precision() < self.precision() and result.precision() < other.precision():
+                if other.precision() < self.precision():
+                    return result.round_to_precision_of(other)
+                else:
+                    return result.round_to_precision_of(self)
+            else:
+                return result
         # Allow Quantity with dimension of temperature to be subtracted from Temperature
         elif isinstance(other, Quantity):
             if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
-                return (
+                result = (
                     self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)
-                ).on_scale(self.unit)
+                ).on(self.unit)
+                # Have to round if precision has increased due to conversion to kelvin
+                if result.precision() < self.precision() and result.precision() < other.precision():
+                    if other.precision() < self.precision():
+                        return result.round_to_precision_of(other)
+                    else:
+                        return result.round_to_precision_of(self)
+                else:
+                    return result
             else:
                 raise NotATemperatureError(
                     f"Can't subtract quantity in {other.unit} from temperature in {self.unit}."
                 )
         else:
             return NotImplemented
+
+    def __neg__(self):
+        return Temperature(-1 * self.number, self.unit, self._uncertainty)
 
     # For other mathematical operations, convert to kelvin and leave in kelvin
     def __mul__(self, other):
@@ -294,5 +326,5 @@ class Temperature(Quantity):
     def to(self, other):
         return self._to_kelvin().to(other)
 
-    def on_scale(self, other):
-        return self._to_kelvin().on_scale(other)
+    def on(self, other):
+        return self._to_kelvin().on(other)

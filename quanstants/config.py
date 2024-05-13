@@ -75,7 +75,7 @@ class QuanstantsConfig:
         2. All parent directories of the above
         3. The user's config directory at ~/.config/quanstants/quanstants.toml on macOS
         and Linux (or on Linux, $XDG_CONFIG_HOME/quanstants/quanstants.toml),
-        or %USERPROFILE%\AppData\Roaming\quanstants\quanstants.toml on Windows.
+        or %USERPROFILE%/AppData/Roaming/quanstants/quanstants.toml on Windows.
 
         Any options specified in the first file found will override the defaults.
         Other files with lower priority in the above list will be completely ignored.
@@ -83,9 +83,9 @@ class QuanstantsConfig:
         paths_to_check = []
         # Check in current working directory (in case different to above) and in parents
         paths_to_check.append(Path.cwd())
-        paths_to_check.extend(Path.cwd().parents)
+        paths_to_check.extend([Path(parent) for parent in Path.cwd().parents])
         # Check in user's config directory last
-        paths_to_check.append(user_config_dir("quanstants", roaming=True))
+        paths_to_check.append(Path(user_config_dir("quanstants", roaming=True)))
         while (toml_path := None) is None:
             for path in paths_to_check:
                 if (path / "quanstants.toml").exists():

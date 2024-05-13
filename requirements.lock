@@ -8,3 +8,5 @@
 #   with-sources: false
 
 -e file:.
+platformdirs==4.2.1
+    # via quanstants

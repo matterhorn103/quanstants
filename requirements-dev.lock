@@ -51,6 +51,8 @@ packaging==24.0
     # via pytest
 pkginfo==1.10.0
     # via twine
+platformdirs==4.2.1
+    # via quanstants
 pluggy==1.4.0
     # via pytest
 pycparser==2.22

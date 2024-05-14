@@ -601,9 +601,12 @@ class CompoundUnit(Unit):
             if not component_matched:
                 result *= component.unit ** component.exponent
         # Drop any unitless units (not dimensionless ones)
-        result = result.number * CompoundUnit(tuple(
-            factor for factor in result.unit.components if not isinstance(factor.unit, Unitless)
-        ))
+        if result.is_dimensionless():
+            pass
+        else:
+            result = result.number * CompoundUnit(tuple(
+                factor for factor in result.unit.components if not isinstance(factor.unit, Unitless)
+            ))
         # Finally cancel again
         return result.cancel()
 

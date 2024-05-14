@@ -185,24 +185,21 @@ class Unit:
         return f"Unit({self.symbol})"
 
     # Units must always come at the end of expressions, so do not define Unit * num or Unit / num
-    # Operations with Quantity are defined in the Quantity class
-    def __rmul__(self, other):
-        if isinstance(other, (str, int, float, dec)):
-            return Quantity(other, self)
-        else:
-            return NotImplemented
-
     def __mul__(self, other):
         if isinstance(other, Unitless):
             return self
         elif isinstance(other, Unit):
             return CompoundUnit(self.components + other.components)
+        elif isinstance(other, Quantity):
+            return Quantity(other.number, self * other.unit)
         else:
             return NotImplemented
-
-    def __rtruediv__(self, other):
+    
+    def __rmul__(self, other):
         if isinstance(other, (str, int, float, dec)):
-            return Quantity(other, self.inverse())
+            return Quantity(other, self)
+        elif isinstance(other, Quantity):
+            return Quantity(other.number, other.unit * self)
         else:
             return NotImplemented
 
@@ -211,6 +208,16 @@ class Unit:
             return self
         elif isinstance(other, Unit):
             return CompoundUnit(self.components + other.inverse().components)
+        elif isinstance(other, Quantity):
+            return Quantity(1 / other.number, self / other.unit)
+        else:
+            return NotImplemented    
+
+    def __rtruediv__(self, other):
+        if isinstance(other, (str, int, float, dec)):
+            return Quantity(other, self.inverse())
+        elif isinstance(other, Quantity):
+            return Quantity(other.number, other.unit / self)
         else:
             return NotImplemented
 

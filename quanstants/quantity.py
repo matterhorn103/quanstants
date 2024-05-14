@@ -239,9 +239,6 @@ class Quantity:
             return Quantity(
                 new_number, self.unit * other.unit, new_uncertainty
             )._auto_cancel()
-        # Check if it's a unit with duck typing
-        elif hasattr(other, "base") and hasattr(other, "components"):
-            return Quantity(self.number, self.unit * other)
         else:
             return NotImplemented
 
@@ -256,9 +253,6 @@ class Quantity:
                 new_number, "mul", self, numberx=other, correlation=correlation
             )
             return Quantity(new_number, self.unit, new_uncertainty)
-        # Check if it's a unit with duck typing
-        elif hasattr(other, "base") and hasattr(other, "components"):
-            return Quantity(self.number, other * self.unit)
         else:
             return NotImplemented
 
@@ -281,9 +275,6 @@ class Quantity:
             return Quantity(
                 new_number, self.unit / other.unit, new_uncertainty
             )._auto_cancel()
-        # Check if it's a unit with duck typing
-        elif hasattr(other, "base") and hasattr(other, "components"):
-            return Quantity(self.number, self.unit / other)
         else:
             return NotImplemented
 
@@ -298,9 +289,6 @@ class Quantity:
                 new_number, "rtruediv", self, numberx=other, correlation=correlation
             )
             return Quantity(new_number, self.unit.inverse(), new_uncertainty)
-        # Check if it's a unit with duck typing
-        elif hasattr(other, "base") and hasattr(other, "components"):
-            return Quantity(1 / self.number, other / self.unit)
         else:
             return NotImplemented
 

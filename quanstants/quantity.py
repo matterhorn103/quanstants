@@ -385,14 +385,14 @@ class Quantity:
             return 0
         # Check if unitless
         elif canonical.unit == 1:
-            return 1
+            return hash(canonical.number)
         else:
             return hash(
                 (
                     canonical.number,
                     canonical.unit.symbol,
                     canonical.unit.name,
-                    canonical.unit.dimensional_exponents,
+                    frozenset(canonical.unit.dimensional_exponents.items()),
                 )
             )
 

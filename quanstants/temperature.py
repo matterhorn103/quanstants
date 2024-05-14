@@ -244,34 +244,27 @@ class Temperature(Quantity):
             result = (
                 self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)
             ).to(self.unit)
-            # Have to round if precision has increased due to conversion to kelvin
-            if result.precision() < self.precision() and result.precision() < other.precision():
-                if other.precision() < self.precision():
-                    return result.round_to_precision_of(other)
-                else:
-                    return result.round_to_precision_of(self)
-            else:
-                return result
         # Allow Quantity with dimension of temperature to be subtracted from Temperature
         elif isinstance(other, Quantity):
             if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
                 result = (
                     self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)
                 ).on_scale(self.unit)
-                # Have to round if precision has increased due to conversion to kelvin
-                if result.precision() < self.precision() and result.precision() < other.precision():
-                    if other.precision() < self.precision():
-                        return result.round_to_precision_of(other)
-                    else:
-                        return result.round_to_precision_of(self)
-                else:
-                    return result
             else:
                 raise NotATemperatureError(
                     f"Can't subtract quantity in {other.unit} from temperature in {self.unit}."
                 )
         else:
             return NotImplemented
+        # Have to round if precision has increased due to conversion to kelvin
+        if result.precision() < self.precision() and result.precision() < other.precision():
+            if other.precision() < self.precision():
+                return result.round_to_precision_of(other)
+            else:
+                return result.round_to_precision_of(self)
+        else:
+            return result
+        
 
     def __neg__(self):
         return Temperature(-1 * self.number, self.unit, self._uncertainty)

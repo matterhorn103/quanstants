@@ -1,6 +1,7 @@
 from collections import namedtuple
 from decimal import Decimal as dec
 from fractions import Fraction as frac
+from functools import cache
 
 from .config import quanfig
 from .quantity import Quantity
@@ -166,7 +167,7 @@ class Unit:
         return self._symbol
 
     @property
-    def name(self) -> str:
+    def name(self) -> str | None:
         return self._name
 
     @property
@@ -283,7 +284,7 @@ class Unit:
 
     def _mul_with_concat(self, other):
         """Similar to multiplication, but the `symbol` of the resulting CompoundUnit is just the symbols of the two concatenated."""
-        return CompoundUnit(components=None, units=[self, other], combine_symbol=False)
+        return CompoundUnit(components=None, units=(self, other), combine_symbol=False)
 
     def inverse(self):
         """Return the inverse of the unit as a CompoundUnit."""
@@ -466,8 +467,14 @@ class Unitless(BaseUnit):
     def __pow__(self, other):
         return self
 
+    def _mul_with_concat(self, other):
+        return other
+
     # Unitless units also need to evaluate to equal to 1, because they hash to 1 (they
     # are unique in this respect - no other units are equal to a numerical value)
+    def __hash__(self):
+        return 1
+
     def __eq__(self, other):
         return 1 == other
     
@@ -488,13 +495,67 @@ unitless = Unitless(
 )
 
 
+class DerivedUnit(Unit):
+    """Units derived from and defined with SI units.
+
+    `value` is a `Quantity` with both a number and a `Unit`, and optionally, an uncertainty.
+    A `symbol` must be provided, but a `name` is optional.
+    If a name is given and `add_to_reg` is `True` (default), the unit will be added to the
+    unit registry under that name (note that trying to replace an existing unit with that name
+    will raise an error).
+    The `dimensional_exponents` are set to that of the provided value's unit(s).
+    """
+
+    __slots__ = ("_value")
+
+    def __init__(
+        self,
+        symbol: str,
+        name: str,
+        value: Quantity,
+        add_to_reg: bool = True,
+        reg: UnitReg = unit_reg,
+        canon_symbol: bool = False,
+        alt_names: list[str] | None = None,
+    ):
+        self._value = value
+        super().__init__(
+            symbol,
+            name,
+            components=(Factor(self, 1),),
+            dimensional_exponents=self.value.unit.dimensional_exponents,
+            add_to_reg=add_to_reg,
+            reg=reg,
+            canon_symbol=canon_symbol,
+            alt_names=alt_names,
+        )
+
+    # Always access properties via self.x not self._x for consistency
+    # self._x is slightly faster, but even for time-critical operations it makes v little difference
+    # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 μs)
+    @property
+    def value(self) -> Quantity:
+        return self._value
+
+    def base(self) -> Quantity:
+        """Return the unit's value in base units as a Quantity."""
+        return self.value.base()
+
+    def cancel(self) -> Quantity:
+        return 1 * self
+
+    def canonical(self) -> Quantity:
+        return 1 * self
+
+
+@cache
 class CompoundUnit(Unit):
     """An effective unit created through multiplication of non-compound units.
 
     Multiple units multiplied together are treated as a single `Unit` object with its constituent parts
     gathered under `components`.
     Generally, the constituent units are passed as a tuple of `Factor` objects.
-    Alternatively, a list of `Unit` objects can be passed and the `components` attributes of each will
+    Alternatively, a tuple of `Unit` objects can be passed and the `components` attributes of each will
     be combined automatically.
     """
 
@@ -502,12 +563,12 @@ class CompoundUnit(Unit):
 
     def __init__(
         self,
-        components: tuple[Factor, ...] | None,
-        units: list[Unit] | None = None,
+        components: tuple[Factor, ...] | None = None,
+        units: tuple[Unit] | None = None,
         name: str | None = None,
         add_to_reg: bool = False,
         reg: UnitReg = unit_reg,
-        alt_names: list | None = None,
+        alt_names: tuple[str] | None = None,
         symbol_sort: str = "sign",
         symbol_inverse: str = quanfig.INVERSE_UNIT,
         combine_symbol: bool = True,
@@ -530,6 +591,7 @@ class CompoundUnit(Unit):
         else:
             symbol = generate_symbol(components, symbol_sort, symbol_inverse)
         dimensional_exponents = generate_dimensional_exponents(components)
+        alt_names = list(alt_names) if alt_names else None
         # Don't define a name etc., just a symbol and the components
         super().__init__(
             symbol=symbol,
@@ -589,25 +651,23 @@ class CompoundUnit(Unit):
         
         Units of the same dimension are converted to whichever unit is a base unit, and otherwise to
         whichever occurs first.
-        Any terms which are unitless
+        Any superfluous terms of `Unitless` units (i.e. equal to 1) will also be dropped.
         """
-        print(self)
         # First cancel like normal
         cancelled = self.cancel().unit
-        print(cancelled)
         # Find first non-unitless factor
         first = None
         i, i_max = 0, len(cancelled.components) - 1
         while first is None:
             if i > i_max:
                 # All components are unitless so overall unit is unitless
-                return unitless
+                return 1 * unitless
             if isinstance(cancelled.components[i].unit, Unitless):
                 i += 1
             else:
                 first = cancelled.components[i]
-        first_matched = False
         # Check if first component needs to be converted before we add it to result
+        first_matched = False
         for other in cancelled.components[i+1:]:
             if first.unit.dimensional_exponents == other.unit.dimensional_exponents:
                 if isinstance(other, BaseUnit):
@@ -622,7 +682,6 @@ class CompoundUnit(Unit):
             result = first.unit ** first.exponent
         # Bring in each remaining component to the result, converting if necessary
         for component in cancelled.components[i+1:]:
-            print(component)
             component_matched = False
             for other in result.components:
                 if component.unit.dimensional_exponents == other.unit.dimensional_exponents:
@@ -634,9 +693,13 @@ class CompoundUnit(Unit):
             if not component_matched:
                 result *= component.unit ** component.exponent
         # Drop any unitless units (not dimensionless ones)
-        result = result.number * CompoundUnit(tuple(
-                factor for factor in result.unit.components if not isinstance(factor.unit, Unitless)
-            ))
+        new_components = tuple(
+            factor for factor in result.unit.components if not isinstance(factor.unit, Unitless)
+        )
+        if len(new_components) == 0:
+            result = result.number * unitless
+        else:
+            result = result.number * CompoundUnit(new_components)
         # Finally cancel again
         return result.cancel()
 
@@ -651,56 +714,3 @@ class CompoundUnit(Unit):
             symbol_inverse="NEGATIVE_SUPERSCRIPT",
             combine_symbol=True,
         )
-
-
-class DerivedUnit(Unit):
-    """Units derived from and defined with SI units.
-
-    `value` is a `Quantity` with both a number and a `Unit`, and optionally, an uncertainty.
-    A `symbol` must be provided, but a `name` is optional.
-    If a name is given and `add_to_reg` is `True` (default), the unit will be added to the
-    unit registry under that name (note that trying to replace an existing unit with that name
-    will raise an error).
-    The `dimensional_exponents` are set to that of the provided value's unit(s).
-    """
-
-    __slots__ = ("_value")
-
-    def __init__(
-        self,
-        symbol: str,
-        name: str,
-        value: Quantity,
-        add_to_reg: bool = True,
-        reg: UnitReg = unit_reg,
-        canon_symbol: bool = False,
-        alt_names: list[str] | None = None,
-    ):
-        self._value = value
-        super().__init__(
-            symbol,
-            name,
-            components=(Factor(self, 1),),
-            dimensional_exponents=self.value.unit.dimensional_exponents,
-            add_to_reg=add_to_reg,
-            reg=reg,
-            canon_symbol=canon_symbol,
-            alt_names=alt_names,
-        )
-
-    # Always access properties via self.x not self._x for consistency
-    # self._x is slightly faster, but even for time-critical operations it makes v little difference
-    # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 μs)
-    @property
-    def value(self) -> Quantity:
-        return self._value
-
-    def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity."""
-        return self.value.base()
-
-    def cancel(self) -> Quantity:
-        return 1 * self
-
-    def canonical(self) -> Quantity:
-        return 1 * self

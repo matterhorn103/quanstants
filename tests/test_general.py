@@ -494,9 +494,9 @@ class TestTemperatures:
         assert repr(result) == "Temperature(0, °C)"
 
     def test_kelvin_to_celsius(self):
-        result = ((273.15 * qu.kelvin) + (25 * qu.kelvin)).on(qu.celsius)
+        result = ((273.15 * qu.kelvin) + (25 * qu.kelvin)).on_scale(qu.celsius)
         assert repr(result) == "Temperature(25.00, °C)"
 
     def test_celsius_to_fahrenheit(self):
-        result = (0 @ qu.celsius).on(qu.fahrenheit)
+        result = (0 @ qu.celsius).on_scale(qu.fahrenheit)
         assert repr(result) == "Temperature(32, °F)"

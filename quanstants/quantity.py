@@ -761,7 +761,7 @@ class Quantity:
                     self.uncertainty.to(other),
                 )
 
-    def on(self, other):
+    def on_scale(self, other):
         """Convert an absolute quantity to a point on a relative scale.
 
         For example, express an absolute temperature in kelvin as a relative temperature on a scale with a

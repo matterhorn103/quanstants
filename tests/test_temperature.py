@@ -35,7 +35,7 @@ class TestCelsius:
 
     def test_conversion_from_kelvin(self):
         q = 250 * qu.kelvin
-        assert repr(q.on(qu.celsius)) == "Temperature(-23.15, °C)"
+        assert repr(q.on_scale(qu.celsius)) == "Temperature(-23.15, °C)"
 
     def test_temp_conversion_at_0(self):
         t = 0 @ qu.celsius
@@ -61,15 +61,15 @@ class TestCelsius:
 
     def test_celsius_fahrenheit_intersection(self):
         t = -40 @ qu.celsius
-        assert t.on(qu.fahrenheit).number == dec("-40")
+        assert t.on_scale(qu.fahrenheit).number == dec("-40")
 
     def test_conversion_to_fahrenheit_at_0(self):
         t = 0 @ qu.celsius
-        assert t.on(qu.fahrenheit) == 32 @ qu.fahrenheit
+        assert t.on_scale(qu.fahrenheit) == 32 @ qu.fahrenheit
 
     def test_conversion_to_fahrenheit_scale(self):
         t = 232 @ qu.celsius
-        assert t.on(qu.fahrenheit) == "449.6" @ qu.fahrenheit
+        assert t.on_scale(qu.fahrenheit) == "449.6" @ qu.fahrenheit
 
     def test_conversion_to_fahrenheit_unit(self):
         t = 232 @ qu.celsius

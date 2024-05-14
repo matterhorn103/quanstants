@@ -119,7 +119,7 @@ class TemperatureUnit(Unit):
     def from_absolute(self, other: Quantity):
         """Convert an absolute `Quantity` with temperature units to a relative `Temperature` with this unit.
 
-        When `Quantity.on()` is called on a quantity and the target unit is an instance of
+        When `Quantity.on_scale()` is called on a quantity and the target unit is an instance of
         `TemperatureUnit`, this method of the target unit will be called.
         """
         if other.unit == kelvin:
@@ -220,7 +220,7 @@ class Temperature(Quantity):
             if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
                 result = (
                     self._to_kelvin().__add__(other.to(kelvin), correlation=correlation)
-                ).on(self.unit)
+                ).on_scale(self.unit)
                 # Have to round if precision has increased due to conversion to kelvin
                 if result.precision() < self.precision() and result.precision() < other.precision():
                     if other.precision() < self.precision():
@@ -257,7 +257,7 @@ class Temperature(Quantity):
             if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
                 result = (
                     self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)
-                ).on(self.unit)
+                ).on_scale(self.unit)
                 # Have to round if precision has increased due to conversion to kelvin
                 if result.precision() < self.precision() and result.precision() < other.precision():
                     if other.precision() < self.precision():
@@ -326,5 +326,5 @@ class Temperature(Quantity):
     def to(self, other):
         return self._to_kelvin().to(other)
 
-    def on(self, other):
-        return self._to_kelvin().on(other)
+    def on_scale(self, other):
+        return self._to_kelvin().on_scale(other)

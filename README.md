@@ -711,11 +711,11 @@ Temperature(50, °C)
 Temperature(0, °C)
 ```
 
-Temperatures can be converted between scales using the `on()` method, and this can also be used with quantities representing absolute temperatures:
+Temperatures can be converted between scales using the `on_scale()` method, and this can also be used with quantities representing absolute temperatures:
 ```python
->>> ((273.15 * qu.kelvin) + (25 * qu.kelvin)).on(qu.celsius)
+>>> ((273.15 * qu.kelvin) + (25 * qu.kelvin)).on_scale(qu.celsius)
 Temperature(25.00, °C)
->>> (0 @ qu.celsius).on(qu.fahrenheit)
+>>> (0 @ qu.celsius).on_scale(qu.fahrenheit)
 Temperature(32, °F)
 ```
 

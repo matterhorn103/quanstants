@@ -343,7 +343,12 @@ class Unit:
 
 
 class Unitless(Unit):
-    """Special unitless unit."""
+    """Special unitless unit that is numerically equal to 1.
+    
+    Note that this is distinct from a dimensionless unit.
+    For example, the degree is defined as a dimensionless `DerivedUnit` defined in terms of radian,
+    and percent is defined as a dimensionless `DerivedUnit` defined in terms of unitless.
+    """
 
     __slots__ = ()
 
@@ -548,57 +553,59 @@ class CompoundUnit(Unit):
             return 1 * CompoundUnit(new_components)
 
     def fully_cancel(self):
-        """Combine any like terms, with units of the same dimension converted and also combined."""
+        """Combine any like terms, with units of the same dimension converted and also combined.
+        
+        Units of the same dimension are converted to whichever unit is a base unit, and otherwise to
+        whichever occurs first.
+        """
+        print(self)
         # First cancel like normal
-        cancelled = self.cancel()
-        # Check if we need to convert first factor
-        first = cancelled.components[0]
+        cancelled = self.cancel().unit
+        print(cancelled)
+        # Find first non-unitless factor
+        first = None
+        i, i_max = 0, len(cancelled.components) - 1
+        while first is None:
+            if i > i_max:
+                # All components are unitless so overall unit is unitless
+                return unitless
+            if isinstance(cancelled.components[i].unit, Unitless):
+                i += 1
+            else:
+                first = cancelled.components[i]
         first_matched = False
-        for other in cancelled.components[1:]:
-            if (first.dimension() != "(unitless)") and (
-                (first.dimensional_exponents == other.dimensional_exponents)
-                or (
-                    first.dimensional_exponents
-                    == {
-                        dim: exp * -1
-                        for dim, exp in other.dimensional_exponents.items()
-                    }
-                )
-            ):
+        # Check if first component needs to be converted before we add it to result
+        for other in cancelled.components[i+1:]:
+            if first.unit.dimensional_exponents == other.unit.dimensional_exponents:
                 if isinstance(other, BaseUnit):
-                    product = first.unit.base() ** first.exponent
-                    first_matched = True
+                    result = first.unit.base() ** first.exponent
+                else:
+                    result = first.unit ** first.exponent
+                first_matched = True
                 break
             else:
                 continue
         if not first_matched:
-            product = first.unit**first.exponent
-        for component in cancelled.components[1:]:
+            result = first.unit ** first.exponent
+        # Bring in each remaining component to the result, converting if necessary
+        for component in cancelled.components[i+1:]:
+            print(component)
             component_matched = False
-            for other in product.components:
-                if (component.dimension() != "(unitless)") and (
-                    (component.dimensional_exponents == other.dimensional_exponents)
-                    or (
-                        component.dimensional_exponents
-                        == {
-                            dim: exp * -1
-                            for dim, exp in other.dimensional_exponents.items()
-                        }
-                    )
-                ):
-                    if isinstance(other, BaseUnit):
-                        product *= component.unit.base() ** component.exponent
-                    elif isinstance(component, BaseUnit):
-                        product *= component.unit**component.exponent
-                    else:
-                        product *= (1 * component.unit).to(other.unit)
+            for other in result.components:
+                if component.unit.dimensional_exponents == other.unit.dimensional_exponents:
+                    result *= ((1 * component.unit).to(other.unit)) ** component.exponent
+                    component_matched = True
                     break
                 else:
                     continue
             if not component_matched:
-                product *= component.unit**component.exponent
+                result *= component.unit ** component.exponent
+        # Drop any unitless units (not dimensionless ones)
+        result = result.number * CompoundUnit(tuple(
+            factor for factor in result.unit.components if not isinstance(factor.unit, Unitless)
+        ))
         # Finally cancel again
-        return product.cancel()
+        return result.cancel()
 
     def canonical(self):
         """Order terms into a reproducible order and return as a Quantity."""

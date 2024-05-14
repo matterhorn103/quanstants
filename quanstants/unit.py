@@ -124,10 +124,10 @@ class Unit:
         components: tuple[Factor, ...],
         dimension: str | None = None,
         dimensional_exponents: dict | None = None,
-        add_to_reg: bool = False,
         reg: UnitReg = unit_reg,
+        add_to_reg: bool = False,
         canon_symbol: bool = False,
-        alt_names: list | None = None,
+        alt_names: list[str] | None = None,
     ):
         if symbol is not None:
             self._symbol = symbol
@@ -325,43 +325,108 @@ class Unit:
 
     # Some methods that subclasses need to redefine
     def base(self):
-        """Return the unit's value in base units as a Quantity."""
+        """Return the unit's value in base units as a `Quantity`."""
         raise NotImplementedError
 
     def cancel(self):
-        """Combine any like terms and return as a Quantity."""
+        """Combine any like terms and return as a `Quantity`."""
         raise NotImplementedError
 
-    # Likely necessary to redefine but defaults to cancel() if not
+    # Sometimes necessary to redefine but defaults to cancel() if not
     def fully_cancel(self):
-        """Combine any like terms and return as a Quantity, with units of the same dimension converted and also combined."""
+        """Combine any like terms and return as a `Quantity`, with units of the same dimension converted and also combined."""
         return self.cancel()
 
     def canonical(self):
-        """Order terms into a reproducible order and return as a Quantity."""
+        """Order terms into a reproducible order and return as a `Quantity`."""
         raise NotImplementedError
 
 
-class Unitless(Unit):
-    """Special unitless unit that is numerically equal to 1.
+class BaseUnit(Unit):
+    """SI base units and other base units that are not defined in terms of other units.
     
-    Note that this is distinct from a dimensionless unit.
-    For example, the degree is defined as a dimensionless `DerivedUnit` defined in terms of radian,
-    and percent is defined as a dimensionless `DerivedUnit` defined in terms of unitless.
+    The key property of a `BaseUnit` is that a request to express it in base units, to
+    cancel it, or to express it canonically, simply returns a `Quantity` of unity times
+    the `BaseUnit`.
     """
 
     __slots__ = ()
 
-    def __init__(self, reg: UnitReg = unit_reg, add_to_reg=False):
+    def __init__(
+        self,
+        symbol: str,
+        name: str,
+        dimension: str,
+        reg: UnitReg = unit_reg,
+        add_to_reg: bool = True,
+        canon_symbol: bool = True,
+        alt_names: list[str] = None,
+    ):
         super().__init__(
-            symbol="(unitless)",
-            name="unitless",
+            symbol,
+            name,
             components=(Factor(self, 1),),
-            dimension="X",
-            add_to_reg=add_to_reg,
+            dimension=dimension,
             reg=reg,
-            canon_symbol=False,
-            alt_names=None,
+            add_to_reg=add_to_reg,
+            canon_symbol=canon_symbol,
+            alt_names=alt_names,
+        )
+
+    def base(self) -> Quantity:
+        """Return the unit's value in base units as a Quantity.
+        
+        For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
+        """
+        return 1 * self
+
+    def cancel(self) -> Quantity:
+        """Combine any like terms and return as a Quantity.
+        
+        For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
+        """
+        return 1 * self
+
+    def canonical(self) -> Quantity:
+        """Order terms into a reproducible order and return as a Quantity.
+        
+        For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
+        """
+        return 1 * self
+
+
+class Unitless(BaseUnit):
+    """Special dimensionless units that are numerically equal to 1.
+    
+    Derives from `BaseUnit` and acts similar in most ways, but in arithmetic and
+    equalities behaves like unity.
+    Note that a unitless unit is not simply dimensionless, and not all dimensionless
+    units are instances of `Unitless`.
+    For example, the degree is defined as a dimensionless `DerivedUnit` defined in terms
+    of radian, and percent is defined as a dimensionless `DerivedUnit` defined in terms
+    of unitless, while both `quanstants.units.radian` and `quanstants.units.unitless`
+    are instances of `Unitless`.
+    """
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        symbol: str | None = None,
+        name: str | None = None,
+        reg: UnitReg = unit_reg,
+        add_to_reg: bool = True,
+        canon_symbol: bool = True,
+        alt_names: list[str] | None = None,
+    ):
+        super().__init__(
+            symbol=symbol,
+            name=name,
+            dimension="X",
+            reg=reg,
+            add_to_reg=add_to_reg,
+            canon_symbol=canon_symbol,
+            alt_names=alt_names,
         )
 
     # Make sure that Unitless * Unit and Unitless / Unit return just the other Unit
@@ -389,70 +454,31 @@ class Unitless(Unit):
         else:
             return super().__rtruediv__(other)
 
-    # Unitless is basically equal to 1, so if raised to the power of something else, return self
+    # Unitless is numerically equal to 1, so if raised to the power of something else,
+    # just return self
     def __pow__(self, other):
         return self
 
-    # Unitless also needs to evaluate to equal to 1, because it hashes to 1 (it is
-    # unique in this respect, no other units are equal to a numerical value)
+    # Unitless units also need to evaluate to equal to 1, because they hash to 1 (they
+    # are unique in this respect - no other units are equal to a numerical value)
     def __eq__(self, other):
         return 1 == other
-
-    def base(self):
-        """Return unity as a unitless Quantity."""
-        return 1 * self
-
-    def cancel(self):
-        """Return unity as a unitless Quantity."""
-        return 1 * self
-
-    def canonical(self):
-        """Return unity as a unitless Quantity."""
-        return 1 * self
+    
+    def __gt__(self, other):
+        return 1 > other
+    
+    def __ge__(self, other):
+        return 1 >= other
 
 
-# Instantiate the special unitless dimensionless unit; typically the only instance required
-unitless = Unitless(add_to_reg=True)
-
-
-class BaseUnit(Unit):
-    """SI base units and other base units that are not defined in terms of other units."""
-
-    __slots__ = ()
-
-    def __init__(
-        self,
-        symbol,
-        name,
-        dimension,
-        add_to_reg: bool = True,
-        reg: UnitReg = unit_reg,
-        canon_symbol: bool = True,
-        alt_names=None,
-    ):
-        # All base units will be the canonical unit for that symbol
-        super().__init__(
-            symbol,
-            name,
-            components=(Factor(self, 1),),
-            dimension=dimension,
-            add_to_reg=add_to_reg,
-            reg=reg,
-            canon_symbol=canon_symbol,
-            alt_names=alt_names,
-        )
-
-    def base(self):
-        """Return a Quantity of unity times the base unit."""
-        return 1 * self
-
-    def cancel(self):
-        """Return a Quantity of unity times the base unit."""
-        return 1 * self
-
-    def canonical(self):
-        """Return a Quantity of unity times the base unit."""
-        return 1 * self
+# Instantiate the main unitless instance which is the one typically used internally
+unitless = Unitless(
+    symbol="(unitless)",
+    name="unitless",
+    add_to_reg=True,
+    canon_symbol=False,
+    alt_names=None,
+)
 
 
 class CompoundUnit(Unit):
@@ -460,8 +486,7 @@ class CompoundUnit(Unit):
 
     Multiple units multiplied together are treated as a single `Unit` object with its constituent parts
     gathered under `components`.
-    Generally, the constituent units are passed as a tuple of `Factors`, a `namedtuple` of a unit and an
-    exponent.
+    Generally, the constituent units are passed as a tuple of `Factor` objects.
     Alternatively, a list of `Unit` objects can be passed and the `components` attributes of each will
     be combined automatically.
     """
@@ -518,7 +543,7 @@ class CompoundUnit(Unit):
     def defined_in_base(self):
         return self._defined_in_base
 
-    def base(self):
+    def base(self) -> Quantity:
         """Return the unit's value in base units as a Quantity."""
         if self.defined_in_base:
             return Quantity(1, self)
@@ -529,7 +554,7 @@ class CompoundUnit(Unit):
                 result *= component.unit.base() ** component.exponent
             return result
 
-    def cancel(self):
+    def cancel(self) -> Quantity:
         """Combine any like terms."""
         new_components_list = []
         for factor in self.components:
@@ -552,11 +577,12 @@ class CompoundUnit(Unit):
         else:
             return 1 * CompoundUnit(new_components)
 
-    def fully_cancel(self):
+    def fully_cancel(self) -> Quantity:
         """Combine any like terms, with units of the same dimension converted and also combined.
         
         Units of the same dimension are converted to whichever unit is a base unit, and otherwise to
         whichever occurs first.
+        Any terms which are unitless
         """
         print(self)
         # First cancel like normal
@@ -601,16 +627,13 @@ class CompoundUnit(Unit):
             if not component_matched:
                 result *= component.unit ** component.exponent
         # Drop any unitless units (not dimensionless ones)
-        if result.is_dimensionless():
-            pass
-        else:
-            result = result.number * CompoundUnit(tuple(
+        result = result.number * CompoundUnit(tuple(
                 factor for factor in result.unit.components if not isinstance(factor.unit, Unitless)
             ))
         # Finally cancel again
         return result.cancel()
 
-    def canonical(self):
+    def canonical(self) -> Quantity:
         """Order terms into a reproducible order and return as a Quantity."""
         ordered_components = tuple(sorted(self.components, key=get_priority))
         # Now that the components have the canonical order, make sure the order of units in the
@@ -644,7 +667,7 @@ class DerivedUnit(Unit):
         add_to_reg: bool = True,
         reg: UnitReg = unit_reg,
         canon_symbol: bool = False,
-        alt_names: list | None = None,
+        alt_names: list[str] | None = None,
     ):
         self._value = value
         super().__init__(
@@ -665,12 +688,12 @@ class DerivedUnit(Unit):
     def value(self) -> Quantity:
         return self._value
 
-    def base(self):
+    def base(self) -> Quantity:
         """Return the unit's value in base units as a Quantity."""
         return self.value.base()
 
-    def cancel(self):
+    def cancel(self) -> Quantity:
         return 1 * self
 
-    def canonical(self):
+    def canonical(self) -> Quantity:
         return 1 * self

@@ -719,6 +719,50 @@ Temperature(25.00, °C)
 Temperature(32, °F)
 ```
 
+### Configuration
+
+The config object `quanstants.quanfig` provides access to many variables that change the behaviour of `quanstants` objects:
+
+```python
+>>> from quanstants import quanfig
+>>> quanfig.ROUNDING_MODE  # The rounding mode used by internal Decimal objects
+'ROUND_HALF_UP'
+>>> quanfig.INVERSE_UNIT  # The style to use to show unit division i.e. m s⁻¹ or m / s
+'NEGATIVE_SUPERSCRIPT'
+```
+
+Simply set one of the variables to change behaviour:
+```python
+>>> 3 * qu.m * qu.s**-1
+Quantity(3, m s⁻¹)
+>>> quanfig.INVERSE_UNIT = "SLASH"
+>>> 3 * qu.m * qu.s**-1
+Quantity(3, m/s)
+```
+
+Custom units and constants can also be defined in `quanstants.toml`:
+```toml
+[units.derived]
+thaum.symbol = "thm"
+thaum.value.number = "3.595e16"
+thaum.value.unit = "J"
+thaum.canon_symbol = true
+
+[constants]
+swallow_airspeed_velocity.symbol = "swv"
+swallow_airspeed_velocity.value.number = "9"
+swallow_airspeed_velocity.value.unit = "m s-1"
+swallow_airspeed_velocity.alt_names = [ "european_swallow_airspeed_velocity", "unladen_swallow_airspeed_velocity" ]
+```
+
+```python
+>>> from quanstants import units as qu, constants as qc
+>>> print(qu.thm, qu.thm.value)
+Unit(thm) 3.595E+16 J
+>>> print(qc.european_swallow_airspeed_velocity)
+swallow_airspeed_velocity = 9 m s⁻¹
+```
+
 ## Standards and naming
 
 The primary source of authority is the SI brochure (9th Edition v2.01 in English), followed by ISO/IEC 80000.

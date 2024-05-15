@@ -45,7 +45,7 @@ def generate_symbol(
             if inverse == "NEGATIVE_SUPERSCRIPT":
                 return " ".join(positive_terms) + " " + " ".join(negative_terms)
             elif inverse == "SLASH":
-                return " ".join(positive_terms) + " / " + " ".join(negative_terms)
+                return " ".join(positive_terms) + "/" + " ".join(negative_terms)
         else:
             return " ".join(positive_terms)
     else:

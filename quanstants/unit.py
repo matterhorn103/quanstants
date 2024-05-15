@@ -115,7 +115,12 @@ class Unit:
     # Using slots keeps the memory footprint down as there is no __dict__
     # It also helps immutability as users can't add attributes
     __slots__ = (
-        "_symbol", "_name", "_dimensional_exponents", "_components", "_alt_names"
+        "_symbol",
+        "_name",
+        "_components",
+        "_value",
+        "_dimensional_exponents",
+        "_alt_names",
     )
 
     def __init__(
@@ -123,6 +128,7 @@ class Unit:
         symbol: str | None,
         name: str | None,
         components: tuple[Factor, ...],
+        value: Quantity | None = None,
         dimension: str | None = None,
         dimensional_exponents: dict | None = None,
         reg: UnitReg = unit_reg,
@@ -158,6 +164,7 @@ class Unit:
                 if dim in dimensional_exponents:
                     self._dimensional_exponents[dim] += dimensional_exponents[dim]
         self._components = components
+        self._value = Quantity(1, self) if value is None else value
         self._alt_names = tuple(alt_names) if alt_names is not None else None
         if add_to_reg:
             self.add_to_reg(reg=reg, add_symbol=canon_symbol)
@@ -177,6 +184,10 @@ class Unit:
     @property
     def components(self) -> tuple[Factor, ...]:
         return self._components
+    
+    @property
+    def value(self) -> Quantity:
+        return self._value
 
     @property
     def alt_names(self) -> list[str]:
@@ -185,14 +196,21 @@ class Unit:
     def __str__(self):
         return f"Unit({self.symbol})"
 
-    # Units must always come at the end of expressions, so do not define Unit * num or Unit / num
-    def __mul__(self, other):
+    # Units must always come at the end of expressions,
+    # so do not define Unit * num or Unit / num
+    def __mul__(self, other, concatenate_symbols: bool = False):
         if isinstance(other, Unitless):
-            return self
+            if concatenate_symbols and not other._drop_on_concat:
+                return CompoundUnit(components=None, units=(self, other), concatenate_symbols=True)
+            else:
+                return self
         elif isinstance(other, Unit):
-            return CompoundUnit(self.components + other.components)
+            if concatenate_symbols:
+                return CompoundUnit(components=None, units=(self, other), concatenate_symbols=True)
+            else:
+                return CompoundUnit(self.components + other.components)
         elif isinstance(other, Quantity):
-            return Quantity(other.number, self * other.unit)
+            return Quantity(other.number, self.__mul__(other.unit, concatenate_symbols=concatenate_symbols))
         else:
             return NotImplemented
     
@@ -247,44 +265,30 @@ class Unit:
             return NotImplemented
 
     # Hashing and equalities use the implementations of `Quantity`
-    # Units are thus considered equal to quantities that have the same value
+    # Units are thus considered equal to quantities that have an equivalent value
     def __hash__(self):
-        canonical = self.base().cancel().canonical()
-        return hash(canonical)
+        return hash(self.value)
 
     def __eq__(self, other):
         if isinstance(other, (Unit, Quantity)):
-            # Convert both to base unit representations (Quantities)
-            a = self.base().cancel().canonical()
-            b = other.base().cancel().canonical()
-            # Compare the quantities
-            return a == b
+            # Compare the values (handled by `Quantity`)
+            return self.value == other.value
         else:
             return NotImplemented
 
     def __gt__(self, other):
         if isinstance(other, (Unit, Quantity)):
-            # Convert both to base unit representations (Quantities)
-            a = self.base().cancel().canonical()
-            b = other.base().cancel().canonical()
-            # Compare the quantities
-            return a > b
+            # Compare the values (handled by `Quantity`)
+            return self.value > other.value
         else:
             return NotImplemented
 
     def __ge__(self, other):
         if isinstance(other, (Unit, Quantity)):
-            # Convert both to base unit representations (Quantities)
-            a = self.base().cancel().canonical()
-            b = other.base().cancel().canonical()
-            # Compare the quantities
-            return a >= b
+            # Compare the values (handled by `Quantity`)
+            return self.value >= other.value
         else:
             return NotImplemented
-
-    def _mul_with_concat(self, other):
-        """Similar to multiplication, but the `symbol` of the resulting CompoundUnit is just the symbols of the two concatenated."""
-        return CompoundUnit(components=None, units=(self, other), combine_symbol=False)
 
     def inverse(self):
         """Return the inverse of the unit as a CompoundUnit."""
@@ -386,21 +390,21 @@ class BaseUnit(Unit):
         
         For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
         """
-        return 1 * self
+        return self.value
 
     def cancel(self) -> Quantity:
         """Combine any like terms and return as a Quantity.
         
         For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
         """
-        return 1 * self
+        return self.value
 
     def canonical(self) -> Quantity:
         """Order terms into a reproducible order and return as a Quantity.
         
         For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
         """
-        return 1 * self
+        return self.value
 
 
 class Unitless(BaseUnit):
@@ -416,7 +420,7 @@ class Unitless(BaseUnit):
     are instances of `Unitless`.
     """
 
-    __slots__ = ()
+    __slots__ = ("_drop_on_concat")
 
     def __init__(
         self,
@@ -426,6 +430,7 @@ class Unitless(BaseUnit):
         add_to_reg: bool = True,
         canon_symbol: bool = True,
         alt_names: list[str] | None = None,
+        drop_on_concat: bool = False,
     ):
         super().__init__(
             symbol=symbol,
@@ -436,10 +441,14 @@ class Unitless(BaseUnit):
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
+        self._drop_on_concat = drop_on_concat
 
     # Make sure that Unitless * Unit and Unitless / Unit return just the other Unit
-    def __mul__(self, other):
-        if isinstance(other, (Unit, Quantity)):
+    # The exception being if concatenation is requested
+    def __mul__(self, other, concatenate_symbols: bool = False):
+        if concatenate_symbols and not self._drop_on_concat:
+            return super().__mul__(other, concatenate_symbols=concatenate_symbols)
+        elif isinstance(other, (Unit, Quantity)):
             return other
         else:
             return super().__mul__(other)
@@ -462,13 +471,9 @@ class Unitless(BaseUnit):
         else:
             return super().__rtruediv__(other)
 
-    # Unitless is numerically equal to 1, so if raised to the power of something else,
-    # just return self
+    # Unitless is numerically equal to 1, so raising to a power has no effect
     def __pow__(self, other):
         return self
-
-    def _mul_with_concat(self, other):
-        return other
 
     # Unitless units also need to evaluate to equal to 1, because they hash to 1 (they
     # are unique in this respect - no other units are equal to a numerical value)
@@ -492,6 +497,7 @@ unitless = Unitless(
     add_to_reg=True,
     canon_symbol=False,
     alt_names=None,
+    drop_on_concat=True,
 )
 
 
@@ -506,7 +512,7 @@ class DerivedUnit(Unit):
     The `dimensional_exponents` are set to that of the provided value's unit(s).
     """
 
-    __slots__ = ("_value")
+    __slots__ = ()
 
     def __init__(
         self,
@@ -518,24 +524,17 @@ class DerivedUnit(Unit):
         canon_symbol: bool = False,
         alt_names: list[str] | None = None,
     ):
-        self._value = value
         super().__init__(
             symbol,
             name,
             components=(Factor(self, 1),),
-            dimensional_exponents=self.value.unit.dimensional_exponents,
+            value=value,
+            dimensional_exponents=value.unit.dimensional_exponents,
             add_to_reg=add_to_reg,
             reg=reg,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
-
-    # Always access properties via self.x not self._x for consistency
-    # self._x is slightly faster, but even for time-critical operations it makes v little difference
-    # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 μs)
-    @property
-    def value(self) -> Quantity:
-        return self._value
 
     def base(self) -> Quantity:
         """Return the unit's value in base units as a Quantity."""
@@ -548,7 +547,7 @@ class DerivedUnit(Unit):
         return 1 * self
 
 
-@cache
+#@cache
 class CompoundUnit(Unit):
     """An effective unit created through multiplication of non-compound units.
 
@@ -571,25 +570,27 @@ class CompoundUnit(Unit):
         alt_names: tuple[str] | None = None,
         symbol_sort: str = "sign",
         symbol_inverse: str = quanfig.INVERSE_UNIT,
-        combine_symbol: bool = True,
+        concatenate_symbols: bool = False,
     ):
         # If no components passed, first get components from list of units
         if components is None:
             # Repeated addition of tuples, starting with (), fastest method for low n (n < 10)
             components = sum([unit.components for unit in units], ())
-        # Generate a symbol based on passed options
-        if (units is not None) and (not combine_symbol):
-            # Put each unit's symbol in parentheses if they contain a slash, but drop if they are unitless
+
+        # Generate a new symbol based on passed options
+        if (units is None) or (not concatenate_symbols):
+            symbol = generate_symbol(components, symbol_sort, symbol_inverse)
+        else:
+            # Maintain visual separation of combined units in symbol
+            # Put each unit's symbol in parentheses if they contain a slash
             symbols = []
             for unit in units:
-                if not isinstance(unit, Unitless):
-                    if "/" in unit.symbol:
-                        symbols.append("(" + unit.symbol + ")")
-                    else:
-                        symbols.append(unit.symbol)
+                if "/" in unit.symbol:
+                    symbols.append("(" + unit.symbol + ")")
+                else:
+                    symbols.append(unit.symbol)
             symbol = " ".join(symbols)
-        else:
-            symbol = generate_symbol(components, symbol_sort, symbol_inverse)
+            
         dimensional_exponents = generate_dimensional_exponents(components)
         alt_names = list(alt_names) if alt_names else None
         # Don't define a name etc., just a symbol and the components
@@ -712,5 +713,5 @@ class CompoundUnit(Unit):
             ordered_components,
             symbol_sort="unsorted",
             symbol_inverse="NEGATIVE_SUPERSCRIPT",
-            combine_symbol=True,
+            concatenate_symbols=False,
         )

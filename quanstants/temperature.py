@@ -59,7 +59,7 @@ class TemperatureUnit(Unit):
     ```
     """
 
-    __slots__ = ("_value", "_zero_point")
+    __slots__ = ("_degree_value", "_zero_point")
 
     def __init__(
         self,
@@ -73,9 +73,9 @@ class TemperatureUnit(Unit):
         alt_names: list | None = None,
     ):
         if isinstance(degree_value, Quantity) and (degree_value.base().unit == kelvin):
-            self._value = degree_value.base()
+            self._degree_value = degree_value.base()
         else:
-            self._value = Quantity(degree_value, kelvin)
+            self._degree_value = Quantity(degree_value, kelvin)
         if isinstance(zero_point, Quantity) and (zero_point.base().unit == kelvin):
             self._zero_point = zero_point.base()
         else:
@@ -84,6 +84,7 @@ class TemperatureUnit(Unit):
             symbol=symbol,
             name=name,
             components=(Factor(self, 1),),
+            value = self._degree_value,
             dimension="Θ",
             add_to_reg=add_to_reg,
             reg=reg,
@@ -91,10 +92,11 @@ class TemperatureUnit(Unit):
             alt_names=alt_names,
         )
 
+    # Not strictly necessary to override `super().value()` but aids clarity
     @property
     def value(self) -> Quantity:
-        """Return the value of a degree in this scale, i.e. (x+1)° - (x)°, in kelvin."""
-        return self._value
+        """Return the value of the unit itself, a degree in this scale, i.e. (x+1)° - (x)°, in kelvin."""
+        return self._degree_value
 
     @property
     def zero_point(self) -> Quantity:

@@ -1,7 +1,6 @@
 from collections import namedtuple
 from decimal import Decimal as dec
 from fractions import Fraction as frac
-from functools import cache
 
 from .config import quanfig
 from .quantity import Quantity
@@ -547,7 +546,6 @@ class DerivedUnit(Unit):
         return 1 * self
 
 
-#@cache
 class CompoundUnit(Unit):
     """An effective unit created through multiplication of non-compound units.
 
@@ -567,7 +565,7 @@ class CompoundUnit(Unit):
         name: str | None = None,
         add_to_reg: bool = False,
         reg: UnitReg = unit_reg,
-        alt_names: tuple[str] | None = None,
+        alt_names: list[str] | None = None,
         symbol_sort: str = "sign",
         symbol_inverse: str = quanfig.INVERSE_UNIT,
         concatenate_symbols: bool = False,
@@ -592,7 +590,7 @@ class CompoundUnit(Unit):
             symbol = " ".join(symbols)
             
         dimensional_exponents = generate_dimensional_exponents(components)
-        alt_names = list(alt_names) if alt_names else None
+        alt_names = alt_names if alt_names else None
         # Don't define a name etc., just a symbol and the components
         super().__init__(
             symbol=symbol,

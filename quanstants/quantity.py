@@ -77,10 +77,37 @@ class Quantity:
             else:
                 number, unit, uncertainty = value.number, value.unit, value.uncertainty
 
-        if quanfig.CONVERT_FLOAT_AS_STR:
+        # Did extensive timings for this, shown in comments in ns in format:
+        # dec; str, int, float => sum(str, int, float)
+        # Prioritize fast dec as most Quantity creation is internal with a dec
+        # Also choose to prioritize float over int/str as performance-sensitive things
+        # are likely using floats
+        # Considered using function but adds around 40 ns overhead
+        # One-liner isn't faster than multi-line
+        # Timings tested with dec("3.2"); "3.2", 3, 3.2
+        # For reference, timings for conversion of each type directly and via str:
+        # _number = dec(number)  # 86; 703, 116, 708 => 1527
+        # _number = dec.from_float(number)  # N/A; N/A, 116, 719
+        # _number = dec(str(number))  # 516; 331, 185, 328 => 844
+        # 844 ns is presumably the lower limit for the total of the non-dec timings
+        # I have absolutely no idea why the latter should be 2x faster for str and float
+        # Naturally "3.2" vs 3 is unfair, but it is more relevant here
+        # For reference, timings for dec(number) with 3 in each type:  # 86; 143, 116, 318 => 577
+        # And for dec(str(number)):  # 217; 151, 191, 250 => 592
+
+        # Current method: # 18; 405, 244, 420 => 1069
+        if isinstance(number, dec):
+            self._number = number    
+        elif isinstance(number, float) and quanfig.CONVERT_FLOAT_AS_STR:
             self._number = dec(str(number))
         else:
             self._number = dec(number)
+
+        # _number = number if isinstance(number, dec) else dec(str(number)) if (isinstance(number, float) and quanfig.CONVERT_FLOAT_AS_STR) else dec(number)  # 18; 430, 203, 422 => 1055
+        # _number = number if isinstance(number, dec) else dec(number) if isinstance(number, (int, str)) else dec(str(number)) if quanfig.CONVERT_FLOAT_AS_STR else dec(str(number)) # 18; 518, 184, 498 => 1200
+        # _number = number if isinstance(number, dec) else dec(number) if isinstance(number, (int, str)) or not quanfig.CONVERT_FLOAT_AS_STR else dec(str(number))  # 20; 483, 186, 493 => 1162
+        # Old method, very slow for decimals:
+        # _number = dec(str(number)) if quanfig.CONVERT_FLOAT_AS_STR else dec(number)  # 540; 368, 213, 367 => 948
 
         if isinstance(unit, str):
             self._unit = unit_reg.parse(unit)
@@ -96,14 +123,17 @@ class Quantity:
                 self._uncertainty = uncertainty.to(self._unit).number
             else:
                 self._uncertainty = uncertainty.number
-        elif quanfig.CONVERT_FLOAT_AS_STR:
+        elif isinstance(uncertainty, dec):
+            self._uncertainty = uncertainty    
+        elif isinstance(uncertainty, float) and quanfig.CONVERT_FLOAT_AS_STR:
             self._uncertainty = dec(str(uncertainty))
         else:
             self._uncertainty = dec(uncertainty)
 
-    # Always access properties via self.x not self._x for consistency
-    # self._x is slightly faster, but even for time-critical operations it makes v little difference
-    # e.g. for Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 μs)
+    # Generally access properties via self.x not self._x for consistency
+    # self._x is faster, in my tests 9.7 ns vs 48.6 ns
+    # However for most operations this is not a bottleneck e.g. for
+    # Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 μs)
     @property
     def number(self):
         return self._number
@@ -112,11 +142,21 @@ class Quantity:
     def unit(self):
         return self._unit
 
-    # Note that the uncertainty is returned to the user as a Quantity, while internally usually the
-    # decimal value should be accessed with _uncertainty
+    # But note: the uncertainty is returned to the user as a Quantity, so internally
+    # usually the decimal value should be accessed directly with _uncertainty
     @property
     def uncertainty(self):
         return Quantity(self._uncertainty, self._unit)
+    
+    @property
+    def value(self):
+        """Return the value of the object as a `Quantity`.
+        
+        For a `Quantity`, just returns itself.
+        Defined so that all quantities, units, constants etc. can be guaranteed to have a representation
+        as a `Quantity` available.
+        """
+        return self
 
     def __repr__(self):
         if not self._uncertainty:
@@ -381,18 +421,19 @@ class Quantity:
 
     def __hash__(self):
         canonical = self.base().cancel().canonical()
+        canonical = self
         if canonical.number == 0:
             return 0
         # Check if unitless
         elif canonical.unit == 1:
-            return 1
+            return hash(canonical.number)
         else:
             return hash(
                 (
                     canonical.number,
                     canonical.unit.symbol,
                     canonical.unit.name,
-                    canonical.unit.dimensional_exponents,
+                    frozenset(canonical.unit.dimensional_exponents.items()),
                 )
             )
 
@@ -699,7 +740,7 @@ class Quantity:
     def cancel(self):
         """Combine any like terms in the unit."""
         return (self.number * self.unit.cancel()).with_uncertainty(
-            self.uncertainty.number
+            self._uncertainty
         )
 
     def fully_cancel(self):
@@ -724,8 +765,8 @@ class Quantity:
             return self.number * self.unit.canonical()
         else:
             return (self.number * self.unit.canonical()).with_uncertainty(
-                self.uncertainty.canonical().number
-            )
+                self._uncertainty
+        )
 
     def to(self, other):
         """Express the quantity in terms of another unit."""
@@ -741,11 +782,11 @@ class Quantity:
             # Convert both args to quantities in base units, then divide, then cancel to get ratio
             result = (self.base() / other.base()).cancel()
             if not self._uncertainty:
-                return Quantity(result.number, result.unit._mul_with_concat(other))
+                return Quantity(result.number, result.unit.__mul__(other, concatenate_symbols=True))
             else:
                 return Quantity(
                     result.number,
-                    result.unit._mul_with_concat(other),
+                    result.unit.__mul__(other, concatenate_symbols=True),
                     self.uncertainty.to(other),
                 )
 

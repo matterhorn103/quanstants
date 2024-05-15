@@ -618,11 +618,15 @@ class CompoundUnit(Unit):
         if self.defined_in_base:
             return Quantity(1, self)
         else:
-            result = 1
+            result_number = 1
+            new_components = tuple()
             for component in self.components:
-                # This will continue down iteratively within each component
-                result *= component.unit.base() ** component.exponent
-            return result
+                component_unit_base = component.unit.base()
+                # Do this way to avoid creating a new compound unit at every step
+                result_number *= component_unit_base.number ** component.exponent
+                new_components += (component_unit_base.unit ** component.exponent).components
+                # TODO Uncertainty in units?
+            return Quantity(result_number, CompoundUnit(new_components))
 
     def cancel(self) -> Quantity:
         """Combine any like terms."""

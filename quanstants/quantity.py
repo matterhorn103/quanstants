@@ -123,13 +123,15 @@ class Quantity:
                 self._uncertainty = uncertainty.to(self._unit).number
             else:
                 self._uncertainty = uncertainty.number
-        elif quanfig.CONVERT_FLOAT_AS_STR:
+        elif isinstance(uncertainty, dec):
+            self._uncertainty = uncertainty    
+        elif isinstance(uncertainty, float) and quanfig.CONVERT_FLOAT_AS_STR:
             self._uncertainty = dec(str(uncertainty))
         else:
             self._uncertainty = dec(uncertainty)
 
     # Generally access properties via self.x not self._x for consistency
-    # self._x is slightly faster, in my tests 9.7 ns vs 48.6 ns
+    # self._x is faster, in my tests 9.7 ns vs 48.6 ns
     # However for most operations this is not a bottleneck e.g. for
     # Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 μs)
     @property
@@ -140,7 +142,7 @@ class Quantity:
     def unit(self):
         return self._unit
 
-    # But note: the uncertainty is returned to the user as a Quantity, while internally
+    # But note: the uncertainty is returned to the user as a Quantity, so internally
     # usually the decimal value should be accessed directly with _uncertainty
     @property
     def uncertainty(self):
@@ -738,7 +740,7 @@ class Quantity:
     def cancel(self):
         """Combine any like terms in the unit."""
         return (self.number * self.unit.cancel()).with_uncertainty(
-            self.uncertainty.number
+            self._uncertainty
         )
 
     def fully_cancel(self):
@@ -763,8 +765,8 @@ class Quantity:
             return self.number * self.unit.canonical()
         else:
             return (self.number * self.unit.canonical()).with_uncertainty(
-                self.uncertainty.canonical().number
-            )
+                self._uncertainty
+        )
 
     def to(self, other):
         """Express the quantity in terms of another unit."""

@@ -8,12 +8,13 @@ from decimal import Decimal as dec
 # Setup configuration first in case the user's preferences affect initial setup
 from .config import quanfig
 
-quanfig.find_config()
+quanfig.find_toml()
+quanfig.load_toml(["config"])
 
-# Import unit first because the other classes rely on it
+# Import in order of dependency
+from . import quantity
 from . import unit
 from . import prefix
-from . import quantity
 from . import constant
 
 # Definition modules are "unused" imports but do need to be imported so that
@@ -25,6 +26,9 @@ from . import si, prefix_defs
 # Then import whichever optional unit and constant modules should be provided by default
 from .units import default
 from .constants import default
+
+# Now load any custom units and constants defined by the user in their toml
+quanfig.load_toml(["units", "constants"])
 
 # Make the unit, prefix, and constant namespaces available directly in this namespace
 units = unit.unit_reg

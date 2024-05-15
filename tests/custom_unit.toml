@@ -1,0 +1,13 @@
+[units.base]
+
+[units.unitless]
+
+[units.derived]
+thaum.symbol = "thm"
+thaum.value.number = "3.595e16"
+thaum.value.unit = "J"
+thaum.canon_symbol = true
+
+[units.compound]
+
+[units.temperature]

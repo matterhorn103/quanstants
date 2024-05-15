@@ -1,0 +1,9 @@
+[config.rounding]
+ROUNDING_MODE = "ROUND_HALF_DOWN"
+ROUND_PAD = false
+
+[config.arithmetic]
+AUTO_CANCEL = false
+
+[config.printing]
+INVERSE_UNIT = "SLASH"

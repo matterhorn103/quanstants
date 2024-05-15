@@ -2,7 +2,7 @@ import math
 from decimal import Decimal as dec
 
 from .config import quanfig
-from .unit import BaseUnit, DerivedUnit, Unitless, unitless
+from .unit import BaseUnit, DerivedUnit, UnitlessUnit, unitless
 from .quantity import Quantity
 from . import temperature
 from .temperature import TemperatureUnit
@@ -18,12 +18,12 @@ kelvin = temperature.kelvin
 mole = BaseUnit("mol", "mole", dimension="N")
 candela = BaseUnit("cd", "candela", dimension="J")
 
-# Also define radians and steradians as instances of Unitless
-# Previously defined them as BaseUnits, but making them Unitless means they are
+# Also define radians and steradians as instances of UnitlessUnit
+# Previously defined them as BaseUnits, but making them UnitlessUnits means they are
 # equal to 1
 # Could define them as DerivedUnits (like percent), but then they would get cancelled
-radian = Unitless("rad", "radian")
-steradian = Unitless("sr", "steradian")
+radian = UnitlessUnit("rad", "radian")
+steradian = UnitlessUnit("sr", "steradian")
 
 # Create aliases for all of the above to make defining new units easier
 s = second

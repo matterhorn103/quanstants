@@ -25,7 +25,7 @@ class Quantity:
     optional associated `uncertainty`, which is also a numerical value.
     `number` is any type that can be converted to `Decimal`, including strings.
     `unit` is any `BaseUnit` or `DerivedUnit`, or any `CompoundUnit` formed by multiplication thereof,
-    or any instance of the special `Unitless` unit.
+    or any `UnitlessUnit` such as `quanstants.unit.unitless`.
     `uncertainty` is also any type that can be converted to `Decimal`, including strings, however if
     `uncertainty` is not specified or given as `0` or `None` (default) or anything else "falsy" then
     the quantity`s uncertainty is set to `0`.

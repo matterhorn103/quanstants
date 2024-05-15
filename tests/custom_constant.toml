@@ -1,0 +1,5 @@
+[constants]
+swallow_airspeed_velocity.symbol = "swv"
+swallow_airspeed_velocity.value.number = "9"
+swallow_airspeed_velocity.value.unit = "m s-1"
+swallow_airspeed_velocity.alt_names = [ "european_swallow_airspeed_velocity", "unladen_swallow_airspeed_velocity" ]

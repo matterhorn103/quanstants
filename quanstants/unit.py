@@ -93,9 +93,9 @@ class Unit:
     Either `symbol` or `name` must be provided. If `symbol` is not provided, it will be set to the
     value of `name`, so that all units have a symbolic representation that is used in printed
     representations.
+    `symbol` may be any Unicode string.
     `name` must contain only ASCII letters and digits, and underscores. It must in addition be a valid
     Python identifier, so it cannot start with a digit.
-    `symbol` may be any Unicode string.
     At minimum, `components` and one of `dimension` or `dimensional_exponents` must be specified.
     `components` is a tuple of `Factor`s. `Factor` is a `namedtuple` found in this module.
     If a unit only has a single base dimension without exponents, that dimension can be passed as
@@ -186,7 +186,7 @@ class Unit:
 
     # Units must always come at the end of expressions, so do not define Unit * num or Unit / num
     def __mul__(self, other):
-        if isinstance(other, Unitless):
+        if isinstance(other, UnitlessUnit):
             return self
         elif isinstance(other, Unit):
             return CompoundUnit(self.components + other.components)
@@ -204,7 +204,7 @@ class Unit:
             return NotImplemented
 
     def __truediv__(self, other):
-        if isinstance(other, Unitless):
+        if isinstance(other, UnitlessUnit):
             return self
         elif isinstance(other, Unit):
             return CompoundUnit(self.components + other.inverse().components)
@@ -402,17 +402,17 @@ class BaseUnit(Unit):
         return 1 * self
 
 
-class Unitless(BaseUnit):
+class UnitlessUnit(BaseUnit):
     """Special dimensionless units that are numerically equal to 1.
     
     Derives from `BaseUnit` and acts similar in most ways, but in arithmetic and
     equalities behaves like unity.
     Note that a unitless unit is not simply dimensionless, and not all dimensionless
-    units are instances of `Unitless`.
+    units are instances of `UnitlessUnit`.
     For example, the degree is defined as a dimensionless `DerivedUnit` defined in terms
     of radian, and percent is defined as a dimensionless `DerivedUnit` defined in terms
     of unitless, while both `quanstants.units.radian` and `quanstants.units.unitless`
-    are instances of `Unitless`.
+    are instances of `UnitlessUnit`.
     """
 
     __slots__ = ()
@@ -436,7 +436,7 @@ class Unitless(BaseUnit):
             alt_names=alt_names,
         )
 
-    # Make sure that Unitless * Unit and Unitless / Unit return just the other Unit
+    # Make sure that UnitlessUnit * Unit and UnitlessUnit / Unit return just the other Unit
     def __mul__(self, other):
         if isinstance(other, (Unit, Quantity)):
             return other
@@ -461,12 +461,12 @@ class Unitless(BaseUnit):
         else:
             return super().__rtruediv__(other)
 
-    # Unitless is numerically equal to 1, so if raised to the power of something else,
+    # UnitlessUnits are numerically equal to 1, so if raised to the power of something else,
     # just return self
     def __pow__(self, other):
         return self
 
-    # Unitless units also need to evaluate to equal to 1, because they hash to 1 (they
+    # UnitlessUnits also need to evaluate to equal to 1, because they hash to 1 (they
     # are unique in this respect - no other units are equal to a numerical value)
     def __eq__(self, other):
         return 1 == other
@@ -478,8 +478,8 @@ class Unitless(BaseUnit):
         return 1 >= other
 
 
-# Instantiate the main unitless instance which is the one typically used internally
-unitless = Unitless(
+# Instantiate the main UnitlessUnit instance which is the one typically used internally
+unitless = UnitlessUnit(
     symbol="(unitless)",
     name="unitless",
     add_to_reg=True,
@@ -521,7 +521,7 @@ class CompoundUnit(Unit):
             # Put each unit's symbol in parentheses if they contain a slash, but drop if they are unitless
             symbols = []
             for unit in units:
-                if not isinstance(unit, Unitless):
+                if not isinstance(unit, UnitlessUnit):
                     if "/" in unit.symbol:
                         symbols.append("(" + unit.symbol + ")")
                     else:
@@ -602,7 +602,7 @@ class CompoundUnit(Unit):
             if i > i_max:
                 # All components are unitless so overall unit is unitless
                 return unitless
-            if isinstance(cancelled.components[i].unit, Unitless):
+            if isinstance(cancelled.components[i].unit, UnitlessUnit):
                 i += 1
             else:
                 first = cancelled.components[i]
@@ -635,7 +635,7 @@ class CompoundUnit(Unit):
                 result *= component.unit ** component.exponent
         # Drop any unitless units (not dimensionless ones)
         result = result.number * CompoundUnit(tuple(
-                factor for factor in result.unit.components if not isinstance(factor.unit, Unitless)
+                factor for factor in result.unit.components if not isinstance(factor.unit, UnitlessUnit)
             ))
         # Finally cancel again
         return result.cancel()

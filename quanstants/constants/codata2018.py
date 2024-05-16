@@ -1,6 +1,5 @@
 from ..constant import Constant
-from ..unit import unit_reg as qu
-from ..prefix import prefix_reg as qp
+from .. import units as qu, prefixes as qp
 from . import fundamental
 
 # fmt: off

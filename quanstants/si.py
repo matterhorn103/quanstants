@@ -55,7 +55,7 @@ siemens = DerivedUnit("S", "siemens", Quantity(1, kg**-1 * m**-2 * s**3 * A**2),
 weber = DerivedUnit("Wb", "weber", Quantity(1, kg * m**2 * s**-2 * A**-1), canon_symbol=True)
 tesla = DerivedUnit("T", "tesla", Quantity(1, kg * s**-2 * A**-1), canon_symbol=True)
 henry = DerivedUnit("H", "henry", Quantity(1, kg * m**2 * s**-2 * A**-2), canon_symbol=True)
-degreeCelsius = TemperatureUnit("°C", "degreeCelsius", "1", "273.15", add_to_reg=True, canon_symbol=True, alt_names=["degree_Celsius", "degreeC", "celsius", "degreeCentigrade", "degree_Centigrade", "centigrade"])
+degreeCelsius = TemperatureUnit("°C", "degreeCelsius", "1", "273.15", add_to_namespace=True, canon_symbol=True, alt_names=["degree_Celsius", "degreeC", "celsius", "degreeCentigrade", "degree_Centigrade", "centigrade"])
 lumen = DerivedUnit("lm", "lumen", Quantity(1, cd * sr), canon_symbol=True)
 lux = DerivedUnit("lx", "lux", Quantity(1, cd * sr * m**-2), canon_symbol=True)
 becquerel = DerivedUnit("Bq", "becquerel", Quantity(1, s**-1), canon_symbol=True)

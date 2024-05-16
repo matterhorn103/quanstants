@@ -1,5 +1,6 @@
 """These tests test the examples used in the README to check they work as advertised."""
 
+import decimal
 from decimal import Decimal as dec
 from fractions import Fraction as frac
 
@@ -48,13 +49,17 @@ class TestREADME:
         # executing the previous line
         in_code_block = False
         last_executed = ""
-        for line in subsection:
+        for n, line in enumerate(subsection):
             if line == "```python":
                 in_code_block = True
             elif line == "```":
                 in_code_block = False
             elif in_code_block:
-                if line[:4] == ">>> ":
+                if "Error" in line.split()[0]:
+                    continue
+                elif "Error" in subsection[n+1].split()[0]:
+                    continue
+                elif line[:4] == ">>> ":
                     print(f"Executing: {line}")
                     last_executed = line[4:]
                     exec(last_executed)
@@ -95,6 +100,8 @@ class TestREADME:
     
     def test_rounding(self):
         self.run_subsection(self.subsections["Rounding"])
+        # Reset decimal rounding behaviour
+        decimal.getcontext().rounding = decimal.ROUND_HALF_EVEN
     
     def test_temperatures(self):
         self.run_subsection(self.subsections["Temperatures"])

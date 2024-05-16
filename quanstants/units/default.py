@@ -1,6 +1,6 @@
 from ..unit import DerivedUnit, unitless
 from ..prefix import PrefixedUnit
-from ..prefix_defs import kilo
+from ..prefixes.default import kilo
 from ..quantity import Quantity
 from ..si import *
 
@@ -19,10 +19,10 @@ parts_per_quadrillion = DerivedUnit("ppq", "parts_per_quadrillion", Quantity("1e
 
 # Other
 watthour = DerivedUnit("Wh", "watthour", Quantity("3.6E6", joule), canon_symbol=True)
-kilowatthour = PrefixedUnit(kilo, watthour, add_to_reg=True)
+kilowatthour = PrefixedUnit(kilo, watthour, add_to_namespace=True)
 
 # Temperature
-degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", add_to_reg=True, canon_symbol=True, alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"])
+degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", add_to_namespace=True, canon_symbol=True, alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"])
 
 # Standard states
 # standard atm

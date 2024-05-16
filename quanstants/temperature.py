@@ -4,10 +4,10 @@ import types
 from .config import quanfig
 from .uncertainties import get_uncertainty
 from .unit import Unit, Factor
-from .unitreg import unit_reg, UnitReg
 from .quantity import Quantity
 from .si import *
 
+from . import units
 
 # Define the most important unit of temperature, though as a BaseUnit not a TemperatureUnit
 kelvin = BaseUnit("K", "kelvin", dimension="Θ")
@@ -67,8 +67,7 @@ class TemperatureUnit(Unit):
         name: str,
         degree_value: str | int | float | dec | Quantity,
         zero_point: str | int | float | dec | Quantity,
-        add_to_reg: bool = False,
-        reg: UnitReg = unit_reg,
+        add_to_namespace: bool = False,
         canon_symbol: bool = False,
         alt_names: list | None = None,
     ):
@@ -86,8 +85,7 @@ class TemperatureUnit(Unit):
             components=(Factor(self, 1),),
             value = self._degree_value,
             dimension="Θ",
-            add_to_reg=add_to_reg,
-            reg=reg,
+            add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )

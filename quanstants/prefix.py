@@ -5,21 +5,7 @@ from .quantity import Quantity
 from .unit import BaseUnit, DerivedUnit
 from .si import kilogram
 
-
-class PrefixAlreadyDefinedError(Exception):
-    pass
-
-
-# Namespace class to contain all the prefixes, making them useable with prefix.n notation
-class PrefixReg:
-    def add(self, name, prefix):
-        if hasattr(self, name):
-            raise PrefixAlreadyDefinedError
-        setattr(self, name, prefix)
-
-
-prefix_reg = PrefixReg()
-
+from . import prefixes
 
 class AlreadyPrefixedError(Exception):
     pass
@@ -29,7 +15,7 @@ class Prefix:
     """An object representing a (usually metric) prefix.
 
     Combines with a `BaseUnit` or `DerivedUnit` to form a new `PrefixedUnit`.
-    Prefixes are automatically added under both symbol and name to the default prefix registry, which
+    Prefixes are automatically added under both symbol and name to the prefix namespace, which
     is accessible via `quanstants.prefixes`.
     """
 
@@ -47,8 +33,8 @@ class Prefix:
             self._multiplier = dec(str(multiplier))
         else:
             self._multiplier = dec(multiplier)
-        prefix_reg.add(symbol, self)
-        prefix_reg.add(name, self)
+        prefixes.add(symbol, self)
+        prefixes.add(name, self)
 
     @property
     def symbol(self):
@@ -70,11 +56,11 @@ class Prefix:
             # Make sure the user is not trying to add a second prefix to a prefixed unit
             if isinstance(other, PrefixedUnit):
                 raise AlreadyPrefixedError
-            # Create a new unit, don't add to registry to avoid overwrites
+            # Create a new unit, don't add to `prefixes` to avoid overwrites
             return PrefixedUnit(
                 prefix=self,
                 unit=other,
-                add_to_reg=False,
+                add_to_namespace=False,
                 canon_symbol=False,
             )
         else:
@@ -94,7 +80,7 @@ class PrefixedUnit(DerivedUnit):
         self,
         prefix: Prefix,
         unit: BaseUnit | DerivedUnit,
-        add_to_reg: bool = False,
+        add_to_namespace: bool = False,
         canon_symbol: bool = False,
         alt_names: list | None = None,
     ):
@@ -119,7 +105,7 @@ class PrefixedUnit(DerivedUnit):
             symbol=concat_symbol,
             name=concat_name,
             value=Quantity(prefix.multiplier, unit),
-            add_to_reg=add_to_reg,
+            add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=concat_alt_names,
         )

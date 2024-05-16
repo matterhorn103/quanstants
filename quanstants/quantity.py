@@ -7,7 +7,8 @@ from typing import Self
 from .config import quanfig
 from .format import group_digits
 from .uncertainties import get_uncertainty
-from .unitreg import unit_reg
+
+from . import units
 
 
 class MismatchedUnitsError(Exception):
@@ -32,7 +33,7 @@ class Quantity:
     `uncertainty` may also be a `Quantity` itself, which is useful if it was calculated separately.
 
     Normally, `number` and `unit` are both required. To create a unitless quantity, the special unitless
-    unit (found in the main registry i.e. under `quanstants.units.unitless`) should be provided.
+    unit (found in the main units namespace i.e. under `quanstants.units.unitless`) should be provided.
 
     Alternatively, all three may be left as `None` and `value` maybe specified instead as either a
     string or another `Quantity`. Passing a string simply invokes `Quantity.parse(value)`.
@@ -110,9 +111,9 @@ class Quantity:
         # _number = dec(str(number)) if quanfig.CONVERT_FLOAT_AS_STR else dec(number)  # 540; 368, 213, 367 => 948
 
         if isinstance(unit, str):
-            self._unit = unit_reg.parse(unit)
+            self._unit = units.parse(unit)
         elif unit is None:
-            self._unit = unit_reg.unitless
+            self._unit = units.unitless
         else:
             self._unit = unit
 
@@ -772,7 +773,7 @@ class Quantity:
         """Express the quantity in terms of another unit."""
         if isinstance(other, str):
             # Allow parsing of unit string first
-            other = unit_reg.parse(other)
+            other = units.parse(other)
         if self.number == 0:
             if self._uncertainty == 0:
                 return Quantity(0, other)
@@ -806,8 +807,7 @@ class Quantity:
         The string should take the form "<number> <unit>", with number and unit separated by whitespace.
         After separation, the number string is turned directly into a `Decimal`, so it can be any string that
         `Decimal()` accepts.
-        The unit string is parsed by `quanstants.units.parse()` (where `quanstants.units` is the main
-        instance of `quanstants.unitreg.UnitReg`), so it must follow the same rules as for that.
+        The unit string is parsed by `quanstants.units.parse()`, so it must follow the same rules as for that.
         """
         try:
             # Look for uncertainty shown with plusminus symbol

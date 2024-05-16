@@ -305,7 +305,7 @@ quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quant
 
 Similarly, (in)equalities are implemented between quantities of the same dimension:
 ```python
->> (0.3 * qu.litre) > (150 * qu.millilitre)
+>>> (0.3 * qu.litre) > (150 * qu.millilitre)
 True
 >>> (0.15 * qu.litre) >= (150 * qu.millilitre)
 True
@@ -390,6 +390,7 @@ Use the `cancel()` function to combine like terms in the unit after a calculatio
 >>> speed = 3 * qu.m * qu.s**-1
 >>> time = 15 * qu.s
 >>> distance = 45 * (qu.m * qu.s * qu.s**-1)
+>>> distance
 Quantity(45, m s s⁻¹)
 >>> distance.cancel()
 Quantity(45, m)
@@ -514,6 +515,7 @@ Mostly, constants behave like quantities:
 >>> qc.proton_mass
 Constant(proton_mass = 1.67262192369(51)E-27 kg)
 >>> E = qc.proton_mass * qc.speed_of_light**2
+>>> E
 Quantity(1.503277615985125705245525892E-10, kg m² s⁻², uncertainty=4.58365141155777E-20)
 ```
 
@@ -625,11 +627,12 @@ Quantity(1.3, m)
 The rounding mode used for quantities can be chosen by setting `quanstants.quanfig.ROUNDING_MODE` to any of the `decimal` module's [rounding modes](https://docs.python.org/3/library/decimal.html#rounding-modes):
 ```python
 >>> from quanstants import quanfig
->>> ("1.25" * qu.m).round_to_places(1)
-Quantity(1.3, m)
 >>> quanfig.ROUNDING_MODE = "ROUND_HALF_DOWN"
 >>> ("1.25" * qu.m).round_to_places(1)
 Quantity(1.2, m)
+>>> quanfig.ROUNDING_MODE = "ROUND_HALF_UP"
+>>> ("1.25" * qu.m).round_to_places(1)
+Quantity(1.3, m)
 ```
 
 The rounding takes place in a `decimal.localcontext()`, meaning that the user's choices of rounding mode for `Decimal` and `quanstants` are kept separate:
@@ -639,6 +642,7 @@ The rounding takes place in a `decimal.localcontext()`, meaning that the user's 
 Decimal('1.2')
 >>> ("1.25" * qu.m).round_to_places(1)
 Quantity(1.3, m)
+>>> import decimal
 >>> decimal.getcontext().rounding = decimal.ROUND_HALF_UP
 >>> quanfig.ROUNDING_MODE = "ROUND_HALF_DOWN"
 >>> round(Decimal("1.25"), 1)
@@ -650,10 +654,12 @@ Quantity(1.2, m)
 Finally, a method is provided to round just the uncertainty of a quantity without changing the number.
 If `ndigits` and `mode` are not specified, they default to `quanstants.quanfig.NDIGITS_<rounding mode>` and `quanstants.quanfig.ROUND_TO_IF_EXACT` respectively (so by default 3 s.f.), and the uncertainty is never padded when rounded in this manner:
 ```python
->>> b.round_uncertainty()
-Quantity(543.8826, J mol⁻¹, uncertainty=0.032)
->>> b.round_uncertainty(1)
+>>> quanfig.ROUNDING_MODE = "ROUND_HALF_UP"
+>>> c = a.with_uncertainty("0.0323")
+>>> c.round_uncertainty(1)
 Quantity(543.8826, J mol⁻¹, uncertainty=0.03)
+>>> c.round_uncertainty(3, mode="PLACES")
+Quantity(543.8826, J mol⁻¹, uncertainty=0.032)
 ```
 
 ### Temperatures
@@ -666,7 +672,7 @@ As usual, a variety of temperature units are made available under a variety of n
 True
 >>> qu.degreeCelsius is qu.degreeCentigrade
 True
->>> qu.degree_fahrenheit is qu.fahrenheit
+>>> qu.degree_Fahrenheit is qu.fahrenheit
 True
 ```
 
@@ -703,9 +709,9 @@ Arithmetic with `Temperature` instances works correctly, as they are first conve
 ```python
 >>> T = 126.85 @ qu.celsius
 >>> T
-Quantity(126.85, °C)
+Temperature(126.85, °C)
 >>> 2 * T
-Quantity(800, K)
+Quantity(800.00, K)
 >>> (1600 * qu.joule) / T
 Quantity(4, J K⁻¹)
 ```

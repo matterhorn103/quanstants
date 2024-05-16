@@ -6,8 +6,8 @@ from .config import quanfig
 from .quantity import Quantity
 from .unicode import generate_superscript
 
-# Import the main instance of `UnitReg`, which is the default registry for new units
-from .unitreg import unit_reg, UnitReg
+# Import the units namespace module, in which named units are registered
+from . import units
 
 # Create a named tuple that is used to hold a unit with its exponent
 Factor = namedtuple("Factor", ["unit", "exponent"])
@@ -105,10 +105,10 @@ class Unit:
     If a unit's dimension comprises multiple base dimensions or exponents, they should be passed as
     `dimensional_exponents` as a dictionary of the form `{"T": 1, "M": 2, ...}` (only those with
     non-zero exponents are required).
-    `add_to_reg` specifies whether the unit should be added to `reg` as an attribute under the
+    `add_to_namespace` specifies whether the unit should be added to `quanstants.units` under the
     provided `name` and under any alternative names given as a list as `alt_names`.
-    If `canon_symbol` is set to `True`, the unit will also be added to `reg` under `symbol`.
-    The default unit registry is accessible as `quanstants.units`.
+    If `canon_symbol` is set to `True`, the unit will also be added to `quanstants.units` under
+    `symbol`.
     """
 
     # Using slots keeps the memory footprint down as there is no __dict__
@@ -130,8 +130,7 @@ class Unit:
         value: Quantity | None = None,
         dimension: str | None = None,
         dimensional_exponents: dict | None = None,
-        reg: UnitReg = unit_reg,
-        add_to_reg: bool = False,
+        add_to_namespace: bool = False,
         canon_symbol: bool = False,
         alt_names: list[str] | None = None,
     ):
@@ -165,8 +164,8 @@ class Unit:
         self._components = components
         self._value = Quantity(1, self) if value is None else value
         self._alt_names = tuple(alt_names) if alt_names is not None else None
-        if add_to_reg:
-            self.add_to_reg(reg=reg, add_symbol=canon_symbol)
+        if add_to_namespace:
+            self.add_to_namespace(add_symbol=canon_symbol)
 
     @property
     def symbol(self) -> str:
@@ -294,18 +293,18 @@ class Unit:
         # For now just reuse the __pow__ function
         return self**-1
 
-    def add_to_reg(self, reg: UnitReg = unit_reg, add_symbol=False):
-        # Add to specified registry to allow lookup under a provided name
+    def add_to_namespace(self, add_symbol=False):
+        # Add to units namespace to allow lookup under a provided name
         if self.name is not None:
-            reg.add(self.name, self)
+            units.add(self.name, self)
         # Also add under any alternative names e.g. meter vs metre
         if self.alt_names is not None:
             for alt_name in self.alt_names:
-                reg.add(alt_name, self)
+                units.add(alt_name, self)
         # Also add under the symbol if it has been indicated via canon_symbol
         # that the symbol should uniquely refer to this unit
         if (add_symbol) and (self.symbol != self.name):
-            reg.add(self.symbol, self)
+            units.add(self.symbol, self)
 
     def is_dimensionless(self) -> bool:
         if self.dimensional_exponents == {
@@ -368,8 +367,7 @@ class BaseUnit(Unit):
         symbol: str,
         name: str,
         dimension: str,
-        reg: UnitReg = unit_reg,
-        add_to_reg: bool = True,
+        add_to_namespace: bool = True,
         canon_symbol: bool = True,
         alt_names: list[str] = None,
     ):
@@ -378,8 +376,7 @@ class BaseUnit(Unit):
             name,
             components=(Factor(self, 1),),
             dimension=dimension,
-            reg=reg,
-            add_to_reg=add_to_reg,
+            add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
@@ -425,8 +422,7 @@ class UnitlessUnit(BaseUnit):
         self,
         symbol: str | None = None,
         name: str | None = None,
-        reg: UnitReg = unit_reg,
-        add_to_reg: bool = True,
+        add_to_namespace: bool = True,
         canon_symbol: bool = True,
         alt_names: list[str] | None = None,
         drop_on_concat: bool = False,
@@ -435,8 +431,7 @@ class UnitlessUnit(BaseUnit):
             symbol=symbol,
             name=name,
             dimension="X",
-            reg=reg,
-            add_to_reg=add_to_reg,
+            add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
@@ -493,7 +488,7 @@ class UnitlessUnit(BaseUnit):
 unitless = UnitlessUnit(
     symbol="(unitless)",
     name="unitless",
-    add_to_reg=True,
+    add_to_namespace=True,
     canon_symbol=False,
     alt_names=None,
     drop_on_concat=True,
@@ -505,8 +500,8 @@ class DerivedUnit(Unit):
 
     `value` is a `Quantity` with both a number and a `Unit`, and optionally, an uncertainty.
     A `symbol` must be provided, but a `name` is optional.
-    If a name is given and `add_to_reg` is `True` (default), the unit will be added to the
-    unit registry under that name (note that trying to replace an existing unit with that name
+    If a name is given and `add_to_namespace` is `True` (default), the unit will be added to
+    `quanstants.units` under that name (note that trying to replace an existing unit with that name
     will raise an error).
     The `dimensional_exponents` are set to that of the provided value's unit(s).
     """
@@ -518,8 +513,7 @@ class DerivedUnit(Unit):
         symbol: str,
         name: str,
         value: Quantity,
-        add_to_reg: bool = True,
-        reg: UnitReg = unit_reg,
+        add_to_namespace: bool = True,
         canon_symbol: bool = False,
         alt_names: list[str] | None = None,
     ):
@@ -529,8 +523,7 @@ class DerivedUnit(Unit):
             components=(Factor(self, 1),),
             value=value,
             dimensional_exponents=value.unit.dimensional_exponents,
-            add_to_reg=add_to_reg,
-            reg=reg,
+            add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
@@ -563,8 +556,7 @@ class CompoundUnit(Unit):
         components: tuple[Factor, ...] | None = None,
         units: tuple[Unit] | None = None,
         name: str | None = None,
-        add_to_reg: bool = False,
-        reg: UnitReg = unit_reg,
+        add_to_namespace: bool = False,
         alt_names: list[str] | None = None,
         symbol_sort: str = "sign",
         symbol_inverse: str = quanfig.INVERSE_UNIT,
@@ -597,8 +589,7 @@ class CompoundUnit(Unit):
             name=name,
             components=components,
             dimensional_exponents=dimensional_exponents,
-            add_to_reg=add_to_reg,
-            reg=reg,
+            add_to_namespace=add_to_namespace,
             alt_names=alt_names,
         )
         # Determine whether the unit is expressed in terms of base units

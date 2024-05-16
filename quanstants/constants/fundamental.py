@@ -1,5 +1,5 @@
 from ..constant import Constant
-from ..unit import unit_reg as qu
+from .. import units as qu
 
 # fmt: off
 

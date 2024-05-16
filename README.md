@@ -135,9 +135,9 @@ Multiply a prefix with a unit to create a prefixed unit:
 ```python
 >>> from quanstants import units as qu, prefixes as qp
 >>> 50 * (qp.micro * qu.metre)
-Quantity(50, µm)
->>> 50 * (qp.µ * qu.m)
-Quantity(50, µm)
+Quantity(50, μm)
+>>> 50 * (qp.μ * qu.m)
+Quantity(50, μm)
 ```
 
 Binary prefixes are also defined:
@@ -151,9 +151,9 @@ True
 Various common prefixed units are pre-generated and available within `quanstants.units`, but not under their symbol to avoid clashes within the namespace:
 ```python
 >>> 50 * qu.micrometre
-Quantity(50, µm)
+Quantity(50, μm)
 >>> 50 * qu.micron
-Quantity(50, µm)
+Quantity(50, μm)
 >>> "99.7" * qu.megahertz  # qu.MHz raises AttributeError
 Quantity(99.7, MHz)
 ```
@@ -184,7 +184,7 @@ False
 
 Units are often made available in multiple modules if shared between systems, so you only need to worry about importing the unit system of interest:
 ```python
->>> from quanstants import imperial, us
+>>> from quanstants.units import imperial, us
 >>> imperial.foot is us.foot
 True
 >>> imperial.foot is us.us_survey_foot
@@ -204,6 +204,7 @@ The numerical value of a quantity can be most conveniently given an associated u
 ```python
 >>> from quanstants import units as qu
 >>> gravity = ("6.67430e-11" * qu.newton * qu.metre**2 * qu.kilogram**-2).with_uncertainty("0.00015e-11")
+>>> gravity
 Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)
 ```
 The uncertainty can be given as a number with the same units as the quantity, or as a `Quantity` itself:
@@ -214,7 +215,7 @@ Quantity(4.2, m, uncertainty=0.2)
 Quantity(4.2, m, uncertainty=0.20)
 ```
 When printed, uncertainties are shown by parentheses if possible, or with `±` as a fallback:
-```
+```python
 >>> print(("6.67430e-11" * qu.newton * qu.metre**2 * qu.kilogram**-2).with_uncertainty("0.00015e-11"))
 6.67430(15)E-11 N m² kg⁻²
 >>> print(("4.2" * qu.metre).plusminus("20" * qu.centimetre))  # Precisions don't match
@@ -413,6 +414,10 @@ Quantity(150, m² ft⁻¹)
 Quantity(492.1259842519685039370078740, m)
 ```
 
+Note that `fully_cancel()` additionally drops any `UnitlessUnit`s, which are dimensionless base units equal to 1; this includes radians and steradians:
+```python
+```
+
 The presentation of compound units is dependent on the order of mathematical operations.
 While this doesn't affect (in)equalities, it may sometimes be useful to get a canonical, reproducible representation of a quantity and its units, for which the `canonical()` method is available:
 ```python
@@ -464,13 +469,15 @@ True
 True
 ```
 
-Unitless quantities are considered to be equal to their numerical value, and the special unitless unit is considered equal to 1:
+Unitless quantities are considered to be equal to their numerical value, and `UnitlessUnit`s are considered equal to 1:
 ```python
 >>> 2 * qu.unitless
-Quantity(2, (unitless)
+Quantity(2, (unitless))
 >>> 2 * qu.unitless == 2
 True
 >>> qu.unitless == 1
+True
+>>> qu.unitless == qu.radian
 True
 ```
 
@@ -522,6 +529,7 @@ In the sciences it is typically desirable to round to a number of significant fi
 `quanstants` provides both via appropriate methods:
 ```python
 >>> a = (324.9 * qu.J) * (1.674 * qu.mol**-1)
+>>> a
 Quantity(543.8826, J mol⁻¹)
 >>> a.round_to_places(3)
 Quantity(543.883, J mol⁻¹)
@@ -554,6 +562,7 @@ If a quantity has a known uncertainty, it can be useful to round the number off 
 For this, the uncertainty is first rounded to either a provided number of significant figures, or to the number of significant figures set by `quanstants.quanfig.NDIGITS_UNCERTAINTY`, which is by default 1:
 ```python
 >>> b = a.plusminus(0.03)
+>>> b
 Quantity(543.8826, J mol⁻¹, uncertainty=0.03)
 >>> b.round_to_uncertainty()
 Quantity(543.88, J mol⁻¹, uncertainty=0.03)
@@ -664,6 +673,7 @@ True
 Absolute temperatures in kelvin are normal quantities like any other:
 ```python
 >>> T = 400 * qu.kelvin
+>>> T
 Quantity(400, K)
 >>> 2 * T
 Quantity(800, K)
@@ -674,6 +684,7 @@ Quantity(4, J K⁻¹)
 Note that multiplying a number by a temperature unit other than kelvin also creates a normal `Quantity`, which thus also represents an _absolute_ temperature:
 ```python
 >>> T = 25 * qu.celsius
+>>> T
 Quantity(25, °C)
 >>> T.to(qu.kelvin)
 Quantity(25, K)
@@ -682,6 +693,7 @@ Quantity(25, K)
 To instead create a _relative_ temperature on the scale of a `TemperatureUnit`, use the `@` operator, which can be thought of here as standing for "on": 
 ```python
 >>> T = 25 @ qu.celsius
+>>> T
 Temperature(25, °C)
 >>> T.to(qu.kelvin)
 Quantity(298.15, K)
@@ -690,6 +702,7 @@ Quantity(298.15, K)
 Arithmetic with `Temperature` instances works correctly, as they are first converted to absolute temperatures in kelvin:
 ```python
 >>> T = 126.85 @ qu.celsius
+>>> T
 Quantity(126.85, °C)
 >>> 2 * T
 Quantity(800, K)

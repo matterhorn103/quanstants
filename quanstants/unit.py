@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, Counter
 from decimal import Decimal as dec
 from fractions import Fraction as frac
 
@@ -74,8 +74,6 @@ def get_priority(factor: Factor) -> int:
         "K": 4,
         "mol": 5,
         "cd": 6,
-        "rad": 7,
-        "sr": 8,
     }
     if factor.unit.symbol in priorities:
         priority = priorities[factor.unit.symbol]
@@ -120,6 +118,7 @@ class Unit:
         "_value",
         "_dimensional_exponents",
         "_alt_names",
+        "_value_base",
     )
 
     def __init__(
@@ -186,6 +185,10 @@ class Unit:
     @property
     def value(self) -> Quantity:
         return self._value
+
+    @property
+    def value_base(self) -> Quantity:
+        return self._value_base
 
     @property
     def alt_names(self) -> list[str]:
@@ -333,11 +336,12 @@ class Unit:
                         result += generate_superscript(exponent)
             return result
 
-    # Some methods that subclasses need to redefine
+    
     def base(self):
         """Return the unit's value in base units as a `Quantity`."""
-        raise NotImplementedError
+        return self.value_base
 
+    # Some methods that subclasses need to redefine
     def cancel(self):
         """Combine any like terms and return as a `Quantity`."""
         raise NotImplementedError
@@ -380,13 +384,7 @@ class BaseUnit(Unit):
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
-
-    def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity.
-        
-        For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
-        """
-        return self.value
+        self._value_base = self.value
 
     def cancel(self) -> Quantity:
         """Combine any like terms and return as a Quantity.
@@ -527,10 +525,7 @@ class DerivedUnit(Unit):
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
-
-    def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity."""
-        return self.value.base()
+        self._value_base = self.value.base()
 
     def cancel(self) -> Quantity:
         return 1 * self
@@ -602,20 +597,36 @@ class CompoundUnit(Unit):
     def defined_in_base(self):
         return self._defined_in_base
 
-    def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity."""
-        if self.defined_in_base:
-            return Quantity(1, self)
-        else:
-            result_number = 1
-            new_components = tuple()
-            for component in self.components:
-                component_unit_base = component.unit.base()
-                # Do this way to avoid creating a new compound unit at every step
-                result_number *= component_unit_base.number ** component.exponent
-                new_components += (component_unit_base.unit ** component.exponent).components
-                # TODO Uncertainty in units?
-            return Quantity(result_number, CompoundUnit(new_components))
+    def _determine_base(self) -> Quantity:
+        """Return the unit's value in base units as a Quantity.
+        
+        Do without creating any intermediate compound units.
+        """
+        result_number = 1
+        base_components_list = []
+        units_in_list = []
+        # Do this way to avoid creating a new compound unit at every step
+        for component in self.components:
+            if isinstance(component.unit, UnitlessUnit):
+                # Drop
+                continue
+            elif isinstance(component.unit, BaseUnit):
+                i = 0
+                
+                base_components_list.append(list(component))
+            else:
+                if component.exponent == 1:
+                    result_number *= component.unit.value_base.number
+                    base_components = component.unit.value_base.unit.components
+                else:
+                    result_number *= component.unit.value_base.number ** component.exponent
+                    base_components = (component.unit.value_base.unit ** component.exponent).components
+                for factor in base_components:
+                    if factor.unit in units_in_list:
+
+            # TODO Uncertainty in units?
+        # Create canonical, cancelled unit as product of base units by going through the base units
+        return Quantity(result_number, CompoundUnit(base_components))
 
     def cancel(self) -> Quantity:
         """Combine any like terms."""

@@ -148,7 +148,7 @@ Quantity(256, GiB)
 True
 ```
 
-Various common prefixed units are pre-generated and available within `quanstants.units`, but not under their symbol to avoid clashes within the namespace:
+Various common prefixed units are pre-generated and available within the `quanstants.units` namespace, but not under their symbol to avoid clashes with unprefixed units:
 ```python
 >>> 50 * qu.micrometre
 Quantity(50, μm)
@@ -166,7 +166,7 @@ Quantity(45032.5, kWh)
 Quantity(1.27, ct)
 ```
 
-Other systems and categories of units are easily accessed by importing the appropriate module, which adds the units within to `quanstants.units`:
+Other systems and categories of units are easily accessed by importing the appropriate submodule, which adds the units within to `quanstants.units`:
 ```python
 >>> from quanstants.units import imperial
 >>> 6 * qu.foot
@@ -182,7 +182,7 @@ Quantity(32, nmi)
 False
 ```
 
-Units are often made available in multiple modules if shared between systems, so you only need to worry about importing the unit system of interest:
+Units are often made available in multiple submodules if shared between systems, so you only need to worry about importing the unit system of interest:
 ```python
 >>> from quanstants.units import imperial, us
 >>> imperial.foot is us.foot
@@ -191,7 +191,7 @@ True
 False
 ```
 
-Currently, `quanstants` comes by default with a set of >51 pre-defined units, accessible under >113 different names in the `quanstants.units` namespace class.
+Currently, `quanstants` comes by default with a set of >51 pre-defined units, accessible under >113 different names in the `quanstants.units` namespace module.
 An additional 87 prefixed units are also pre-defined.
 With all unit submodules imported, >117 (unprefixed) units are defined under >212 different names.
 
@@ -484,7 +484,7 @@ True
 
 ### Constants
 
-In a similar fashion to units and prefixes, physical constants are available in the constants registry under various names and symbols:
+In a similar fashion to units and prefixes, physical constants are available in the `constants` module under various names and symbols:
 ```python
 >>> from quanstants import units as qu, prefixes as qp, constants as qc
 >>> qc.Planck_constant
@@ -495,7 +495,7 @@ Constant(Planck_constant = 6.62607015E-34 J s)
 Constant(Planck_constant = 6.62607015E-34 J s)
 ```
 
-Only a small selection is imported initially, but further sets of constants can be added to the constants registry in a way analogous to units:
+Only a small selection is imported initially, but further sets of constants can be added to the `constants` module in a way analogous to units:
 ```python
 >>> from quanstants.constants import codata2018
 >>> qc.vacuum_electric_permittivity

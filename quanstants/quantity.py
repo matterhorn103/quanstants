@@ -349,7 +349,7 @@ class Quantity:
         else:
             return NotImplemented
 
-    # Can only use a Quantity as an exponent if it is unitless
+    # Can only use a Quantity as an exponent if it is dimensionless
     def __rpow__(self, other, correlation=0):
         if not self.is_dimensionless():
             raise NotDimensionlessError(
@@ -693,6 +693,8 @@ class Quantity:
         )
 
     def round_to_precision_of(self, other, pad=quanfig.ROUND_PAD):
+        if self.unit != other.unit:
+            raise MismatchedUnitsError
         places = other.number.as_tuple().exponent * -1
         return self.round_to_places(places, pad=pad)
 

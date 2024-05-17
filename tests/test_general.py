@@ -410,7 +410,7 @@ class TestConversion:
 
     def test_base(self):
         result = (50 * qu.joule).base()
-        assert repr(result) == "Quantity(50, kg m² s⁻²)"
+        assert repr(result) == "Quantity(50, m² kg s⁻²)"
 
     def test_cancel(self):
         result = (45 * (qu.m * qu.s * qu.s**-1)).cancel()

@@ -51,7 +51,7 @@ def generate_symbol(
 
 # Function to turn a tuple or other iterable of factors into a dimension
 def generate_dimensional_exponents(components: tuple[tuple, ...]) -> dict:
-    new_dimensional_exponents = {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
+    new_dimensional_exponents = {"L": 0, "M": 0, "T": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
     for unit, exponent in components:
         for dimension in new_dimensional_exponents.keys():
             if dimension in unit.dimensional_exponents:
@@ -64,15 +64,15 @@ def generate_dimensional_exponents(components: tuple[tuple, ...]) -> dict:
 # Function to allow sorting of compound base units into a canonical order
 def get_priority(factor: tuple) -> int:
     priorities = {
-        "s": 0,
-        "m": 1,
-        "kg": 2,
+        "m": 0,
+        "kg": 1,
+        "s": 2,
         "A": 3,
         "K": 4,
         "mol": 5,
         "cd": 6,
     }
-    if factor[0].symbol in priorities:
+    if isinstance(factor[0], BaseUnit) and factor[0].symbol in priorities:
         priority = priorities[factor[0].symbol]
     else:
         # Generate a priority based on the length and Unicode code points of the characters
@@ -141,9 +141,9 @@ class Unit:
         self._name = name
         # Start with a dimensionless unit and add any provided ones
         self._dimensional_exponents = {
-            "T": 0,
             "L": 0,
             "M": 0,
+            "T": 0,
             "I": 0,
             "Θ": 0,
             "N": 0,
@@ -262,7 +262,7 @@ class Unit:
         else:
             return NotImplemented
 
-    # Hashing and equalities use the implementations of `Quantity`
+    # Hashing and equalities by default use the implementations of `Quantity`
     # Units are thus considered equal to quantities that have an equivalent value
     def __hash__(self):
         return hash(self.value)
@@ -308,9 +308,9 @@ class Unit:
 
     def is_dimensionless(self) -> bool:
         if self.dimensional_exponents == {
-            "T": 0,
             "L": 0,
             "M": 0,
+            "T": 0,
             "I": 0,
             "Θ": 0,
             "N": 0,
@@ -557,6 +557,7 @@ class CompoundUnit(Unit):
         symbol_sort: str = "sign",
         symbol_inverse: str = quanfig.INVERSE_UNIT,
         concatenate_symbols: bool = False,
+        is_canon_base: bool = False,
     ):
         # If no components passed, first get components from list of units
         if components is None:
@@ -589,7 +590,8 @@ class CompoundUnit(Unit):
             alt_names=alt_names,
         )
         # Express the unit in terms of base units
-        self._value_base = self._determine_base()
+        if not is_canon_base:
+            self._value_base = self._determine_base()
 
     def __hash__(self) -> int:
         # Make the hashing faster by doing it directly, since we know that doing
@@ -605,12 +607,6 @@ class CompoundUnit(Unit):
         Drop unitless units, cancel like terms, and put in canonical order so that
         different units with equal values give _identical_ results
         """
-        # Quickly confirm that the unit is not already defined in base units
-        defined_in_base = True
-        for component in self.components:
-            defined_in_base *= isinstance(component[0], BaseUnit)
-        if defined_in_base:
-            return self.value
         result_number = 1
         base_components_dict = {}
         # Do this way to avoid creating a new compound unit at every step
@@ -653,6 +649,7 @@ class CompoundUnit(Unit):
                 symbol_sort="unsorted",
                 symbol_inverse="NEGATIVE_SUPERSCRIPT",
                 concatenate_symbols=False,
+                is_canon_base=True,
             )
         )
 
@@ -727,7 +724,7 @@ class CompoundUnit(Unit):
             component_matched = False
             for unit_already_in in new_components_dict.keys():
                 if unit.dimensional_exponents == unit_already_in.dimensional_exponents:
-                    converted_unit = unit.value.to(unit_already_in.unit)
+                    converted_unit = unit.value.to(unit_already_in)
                     result_number *= converted_unit.number ** exponent
                     new_components_dict[unit_already_in] += exponent
                     component_matched = True

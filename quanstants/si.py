@@ -22,8 +22,8 @@ candela = BaseUnit("cd", "candela", dimension="J")
 # Previously defined them as BaseUnits, but making them UnitlessUnits means they are
 # equal to 1
 # Could define them as DerivedUnits (like percent), but then they would get cancelled
-radian = UnitlessUnit("rad", "radian")
-steradian = UnitlessUnit("sr", "steradian")
+radian = UnitlessUnit("rad", "radian", drop=False)
+steradian = UnitlessUnit("sr", "steradian", drop=False)
 
 # Create aliases for all of the above to make defining new units easier
 s = second

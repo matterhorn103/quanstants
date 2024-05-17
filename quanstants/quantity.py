@@ -421,21 +421,16 @@ class Quantity:
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
 
     def __hash__(self):
-        canonical = self.base().cancel().canonical()
-        canonical = self
-        if canonical.number == 0:
+        base = self.base()
+        if base.number == 0:
             return 0
         # Check if unitless
-        elif canonical.unit == 1:
-            return hash(canonical.number)
+        elif base.unit == 1:
+            return hash(base.number)
         else:
+            base_ids = ((id(unit), exponent) for unit, exponent in base.unit.components)
             return hash(
-                (
-                    canonical.number,
-                    canonical.unit.symbol,
-                    canonical.unit.name,
-                    frozenset(canonical.unit.dimensional_exponents.items()),
-                )
+                (base.number, *base_ids)
             )
 
     def __eq__(self, other):
@@ -446,8 +441,8 @@ class Quantity:
             return self.number == other
         elif isinstance(other, Quantity):
             # Convert both to canonical base unit representations
-            a = self.base().cancel().canonical()
-            b = other.base().cancel().canonical()
+            a = self.base()
+            b = other.base()
             # Have to use all three of symbol, name, dimension as unique symbols and
             # names cannot be guaranteed and there may be different base units in
             # different systems with the same dimension (and number = 1)
@@ -731,15 +726,6 @@ class Quantity:
         """Alias for `with_uncertainty()`."""
         return self.with_uncertainty(uncertainty)
 
-    def base(self):
-        """Return the quantity expressed in terms of base units."""
-        if not self._uncertainty:
-            return self.number * self.unit.base()
-        else:
-            return (self.number * self.unit.base()).with_uncertainty(
-                self.uncertainty.base().number
-            )
-
     def cancel(self):
         """Combine any like terms in the unit."""
         return (self.number * self.unit.cancel()).with_uncertainty(
@@ -770,6 +756,18 @@ class Quantity:
             return (self.number * self.unit.canonical()).with_uncertainty(
                 self._uncertainty
         )
+
+    def base(self):
+        """Return the quantity expressed in terms of base units.
+        
+        The unit is always returned in a fully cancelled, canonical form.
+        """
+        if not self._uncertainty:
+            return self.number * self.unit.base()
+        else:
+            return (self.number * self.unit.base()).with_uncertainty(
+                self.uncertainty.base().number
+            )
 
     def to(self, other):
         """Express the quantity in terms of another unit."""

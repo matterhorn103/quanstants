@@ -446,12 +446,7 @@ class Quantity:
             # Have to use all three of symbol, name, dimension as unique symbols and
             # names cannot be guaranteed and there may be different base units in
             # different systems with the same dimension (and number = 1)
-            if (
-                (a.number == b.number)
-                and (a.unit.symbol == b.unit.symbol)
-                and (a.unit.name == b.unit.name)
-                and (a.unit.dimensional_exponents == b.unit.dimensional_exponents)
-            ):
+            if ((a.number == b.number) and (a.unit == b.unit)):
                 return True
             else:
                 return False
@@ -461,8 +456,8 @@ class Quantity:
     def __gt__(self, other):
         if isinstance(other, Quantity):
             # Convert both to canonical base unit representations
-            a = self.base().cancel().canonical()
-            b = other.base().cancel().canonical()
+            a = self.base()
+            b = other.base()
             if a.unit.dimensional_exponents != b.unit.dimensional_exponents:
                 raise MismatchedUnitsError
             elif (

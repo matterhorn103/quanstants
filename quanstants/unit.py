@@ -184,10 +184,6 @@ class Unit:
         return self._value
 
     @property
-    def value_base(self) -> Quantity:
-        return self._value_base
-
-    @property
     def alt_names(self) -> list[str]:
         return self._alt_names
 
@@ -264,6 +260,7 @@ class Unit:
 
     # Hashing and equalities by default use the implementations of `Quantity`
     # Units are thus considered equal to quantities that have an equivalent value
+    # These are fallback methods, for efficiency some subclasses override these
     def __hash__(self):
         return hash(self.value)
 
@@ -352,7 +349,7 @@ class Unit:
         
         This is always returned in a fully cancelled, canonical form.
         """
-        return self.value_base
+        return self._value_base
 
 
 class BaseUnit(Unit):
@@ -389,6 +386,12 @@ class BaseUnit(Unit):
     # This should match hash(Quantity(1, <base unit>))
     def __hash__(self) -> int:
         return hash((1, (id(self), 1)))
+
+    def __eq__(self, other):
+        if other is self:
+            return True
+        else:
+            return False
 
     def cancel(self) -> Quantity:
         """Combine any like terms and return as a Quantity.
@@ -493,47 +496,6 @@ unitless = UnitlessUnit(
 )
 
 
-class DerivedUnit(Unit):
-    """Units derived from and defined with SI units.
-
-    `value` is a `Quantity` with both a number and a `Unit`, and optionally, an uncertainty.
-    A `symbol` must be provided, but a `name` is optional.
-    If a name is given and `add_to_namespace` is `True` (default), the unit will be added to
-    `quanstants.units` under that name (note that trying to replace an existing unit with that name
-    will raise an error).
-    The `dimensional_exponents` are set to that of the provided value's unit(s).
-    """
-
-    __slots__ = ()
-
-    def __init__(
-        self,
-        symbol: str,
-        name: str,
-        value: Quantity,
-        add_to_namespace: bool = True,
-        canon_symbol: bool = False,
-        alt_names: list[str] | None = None,
-    ):
-        super().__init__(
-            symbol,
-            name,
-            components=((self, 1),),
-            value=value,
-            dimensional_exponents=value.unit.dimensional_exponents,
-            add_to_namespace=add_to_namespace,
-            canon_symbol=canon_symbol,
-            alt_names=alt_names,
-        )
-        self._value_base = self.value.base()
-
-    def cancel(self) -> Quantity:
-        return 1 * self
-
-    def canonical(self) -> Quantity:
-        return 1 * self
-
-
 class CompoundUnit(Unit):
     """An effective unit created through multiplication of non-compound units.
 
@@ -545,7 +507,7 @@ class CompoundUnit(Unit):
     be combined automatically.
     """
 
-    __slots__ = ("_defined_in_base")
+    __slots__ = ()
 
     def __init__(
         self,
@@ -590,68 +552,20 @@ class CompoundUnit(Unit):
             alt_names=alt_names,
         )
         # Express the unit in terms of base units
-        if not is_canon_base:
-            self._value_base = self._determine_base()
+        if is_canon_base:
+            self._value_base = self._value
+        else:
+            self._value_base = None
 
     def __hash__(self) -> int:
         # Make the hashing faster by doing it directly, since we know that doing
-        # self.value.base() would just give self._value_base, and we've already
-        # calculated that ahead of time
-        base_ids = ((id(u), e) for u, e in self._value_base.unit.components)
-        return hash((self._value_base.number, *base_ids))
+        # self.value.base() would just give self._value_base, and we've possibly
+        # already calculated that
+        base_ids = ((id(u), e) for u, e in self.base().unit.components)
+        return hash((self.base().number, *base_ids))
 
-    def _determine_base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity.
-        
-        Do without creating any intermediate compound units.
-        Drop unitless units, cancel like terms, and put in canonical order so that
-        different units with equal values give _identical_ results
-        """
-        result_number = 1
-        base_components_dict = {}
-        # Do this way to avoid creating a new compound unit at every step
-        for unit, exponent in self.components:
-            if isinstance(unit, UnitlessUnit):
-                # Drop
-                continue
-            elif isinstance(unit, BaseUnit):
-                if unit in base_components_dict:
-                    base_components_dict[unit] += exponent
-                else:
-                    base_components_dict[unit] = exponent
-            else:
-                # Get the unit of the component expressed in terms of base units
-                # Multiply the number of the result by the number of the expression
-                # Add the components of the unit of the expression to the running dict
-                if exponent == 1:
-                    result_number *= unit.value_base.number
-                    component_base_factors = unit.value_base.unit.components
-                else:
-                    result_number *= unit.value_base.number ** exponent
-                    component_base_factors = tuple((u, (e * exponent)) for u, e in unit.value_base.unit.components)
-                for base_unit, base_exponent in component_base_factors:
-                    if base_unit in base_components_dict:
-                        base_components_dict[base_unit] += base_exponent
-                    else:
-                        base_components_dict[base_unit] = base_exponent
-        # TODO Uncertainty in units?
-        # Turn into tuple, get rid of base units with exponent 0
-        base_components = tuple((u, e) for u, e in base_components_dict.items() if e != 0)
-        # If no units left, return as unitless quantity
-        if len(base_components) == 0:
-            return Quantity(result_number, unitless)
-        # Put in order to create canonical form
-        base_components = tuple(sorted(base_components, key=get_priority))
-        return Quantity(
-            result_number,
-            CompoundUnit(
-                base_components,
-                symbol_sort="unsorted",
-                symbol_inverse="NEGATIVE_SUPERSCRIPT",
-                concatenate_symbols=False,
-                is_canon_base=True,
-            )
-        )
+    def __eq__(self, other):
+        return hash(self) == hash(other)
 
     def _cancel_to_unit(self, force_drop_unitless=False) -> Unit:
         """Does everything that `self.cancel() does, but returns a unit."""
@@ -751,3 +665,101 @@ class CompoundUnit(Unit):
             symbol_inverse="NEGATIVE_SUPERSCRIPT",
             concatenate_symbols=False,
         )
+
+    def base(self) -> Quantity:
+        """Return the unit's value in base units as a Quantity.
+        
+        Do without creating any intermediate compound units.
+        Drop unitless units, cancel like terms, and put in canonical order so that
+        different units with equal values give _identical_ results
+        """
+        # Check to see if it has been pre-calculated
+        if self._value_base is not None:
+            return self._value_base
+        result_number = 1
+        base_components_dict = {}
+        # Do this way to avoid creating a new compound unit at every step
+        for unit, exponent in self.components:
+            if isinstance(unit, UnitlessUnit):
+                # Drop
+                continue
+            elif isinstance(unit, BaseUnit):
+                if unit in base_components_dict:
+                    base_components_dict[unit] += exponent
+                else:
+                    base_components_dict[unit] = exponent
+            else:
+                # Get the unit of the component expressed in terms of base units
+                # Multiply the number of the result by the number of the expression
+                # Add the components of the unit of the expression to the running dict
+                if exponent == 1:
+                    result_number *= unit.base().number
+                    component_base_factors = unit.base().unit.components
+                else:
+                    result_number *= unit.base().number ** exponent
+                    component_base_factors = tuple((u, (e * exponent)) for u, e in unit.base().unit.components)
+                for base_unit, base_exponent in component_base_factors:
+                    if base_unit in base_components_dict:
+                        base_components_dict[base_unit] += base_exponent
+                    else:
+                        base_components_dict[base_unit] = base_exponent
+        # TODO Uncertainty in units?
+        # Turn into tuple, get rid of base units with exponent 0
+        base_components = tuple((u, e) for u, e in base_components_dict.items() if e != 0)
+        # If no units left, return as unitless quantity
+        if len(base_components) == 0:
+            return Quantity(result_number, unitless)
+        # Put in order to create canonical form
+        base_components = tuple(sorted(base_components, key=get_priority))
+        self._value_base = Quantity(
+            result_number,
+            CompoundUnit(
+                base_components,
+                symbol_sort="unsorted",
+                symbol_inverse="NEGATIVE_SUPERSCRIPT",
+                concatenate_symbols=False,
+                is_canon_base=True,
+            )
+        )
+        return self._value_base
+    
+
+class DerivedUnit(Unit):
+    """Units derived from and defined with SI units.
+
+    `value` is a `Quantity` with both a number and a `Unit`, and optionally, an uncertainty.
+    A `symbol` must be provided, but a `name` is optional.
+    If a name is given and `add_to_namespace` is `True` (default), the unit will be added to
+    `quanstants.units` under that name (note that trying to replace an existing unit with that name
+    will raise an error).
+    The `dimensional_exponents` are set to that of the provided value's unit(s).
+    """
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        symbol: str,
+        name: str,
+        value: Quantity,
+        add_to_namespace: bool = True,
+        canon_symbol: bool = False,
+        alt_names: list[str] | None = None,
+    ):
+        super().__init__(
+            symbol,
+            name,
+            components=((self, 1),),
+            value=value,
+            dimensional_exponents=value.unit.dimensional_exponents,
+            add_to_namespace=add_to_namespace,
+            canon_symbol=canon_symbol,
+            alt_names=alt_names,
+        )
+        self._value_base = self.value.base()
+
+    def cancel(self) -> Quantity:
+        return 1 * self
+
+    def canonical(self) -> Quantity:
+        return 1 * self

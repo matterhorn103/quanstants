@@ -3,7 +3,7 @@ import types
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
-from .unit import Unit, Factor
+from .unit import Unit
 from .quantity import Quantity
 from .si import *
 
@@ -82,13 +82,14 @@ class TemperatureUnit(Unit):
         super().__init__(
             symbol=symbol,
             name=name,
-            components=(Factor(self, 1),),
+            components=((self, 1),),
             value = self._degree_value,
             dimension="Θ",
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
+        self._value_base = self._degree_value
 
     # Not strictly necessary to override `super().value()` but aids clarity
     @property
@@ -149,10 +150,6 @@ class TemperatureUnit(Unit):
             if str(new_number)[-2:] == ".0":
                 new_number = dec(int(new_number))
         return Temperature(new_number, self, new_uncertainty)
-
-    def base(self):
-        """Return the unit's value in base units as a Quantity."""
-        return self.value
 
     def cancel(self):
         """Combine any like terms and return as a Quantity."""

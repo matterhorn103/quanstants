@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, Counter
 from decimal import Decimal as dec
 from fractions import Fraction as frac
 
@@ -9,13 +9,10 @@ from .unicode import generate_superscript
 # Import the units namespace module, in which named units are registered
 from . import units
 
-# Create a named tuple that is used to hold a unit with its exponent
-Factor = namedtuple("Factor", ["unit", "exponent"])
 
-
-# Function to turn a tuple or other iterable of Factors into a symbol
+# Function to turn a tuple or other iterable of factors into a symbol
 def generate_symbol(
-    components: tuple[Factor, ...],
+    components: tuple[tuple, ...],
     sort_by="sign",
     inverse=quanfig.INVERSE_UNIT,
 ) -> str:
@@ -24,18 +21,18 @@ def generate_symbol(
     positive_terms = []
     negative_terms = []
     for factor in components:
-        term = factor.unit.symbol
-        if factor.exponent >= 0:
-            term += generate_superscript(factor.exponent)
+        term = factor[0].symbol
+        if factor[1] >= 0:
+            term += generate_superscript(factor[1])
             if sort_by == "sign":
                 positive_terms.append(term)
             else:
                 terms.append(term)
-        elif factor.exponent < 0:
+        elif factor[1] < 0:
             if (inverse == "NEGATIVE_SUPERSCRIPT") or (sort_by != "sign"):
-                term += generate_superscript(factor.exponent)
+                term += generate_superscript(factor[1])
             elif (inverse == "SLASH") and (sort_by == "sign"):
-                term += generate_superscript(-1 * factor.exponent)
+                term += generate_superscript(-1 * factor[1])
             if sort_by == "sign":
                 negative_terms.append(term)
             else:
@@ -52,37 +49,35 @@ def generate_symbol(
         return " ".join(terms)
 
 
-# Function to turn a tuple or other iterable of Factors into a dimension
-def generate_dimensional_exponents(components: tuple[Factor, ...]) -> dict:
-    new_dimensional_exponents = {"T": 0, "L": 0, "M": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
-    for factor in components:
+# Function to turn a tuple or other iterable of factors into a dimension
+def generate_dimensional_exponents(components: tuple[tuple, ...]) -> dict:
+    new_dimensional_exponents = {"L": 0, "M": 0, "T": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
+    for unit, exponent in components:
         for dimension in new_dimensional_exponents.keys():
-            if dimension in factor.unit.dimensional_exponents:
+            if dimension in unit.dimensional_exponents:
                 new_dimensional_exponents[dimension] += (
-                    factor.unit.dimensional_exponents[dimension] * factor.exponent
+                    unit.dimensional_exponents[dimension] * exponent
                 )
     return new_dimensional_exponents
 
 
 # Function to allow sorting of compound base units into a canonical order
-def get_priority(factor: Factor) -> int:
+def get_priority(factor: tuple) -> int:
     priorities = {
-        "s": 0,
-        "m": 1,
-        "kg": 2,
+        "m": 0,
+        "kg": 1,
+        "s": 2,
         "A": 3,
         "K": 4,
         "mol": 5,
         "cd": 6,
-        "rad": 7,
-        "sr": 8,
     }
-    if factor.unit.symbol in priorities:
-        priority = priorities[factor.unit.symbol]
+    if isinstance(factor[0], BaseUnit) and factor[0].symbol in priorities:
+        priority = priorities[factor[0].symbol]
     else:
         # Generate a priority based on the length and Unicode code points of the characters
         priority = 0
-        for index, char in enumerate(factor.unit.symbol):
+        for index, char in enumerate(factor[0].symbol):
             priority += ord(char) * 10 ** (index)
     return priority
 
@@ -97,7 +92,7 @@ class Unit:
     `name` must contain only ASCII letters and digits, and underscores. It must in addition be a valid
     Python identifier, so it cannot start with a digit.
     At minimum, `components` and one of `dimension` or `dimensional_exponents` must be specified.
-    `components` is a tuple of `Factor`s. `Factor` is a `namedtuple` found in this module.
+    `components` is a tuple of factors, where factors are simple tuples of `(unit, exponent)`.
     If a unit only has a single base dimension without exponents, that dimension can be passed as
     `dimension` as one of the strings "X" (for dimensionless), "T" (time), "L" (length), "M" (mass),
     "I" (electric current), "Θ" (thermodynamic temperature), "N" (amount of substance), or "J" (luminous
@@ -120,13 +115,14 @@ class Unit:
         "_value",
         "_dimensional_exponents",
         "_alt_names",
+        "_value_base",
     )
 
     def __init__(
         self,
         symbol: str | None,
         name: str | None,
-        components: tuple[Factor, ...],
+        components: tuple[tuple, ...],
         value: Quantity | None = None,
         dimension: str | None = None,
         dimensional_exponents: dict | None = None,
@@ -145,9 +141,9 @@ class Unit:
         self._name = name
         # Start with a dimensionless unit and add any provided ones
         self._dimensional_exponents = {
-            "T": 0,
             "L": 0,
             "M": 0,
+            "T": 0,
             "I": 0,
             "Θ": 0,
             "N": 0,
@@ -180,7 +176,7 @@ class Unit:
         return self._dimensional_exponents
 
     @property
-    def components(self) -> tuple[Factor, ...]:
+    def components(self) -> tuple[tuple, ...]:
         return self._components
     
     @property
@@ -246,24 +242,25 @@ class Unit:
             # Tuple comprehensions don't exist so make a tuple from a generator
             new_components = tuple(
                 (
-                    Factor(component.unit, component.exponent * other)
-                    for component in self.components
+                    (unit, exponent * other)
+                    for unit, exponent in self.components
                 ),
             )
             return CompoundUnit(new_components)
         elif isinstance(other, str):
             new_components = tuple(
                 (
-                    Factor(component.unit, component.exponent * frac(other))
-                    for component in self.components
+                    (unit, exponent * frac(other))
+                    for unit, exponent in self.components
                 ),
             )
             return CompoundUnit(new_components)
         else:
             return NotImplemented
 
-    # Hashing and equalities use the implementations of `Quantity`
+    # Hashing and equalities by default use the implementations of `Quantity`
     # Units are thus considered equal to quantities that have an equivalent value
+    # These are fallback methods, for efficiency some subclasses override these
     def __hash__(self):
         return hash(self.value)
 
@@ -308,9 +305,9 @@ class Unit:
 
     def is_dimensionless(self) -> bool:
         if self.dimensional_exponents == {
-            "T": 0,
             "L": 0,
             "M": 0,
+            "T": 0,
             "I": 0,
             "Θ": 0,
             "N": 0,
@@ -333,11 +330,7 @@ class Unit:
                         result += generate_superscript(exponent)
             return result
 
-    # Some methods that subclasses need to redefine
-    def base(self):
-        """Return the unit's value in base units as a `Quantity`."""
-        raise NotImplementedError
-
+    # Some methods that subclasses might need to redefine
     def cancel(self):
         """Combine any like terms and return as a `Quantity`."""
         raise NotImplementedError
@@ -350,6 +343,13 @@ class Unit:
     def canonical(self):
         """Order terms into a reproducible order and return as a `Quantity`."""
         raise NotImplementedError
+    
+    def base(self):
+        """Return the unit's value in base units as a `Quantity`.
+        
+        This is always returned in a fully cancelled, canonical form.
+        """
+        return self._value_base
 
 
 class BaseUnit(Unit):
@@ -374,19 +374,24 @@ class BaseUnit(Unit):
         super().__init__(
             symbol,
             name,
-            components=(Factor(self, 1),),
+            components=((self, 1),),
             dimension=dimension,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
+        self._value_base = self.value
 
-    def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity.
-        
-        For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
-        """
-        return self.value
+    # Since base units are unique, they just hash their id
+    # This should match hash(Quantity(1, <base unit>))
+    def __hash__(self) -> int:
+        return hash((1, (id(self), 1)))
+
+    def __eq__(self, other):
+        if other is self:
+            return True
+        else:
+            return False
 
     def cancel(self) -> Quantity:
         """Combine any like terms and return as a Quantity.
@@ -416,7 +421,7 @@ class UnitlessUnit(BaseUnit):
     are instances of `UnitlessUnit`.
     """
 
-    __slots__ = ("_drop_on_concat")
+    __slots__ = ("_drop")
 
     def __init__(
         self,
@@ -425,7 +430,7 @@ class UnitlessUnit(BaseUnit):
         add_to_namespace: bool = True,
         canon_symbol: bool = True,
         alt_names: list[str] | None = None,
-        drop_on_concat: bool = False,
+        drop: bool = False,
     ):
         super().__init__(
             symbol=symbol,
@@ -435,32 +440,28 @@ class UnitlessUnit(BaseUnit):
             canon_symbol=canon_symbol,
             alt_names=alt_names,
         )
-        self._drop_on_concat = drop_on_concat
+        self._drop = drop
 
-    # Make sure that UnitlessUnit * Unit and UnitlessUnit / Unit return just the other Unit
-    # The exception being if concatenation is requested
     def __mul__(self, other, concatenate_symbols: bool = False):
-        if concatenate_symbols and not self._drop_on_concat:
-            return super().__mul__(other, concatenate_symbols=concatenate_symbols)
-        elif isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (Unit, Quantity)):
             return other
         else:
-            return super().__mul__(other)
+            return super().__mul__(other, concatenate_symbols=concatenate_symbols)
 
     def __rmul__(self, other):
-        if isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (Unit, Quantity)):
             return other
         else:
             return super().__rmul__(other)
 
     def __truediv__(self, other):
-        if isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (Unit, Quantity)):
             return other.inverse()
         else:
             return super().__truediv__(other)
 
     def __rtruediv__(self, other):
-        if isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (Unit, Quantity)):
             return other
         else:
             return super().__rtruediv__(other)
@@ -491,52 +492,8 @@ unitless = UnitlessUnit(
     add_to_namespace=True,
     canon_symbol=False,
     alt_names=None,
-    drop_on_concat=True,
+    drop=True,
 )
-
-
-class DerivedUnit(Unit):
-    """Units derived from and defined with SI units.
-
-    `value` is a `Quantity` with both a number and a `Unit`, and optionally, an uncertainty.
-    A `symbol` must be provided, but a `name` is optional.
-    If a name is given and `add_to_namespace` is `True` (default), the unit will be added to
-    `quanstants.units` under that name (note that trying to replace an existing unit with that name
-    will raise an error).
-    The `dimensional_exponents` are set to that of the provided value's unit(s).
-    """
-
-    __slots__ = ()
-
-    def __init__(
-        self,
-        symbol: str,
-        name: str,
-        value: Quantity,
-        add_to_namespace: bool = True,
-        canon_symbol: bool = False,
-        alt_names: list[str] | None = None,
-    ):
-        super().__init__(
-            symbol,
-            name,
-            components=(Factor(self, 1),),
-            value=value,
-            dimensional_exponents=value.unit.dimensional_exponents,
-            add_to_namespace=add_to_namespace,
-            canon_symbol=canon_symbol,
-            alt_names=alt_names,
-        )
-
-    def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity."""
-        return self.value.base()
-
-    def cancel(self) -> Quantity:
-        return 1 * self
-
-    def canonical(self) -> Quantity:
-        return 1 * self
 
 
 class CompoundUnit(Unit):
@@ -544,16 +501,17 @@ class CompoundUnit(Unit):
 
     Multiple units multiplied together are treated as a single `Unit` object with its constituent parts
     gathered under `components`.
-    Generally, the constituent units are passed as a tuple of `Factor` objects.
+    Generally, the constituent units are passed as a tuple of factors (tuples of the form
+    `(unit, exponent)`).
     Alternatively, a tuple of `Unit` objects can be passed and the `components` attributes of each will
     be combined automatically.
     """
 
-    __slots__ = ("_defined_in_base")
+    __slots__ = ()
 
     def __init__(
         self,
-        components: tuple[Factor, ...] | None = None,
+        components: tuple[tuple, ...] | None = None,
         units: tuple[Unit] | None = None,
         name: str | None = None,
         add_to_namespace: bool = False,
@@ -561,6 +519,7 @@ class CompoundUnit(Unit):
         symbol_sort: str = "sign",
         symbol_inverse: str = quanfig.INVERSE_UNIT,
         concatenate_symbols: bool = False,
+        is_canon_base: bool = False,
     ):
         # If no components passed, first get components from list of units
         if components is None:
@@ -592,110 +551,108 @@ class CompoundUnit(Unit):
             add_to_namespace=add_to_namespace,
             alt_names=alt_names,
         )
-        # Determine whether the unit is expressed in terms of base units
-        defined_in_base = True
-        for component in self.components:
-            defined_in_base *= isinstance(component.unit, BaseUnit)
-        self._defined_in_base = bool(defined_in_base)
-
-    @property
-    def defined_in_base(self):
-        return self._defined_in_base
-
-    def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity."""
-        if self.defined_in_base:
-            return Quantity(1, self)
+        # Express the unit in terms of base units
+        if is_canon_base:
+            self._value_base = self._value
         else:
-            result_number = 1
-            new_components = tuple()
-            for component in self.components:
-                component_unit_base = component.unit.base()
-                # Do this way to avoid creating a new compound unit at every step
-                result_number *= component_unit_base.number ** component.exponent
-                new_components += (component_unit_base.unit ** component.exponent).components
-                # TODO Uncertainty in units?
-            return Quantity(result_number, CompoundUnit(new_components))
+            self._value_base = None
 
-    def cancel(self) -> Quantity:
-        """Combine any like terms."""
-        new_components_list = []
-        for factor in self.components:
-            unit_in_list = False
-            for index, new_factor in enumerate(new_components_list):
-                if new_factor.unit.name == factor.unit.name:
-                    new_components_list[index] = Factor(
-                        factor.unit, factor.exponent + new_factor.exponent
-                    )
-                    unit_in_list = True
-                else:
+    def __hash__(self) -> int:
+        # Make the hashing faster by doing it directly, since we know that doing
+        # self.value.base() would just give self._value_base, and we've possibly
+        # already calculated that
+        base_ids = ((id(u), e) for u, e in self.base().unit.components)
+        return hash((self.base().number, *base_ids))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def _cancel_to_unit(self, force_drop_unitless=False) -> Unit:
+        """Does everything that `self.cancel() does, but returns a unit."""
+        new_components_dict = {}
+        unitless_components_dict = {}
+        for unit, exponent in self.components:
+            if isinstance(unit, UnitlessUnit):
+                if force_drop_unitless or unit.drop:
                     continue
-            if not unit_in_list:
-                new_components_list.append(factor)
-        new_components = tuple(
-            factor for factor in new_components_list if factor.exponent != 0
-        )
+                else:
+                    # Can't just use unit as dict key as all UnitlessUnits are equal, so use name
+                    if unit.name in unitless_components_dict:
+                        unitless_components_dict[unit.name][exponent] += exponent
+                    else:
+                        unitless_components_dict[unit.name] = {"unit": unit, "exponent": exponent}
+            else:
+                if unit in new_components_dict:
+                    new_components_dict[unit] += exponent
+                else:
+                    new_components_dict[unit] = exponent
+        new_components = tuple((u, e) for u, e in new_components_dict.items() if e != 0)
+        if len(unitless_components_dict) > 0:
+            new_components += tuple((d["unit"], d["exponent"]) for d in new_components_dict.values() if d["exponent"] != 0)
         if len(new_components) == 0:
-            return 1 * unitless
+            return unitless
         else:
-            return 1 * CompoundUnit(new_components)
+            return CompoundUnit(new_components)
+
+    def cancel(self, force_drop_unitless=False) -> Quantity:
+        """Combine any like terms.
+        
+        Note that "like" means that the units are equivalent in value, not that they are
+        the same Unit object.
+        Terms of `Unitless` units which have `drop = True` will also be dropped; this is the case for
+        `quanstants.units.unitless`, but not for `radian` or `steradian`.
+        """
+        return Quantity(1, self._cancel_to_unit(force_drop_unitless=force_drop_unitless))
 
     def fully_cancel(self) -> Quantity:
         """Combine any like terms, with units of the same dimension converted and also combined.
         
         Units of the same dimension are converted to whichever unit is a base unit, and otherwise to
         whichever occurs first.
-        Any superfluous terms of `Unitless` units (i.e. equal to 1) will also be dropped.
+        Any terms of `Unitless` units (i.e. equal to 1) will also be dropped.
         """
-        # First cancel like normal
-        cancelled = self.cancel().unit
-        # Find first non-unitless factor
-        first = None
-        i, i_max = 0, len(cancelled.components) - 1
-        while first is None:
-            if i > i_max:
-                # All components are unitless so overall unit is unitless
-                return 1 * unitless
-            if isinstance(cancelled.components[i].unit, UnitlessUnit):
-                i += 1
-            else:
-                first = cancelled.components[i]
+        result_number = 1
+        new_components_dict = {}
+        # First cancel like normal, this also gets rid of all UnitlessUnits
+        cancelled = self._cancel_to_unit()
+        if cancelled is unitless:
+            return Quantity(1, unitless)
         # Check if first component needs to be converted before we add it to result
-        first_matched = False
-        for other in cancelled.components[i+1:]:
-            if first.unit.dimensional_exponents == other.unit.dimensional_exponents:
-                if isinstance(other, BaseUnit):
-                    result = first.unit.base() ** first.exponent
-                else:
-                    result = first.unit ** first.exponent
-                first_matched = True
-                break
-            else:
-                continue
-        if not first_matched:
-            result = first.unit ** first.exponent
+        first_unit, first_exponent = cancelled.components[0]
+        if isinstance(first_unit, BaseUnit):
+            new_components_dict[first_unit] = first_exponent
+        else:
+            first_matched = False
+            for other in cancelled.components[1:]:
+                if isinstance(other[0], BaseUnit):
+                    if first_unit.dimensional_exponents == other[0].dimensional_exponents:
+                        first_unit_in_base = first_unit.base()
+                        result_number *= first_unit_in_base.number ** first_exponent
+                        new_components_dict[first_unit] = first_exponent
+                        first_matched = True
+                        break
+            if not first_matched:
+                new_components_dict[first_unit] = first_exponent
         # Bring in each remaining component to the result, converting if necessary
-        for component in cancelled.components[i+1:]:
+        for unit, exponent in cancelled.components[1:]:
             component_matched = False
-            for other in result.components:
-                if component.unit.dimensional_exponents == other.unit.dimensional_exponents:
-                    result *= ((1 * component.unit).to(other.unit)) ** component.exponent
+            for unit_already_in in new_components_dict.keys():
+                if unit.dimensional_exponents == unit_already_in.dimensional_exponents:
+                    converted_unit = unit.value.to(unit_already_in)
+                    result_number *= converted_unit.number ** exponent
+                    new_components_dict[unit_already_in] += exponent
                     component_matched = True
                     break
                 else:
                     continue
             if not component_matched:
-                result *= component.unit ** component.exponent
-        # Drop any unitless units (not dimensionless ones)
-        new_components = tuple(
-            factor for factor in result.unit.components if not isinstance(factor.unit, UnitlessUnit)
-        )
+                new_components_dict[unit] = exponent
+        # TODO Keep uncertainties
+        new_components = tuple((u, e) for u, e in new_components_dict.items() if e != 0)
         if len(new_components) == 0:
-            result = result.number * unitless
+            return Quantity(result_number, unitless)
         else:
-            result = result.number * CompoundUnit(new_components)
-        # Finally cancel again
-        return result.cancel()
+            return Quantity(result_number, CompoundUnit(new_components))
 
     def canonical(self) -> Quantity:
         """Order terms into a reproducible order and return as a Quantity."""
@@ -708,3 +665,101 @@ class CompoundUnit(Unit):
             symbol_inverse="NEGATIVE_SUPERSCRIPT",
             concatenate_symbols=False,
         )
+
+    def base(self) -> Quantity:
+        """Return the unit's value in base units as a Quantity.
+        
+        Do without creating any intermediate compound units.
+        Drop unitless units, cancel like terms, and put in canonical order so that
+        different units with equal values give _identical_ results
+        """
+        # Check to see if it has been pre-calculated
+        if self._value_base is not None:
+            return self._value_base
+        result_number = 1
+        base_components_dict = {}
+        # Do this way to avoid creating a new compound unit at every step
+        for unit, exponent in self.components:
+            if isinstance(unit, UnitlessUnit):
+                # Drop
+                continue
+            elif isinstance(unit, BaseUnit):
+                if unit in base_components_dict:
+                    base_components_dict[unit] += exponent
+                else:
+                    base_components_dict[unit] = exponent
+            else:
+                # Get the unit of the component expressed in terms of base units
+                # Multiply the number of the result by the number of the expression
+                # Add the components of the unit of the expression to the running dict
+                if exponent == 1:
+                    result_number *= unit.base().number
+                    component_base_factors = unit.base().unit.components
+                else:
+                    result_number *= unit.base().number ** exponent
+                    component_base_factors = tuple((u, (e * exponent)) for u, e in unit.base().unit.components)
+                for base_unit, base_exponent in component_base_factors:
+                    if base_unit in base_components_dict:
+                        base_components_dict[base_unit] += base_exponent
+                    else:
+                        base_components_dict[base_unit] = base_exponent
+        # TODO Uncertainty in units?
+        # Turn into tuple, get rid of base units with exponent 0
+        base_components = tuple((u, e) for u, e in base_components_dict.items() if e != 0)
+        # If no units left, return as unitless quantity
+        if len(base_components) == 0:
+            return Quantity(result_number, unitless)
+        # Put in order to create canonical form
+        base_components = tuple(sorted(base_components, key=get_priority))
+        self._value_base = Quantity(
+            result_number,
+            CompoundUnit(
+                base_components,
+                symbol_sort="unsorted",
+                symbol_inverse="NEGATIVE_SUPERSCRIPT",
+                concatenate_symbols=False,
+                is_canon_base=True,
+            )
+        )
+        return self._value_base
+    
+
+class DerivedUnit(Unit):
+    """Units derived from and defined with SI units.
+
+    `value` is a `Quantity` with both a number and a `Unit`, and optionally, an uncertainty.
+    A `symbol` must be provided, but a `name` is optional.
+    If a name is given and `add_to_namespace` is `True` (default), the unit will be added to
+    `quanstants.units` under that name (note that trying to replace an existing unit with that name
+    will raise an error).
+    The `dimensional_exponents` are set to that of the provided value's unit(s).
+    """
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        symbol: str,
+        name: str,
+        value: Quantity,
+        add_to_namespace: bool = True,
+        canon_symbol: bool = False,
+        alt_names: list[str] | None = None,
+    ):
+        super().__init__(
+            symbol,
+            name,
+            components=((self, 1),),
+            value=value,
+            dimensional_exponents=value.unit.dimensional_exponents,
+            add_to_namespace=add_to_namespace,
+            canon_symbol=canon_symbol,
+            alt_names=alt_names,
+        )
+        self._value_base = self.value.base()
+
+    def cancel(self) -> Quantity:
+        return 1 * self
+
+    def canonical(self) -> Quantity:
+        return 1 * self

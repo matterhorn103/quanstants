@@ -2,7 +2,7 @@ from fractions import Fraction as frac
 
 from .config import quanfig
 
-# Dictionary of correspondence between Factor.exponent, which is just an integer,
+# Dictionary of correspondence between a factor's exponent, which is just an integer,
 # and the appropriate Unicode symbol. For now, only hard-code up to |9|
 _unicode_superscripts = {
     1: "¹",

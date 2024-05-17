@@ -382,7 +382,7 @@ Quantity(2.59200E+8, J)
 Use the `base()` function to express a quantity in terms of SI base units:
 ```python
 >>> (50 * qu.joule).base()
-Quantity(50, kg m² s⁻²)
+Quantity(50, m² kg s⁻²)
 ```
 
 Use the `cancel()` function to combine like terms in the unit after a calculation:
@@ -429,9 +429,9 @@ Quantity(60, kg m s⁻²)
 >>> acceleration * mass
 Quantity(60, m kg s⁻²)
 >>> (mass * acceleration).canonical()
-Quantity(60, s⁻² m kg)
+Quantity(60, m kg s⁻²)
 >>> (acceleration * mass).canonical()
-Quantity(60, s⁻² m kg)
+Quantity(60, m kg s⁻²)
 ```
 
 ### Equalities

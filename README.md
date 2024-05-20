@@ -738,6 +738,32 @@ Temperature(25.00, °C)
 Temperature(32, °F)
 ```
 
+### Logarithmic scales
+
+```python
+>>> a = 30 * qu.decibel
+>>> a
+LogarithmicQuantity(30, dB)
+>>> a.base()
+Quantity(1000)
+>>> b = (30 * qu.decibel).with_reference(1 * qu.watt)
+>>> b
+LogarithmicQuantity(30, dB, reference=(1, W))
+>>> b.to(qu.watt)
+Quantity(1000 W)
+>>> from quanstants.units import logarithmic
+>>> 30 @ qu.dBW
+LogarithmicQuantity(30, dB, reference=(1, W))
+>>> 30 @ qu.dBm
+LogarithmicQuantity(30, dB, reference=(1, mW))
+>>> print(30 @ qu.dBm)
+30 dB (1 mW)
+>>> from quanstants import quanfig
+>>> quanfig.LOGARITHMIC_UNIT_STYLE = "SUFFIX"
+>>> print(30 @ qu.dBm)
+30 dBm
+```
+
 ### Configuration
 
 The config object `quanstants.quanfig` provides access to many variables that change the behaviour of `quanstants` objects:

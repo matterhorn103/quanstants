@@ -187,8 +187,11 @@ class Unit:
     def alt_names(self) -> list[str]:
         return self._alt_names
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.symbol})"
+
     def __str__(self):
-        return f"Unit({self.symbol})"
+        return self.symbol
 
     # Units must always come at the end of expressions,
     # so do not define Unit * num or Unit / num

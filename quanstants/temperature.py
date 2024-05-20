@@ -1,5 +1,4 @@
 from decimal import Decimal as dec
-import types
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
@@ -37,25 +36,6 @@ class TemperatureUnit(Unit):
     Of key importance is that multiplication of a number and a `TemperatureUnit` will, as with any other
     unit, create a normal `Quantity` representing a multiple of the unit - in this case representing
     something like a temperature difference, not an actual temperature on the respective scale.
-
-    For example:
-
-    ```python
-    >>> from quanstants import units as qu, Quantity
-    >>> rel_temp = 50 @ qu.degreeCelsius
-    >>> print(rel_temp)
-    50 °C
-    >>> rel_temp.base()
-    Quantity(323.15, K)
-    >>> abs_temp = 50 * qu.degreeCelsius
-    >>> abs_temp.base()
-    Quantity(50, K)
-    >>> rel_temp + rel_temp
-    Quantity(646.30, K)
-    >>> abs_temp + abs_temp
-    Quantity(100, °C)
-    >>> rel_temp + abs_temp
-    Temperature(100, °C)
     ```
     """
 
@@ -83,7 +63,7 @@ class TemperatureUnit(Unit):
             symbol=symbol,
             name=name,
             components=((self, 1),),
-            value = self._degree_value,
+            value=self._degree_value,
             dimension="Θ",
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,

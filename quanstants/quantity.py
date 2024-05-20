@@ -161,15 +161,15 @@ class Quantity:
 
     def __repr__(self):
         if not self._uncertainty:
-            return f"Quantity({group_digits(self.number)}, {self.unit.symbol})"
+            return f"Quantity({group_digits(self.number)}, {self.unit})"
         else:
-            return f"Quantity({group_digits(self.number)}, {self.unit.symbol}, uncertainty={group_digits(self._uncertainty)})"
+            return f"Quantity({group_digits(self.number)}, {self.unit}, uncertainty={group_digits(self._uncertainty)})"
 
     def __str__(self):
         if quanfig.ROUND_BEFORE_PRINT:
             self = self.round()
         if not self._uncertainty:
-            return f"{group_digits(self.number)} {self.unit.symbol}"
+            return f"{group_digits(self.number)} {self.unit}"
         # Check that uncertainty is not more precise than the number via the exponent
         # More negative (smaller) exponent means more precise
         elif (
@@ -186,9 +186,9 @@ class Quantity:
                 ).replace("e", f"{bracketed_uncertainty}e")
             else:
                 number_string = number_string + bracketed_uncertainty
-            return f"{number_string} {self.unit.symbol}"
+            return f"{number_string} {self.unit}"
         else:
-            return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit.symbol}"
+            return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit}"
 
     def __int__(self):
         if not self.is_dimensionless():

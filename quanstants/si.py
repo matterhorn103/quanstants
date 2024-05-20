@@ -6,6 +6,7 @@ from .unit import BaseUnit, DerivedUnit, UnitlessUnit, unitless
 from .quantity import Quantity
 from . import temperature
 from .temperature import TemperatureUnit
+from .log import LogarithmicUnit
 
 # fmt: off
 
@@ -70,7 +71,7 @@ astronomical_unit = DerivedUnit("au", "astronomical_unit", Quantity(149597870700
 #bel TODO but set canon_symbol=False, let B be used by byte
 dalton = DerivedUnit("Da", "dalton", Quantity("1.66053906660e-27", kg, "0.00000000050e-27"), canon_symbol=True, alt_names=["atomic_mass_unit", "unified_atomic_mass_unit"])
 day = DerivedUnit("d", "day", Quantity(86400, s), canon_symbol=True)
-#decibel TODO
+decibel = LogarithmicUnit("dB", "decibel", 10, 10, canon_symbol=True)
 degree = DerivedUnit("°", "degree", Quantity(dec(math.pi)/180, rad), canon_symbol=True)
 electronvolt = DerivedUnit("eV", "electronvolt", Quantity("1.602176634e-19", joule), canon_symbol=True)
 hectare = DerivedUnit("ha", "hectare", Quantity("1e4", m**2), canon_symbol=True)

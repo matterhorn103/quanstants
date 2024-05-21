@@ -36,7 +36,7 @@ class LogarithmicUnit:
         log_base: str | int | float | dec,
         prefactor: str | int | float | dec,
         reference: Quantity | None = None,
-        add_to_namespace: bool = True,
+        add_to_namespace: bool = False,
         canon_symbol: bool = False,
         alt_names: list | None = None,
     ):
@@ -88,7 +88,10 @@ class LogarithmicUnit:
         return self._alt_names
 
     def __repr__(self):
-        return f"LogarithmicUnit({self})"
+        if self.reference is None:
+            return f"LogarithmicUnit({self.symbol}, reference=1)"
+        else:
+            return f"LogarithmicUnit({self.symbol}, reference=({self.reference.number, self.reference.unit}))"
 
     def __str__(self):
         if quanfig.LOGARITHMIC_UNIT_STYLE == "SIMPLE" or self.reference is None:
@@ -97,3 +100,58 @@ class LogarithmicUnit:
             return f"{self.symbol} ({self.reference})"
         elif quanfig.LOGARITHMIC_UNIT_STYLE == "SUFFIX":
             return f"{self.symbol}{self.suffix}"
+    
+    # Use U @ Q for referencing
+    def __matmul__(self, other):
+        if isinstance(other, Quantity):
+            return self.with_reference(other)
+        else:
+            return NotImplemented
+
+    # Use num @ U for quantity creation
+    def __rmatmul__(self, other):
+        if isinstance(other, (str, int, float, dec)):
+            return LogarithmicQuantity(other, self)
+        else:
+            return NotImplemented
+    
+    def from_absolute(self, other: Quantity):
+        """Convert an absolute `Quantity` to a relative `LogarithmicQuantity` with this unit.
+
+        When `Quantity.on_scale()` is called on a quantity and the target unit is an instance of
+        `LogarithmicUnit`, this method of the target unit will be called.
+        """
+        # TODO
+
+    def with_reference(self, reference: Quantity):
+        return type(self)(
+            symbol=self.symbol,
+            suffix=self.suffix,
+            name=None,
+            log_base=self.log_base,
+            prefactor=self.prefactor,
+            reference=reference,
+            )
+
+class LogarithmicQuantity:
+    """A class representing quantities on a logarithmic scale relative to some reference quantity.
+    
+    `quanstants` does not support asymmetric uncertainties. If an uncertainty is
+    provided, it must be an absolute quantity rather than a logarithmic one.
+
+    If `number` is not passed, but `unit` is a referenced `LogarithmicUnit` and `value`
+    is a `Quantity` with the same unit as that of `unit.reference`, the absolute value
+    will be converted to a value on the scale.
+    """
+
+    __slots__ = ("_number", "_unit", "_uncertainty")
+
+    def __init__(
+        self,
+        number: str | int | float | dec | None = None,
+        unit: LogarithmicUnit | None = None,
+        uncertainty: Quantity | None = None,
+        value: Quantity | None = None,
+    ):
+        pass
+        # TODO

@@ -153,5 +153,14 @@ class LogarithmicQuantity:
         uncertainty: Quantity | None = None,
         value: Quantity | None = None,
     ):
-        pass
         # TODO
+        pass
+    
+    @classmethod
+    def from_absolute():
+        # TODO
+        pass
+
+    def to_absolute():
+        # TODO
+        pass

@@ -65,6 +65,11 @@ choices = [ "PARENTHESES", "PLUSMINUS" ]
 default = "PARENTHESES"
 doc = "How uncertainties of quantities should be formatted."
 
+[config.printing.LOGARITHMIC_UNIT_STYLE]
+choices = [ "SIMPLE", "REFERENCE", "SUFFIX" ]
+default = "REFERENCE"
+doc = "How a referenced logarithmic unit should be formatted."
+
 [config.printing.UNIT_SEPARATOR]
 default = " "
 doc = """Unicode character used to separate unit terms.

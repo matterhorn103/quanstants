@@ -4,7 +4,7 @@ from ..temperature import TemperatureUnit
 
 # TODO
 from .base import kelvin
-from .base import degreeCelsius
+from .si import degreeCelsius
 from .common import degreeFahrenheit
 
 degreeReaumur = TemperatureUnit(

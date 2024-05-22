@@ -26,8 +26,8 @@ class QuanstantsConfig:
     def __setattr__(self, name, value):
         if name in self.options:
             # Make sure it's a valid option
-            if value not in self.options[name]["choices"]:
-                raise TypeError(f"Value provided not amongst possible choices: {self.options[name]["choices"]}")
+            if "choices" in self.options[name] and value not in self.options[name]["choices"]:
+                    raise TypeError(f"Value provided not amongst possible choices: {self.options[name]["choices"]}")
             else:
                 # Some options need custom handling
                 if name == "PRETTYPRINT":

@@ -8,7 +8,6 @@ from ..quantity import Quantity
 from .. import temperature
 from ..temperature import TemperatureUnit
 from ..log import LogarithmicUnit, PrefixedLogarithmicUnit
-
 from .base import *
 
 # fmt: off

@@ -1,14 +1,15 @@
 from decimal import Decimal as dec
+import math
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
-from .unit import Unit
-from .quantity import Quantity
+from .unit import Unit, unitless
+from .quantity import Quantity, MismatchedUnitsError
 from .prefix import Prefix, AlreadyPrefixedError
 from .units.base import *
 
 
-class LogarithmicUnit:
+class LogarithmicUnit(Unit):
     """A unit on a logarithmic scale, typically relative to a reference point.
     
     A quantity can be expressed in the unit as:
@@ -20,13 +21,10 @@ class LogarithmicUnit:
     # overridden (at least for now)
 
     __slots__ = (
-        "_symbol",
         "_suffix",
-        "_name",
         "_log_base",
         "_prefactor",
         "_reference",
-        "_alt_names",
     )
 
     def __init__(
@@ -41,36 +39,22 @@ class LogarithmicUnit:
         canon_symbol: bool = False,
         alt_names: list | None = None,
     ):
-        if symbol is not None:
-            self._symbol = symbol
-        elif name is not None:
-            self._symbol = name
-            # Symbol can't be canon if it wasn't even provided
-            canon_symbol = False
-        else:
-            raise RuntimeError("Either a symbol or a name must be provided!")
         self._suffix = suffix
-        self._name = name
         self._log_base = "e" if log_base == "e" or log_base is None else float(log_base) if isinstance(log_base, (str, dec, float)) else log_base
         self._prefactor = 1 if prefactor is None else float(prefactor) if isinstance(prefactor, (str, dec, float)) else prefactor
         self._reference = reference
-        self._alt_names = tuple(alt_names) if alt_names is not None else None
-        if add_to_namespace:
-            self.add_to_namespace(add_symbol=canon_symbol)
-        
-    add_to_namespace = Unit.add_to_namespace
-
-    @property
-    def symbol(self) -> str:
-        return self._symbol
+        super().__init__(
+            symbol=symbol,
+            name=name,
+            value=LogarithmicQuantity(1, self),
+            add_to_namespace=add_to_namespace,
+            canon_symbol=canon_symbol,
+            alt_names=alt_names,
+        )
     
     @property
     def suffix(self) -> str:
         return self._suffix
-
-    @property
-    def name(self) -> str | None:
-        return self._name
 
     @property
     def log_base(self) -> str | int | float:
@@ -82,20 +66,19 @@ class LogarithmicUnit:
 
     @property
     def reference(self) -> Quantity:
-        return self._reference
-
-    @property
-    def alt_names(self) -> list[str]:
-        return self._alt_names
+        if self._reference is None:
+            return Quantity(1, unitless)
+        else:
+            return self._reference
 
     def __repr__(self):
-        if self.reference is None:
+        if self._reference is None:
             return f"LogarithmicUnit({self.symbol}, reference=1)"
         else:
-            return f"LogarithmicUnit({self.symbol}, reference=({self.reference.number, self.reference.unit}))"
+            return f"LogarithmicUnit({self.symbol}, reference=({self.reference}))"
 
     def __str__(self):
-        if quanfig.LOGARITHMIC_UNIT_STYLE == "SIMPLE" or self.reference is None:
+        if quanfig.LOGARITHMIC_UNIT_STYLE == "SIMPLE" or self._reference is None:
             return self.symbol
         elif quanfig.LOGARITHMIC_UNIT_STYLE == "REFERENCE":
             return f"{self.symbol} ({self.reference})"
@@ -129,7 +112,7 @@ class LogarithmicUnit:
         When `Quantity.on_scale()` is called on a quantity and the target unit is an instance of
         `LogarithmicUnit`, this method of the target unit will be called.
         """
-        # TODO
+        return LogarithmicQuantity.from_absolute(self, other)
 
     def with_reference(self, reference: Quantity):
         return type(self)(
@@ -179,10 +162,11 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
         prefactor = unit.prefactor / prefix.multiplier
         super().__init__(
             symbol=concat_symbol,
+            suffix=unit.suffix,
             name=concat_name,
             log_base=unit.log_base,
             prefactor=prefactor,
-            reference=unit.reference,
+            reference=unit._reference,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=concat_alt_names,
@@ -204,7 +188,7 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
             super().__rmul__(other)
 
 
-class LogarithmicQuantity:
+class LogarithmicQuantity(Quantity):
     """A class representing quantities on a logarithmic scale relative to some reference quantity.
     
     `quanstants` does not support asymmetric uncertainties. If an uncertainty is
@@ -215,7 +199,7 @@ class LogarithmicQuantity:
     will be converted to a value on the scale.
     """
 
-    __slots__ = ("_number", "_unit", "_uncertainty")
+    __slots__ = ()
 
     def __init__(
         self,
@@ -224,14 +208,28 @@ class LogarithmicQuantity:
         uncertainty: Quantity | None = None,
         value: Quantity | None = None,
     ):
-        # TODO
-        pass
+        super().__init__(
+            number=number,
+            unit=unit,
+            uncertainty=None,
+            value=value,
+        )
+        self._uncertainty = dec("0") if uncertainty is None else uncertainty
     
-    @classmethod
-    def from_absolute():
-        # TODO
-        pass
+    def __repr__(self):
+        as_quantity = super().__repr__()
+        return as_quantity.replace("Quantity", "LogarithmicQuantity")
+    
+    # def __str__(self):
+        # TODO can't let uncertainty be put in brackets
 
-    def to_absolute():
-        # TODO
-        pass
+    @classmethod
+    def from_absolute(cls, unit: LogarithmicUnit, quantity: Quantity):
+        if quantity.unit.dimensional_exponents != unit.dimensional_exponents:
+            raise MismatchedUnitsError("Ratio of quantity to reference value is not dimensionless!")
+        else:
+            new_number = unit.prefactor * math.log((quantity / unit.reference).number, unit.log_base)
+            return cls(new_number, unit, quantity.uncertainty)
+
+    def to_absolute(self):
+        return self.unit.reference * self.unit.log_base ** (self.number / self.unit.prefactor)

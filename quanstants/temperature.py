@@ -2,10 +2,9 @@ from decimal import Decimal as dec
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
-from .unit import Unit, BaseUnit
+from .unit import LinearUnit, BaseUnit
 from .quantity import Quantity
 
-from . import units
 
 # Define the most important unit of temperature, though as a BaseUnit not a TemperatureUnit
 kelvin = BaseUnit("K", "kelvin", dimension="Θ")
@@ -15,7 +14,7 @@ class NotATemperatureError(Exception):
     pass
 
 
-class TemperatureUnit(Unit):
+class TemperatureUnit(LinearUnit):
     """A unit of temperature with a potentially non-linear relationship to the kelvin scale.
 
     `degree_value` should be the size of the unit itself.
@@ -94,33 +93,7 @@ class TemperatureUnit(Unit):
         When `Quantity.on_scale()` is called on a quantity and the target unit is an instance of
         `TemperatureUnit`, this method of the target unit will be called.
         """
-        if other.unit == kelvin:
-            new_number = (other.number / self.value.number) - self.zero_point.number
-        elif other.unit.dimensional_exponents == {
-            "T": 0,
-            "L": 0,
-            "M": 0,
-            "I": 0,
-            "Θ": 1,
-            "N": 0,
-            "J": 0,
-        }:
-            new_number = (other.base().number / self.value.number) - self.zero_point.number
-        else:
-            raise NotATemperatureError(
-                "Temperatures can only be converted from quantities with units of temperature."
-            )
-
-        if not other._uncertainty:
-            new_uncertainty = dec("0")
-        else:
-            new_uncertainty = other.uncertainty.to(self)
-        # Make sure precision isn't ridiculous for an otherwise exact conversion
-        if str(new_number)[-5:] == "00000":
-            new_number = dec(str(float(new_number)))
-            if str(new_number)[-2:] == ".0":
-                new_number = dec(int(new_number))
-        return Temperature(new_number, self, new_uncertainty)
+        return Temperature.from_absolute(self, other)
 
     def cancel(self):
         """Combine any like terms and return as a Quantity."""
@@ -155,6 +128,37 @@ class Temperature(Quantity):
     def __repr__(self):
         as_quantity = super().__repr__()
         return as_quantity.replace("Quantity", "Temperature")
+
+    @classmethod
+    def from_absolute(cls, unit: TemperatureUnit, quantity: Quantity):
+        """Convert an absolute `Quantity` with temperature units to a relative `Temperature` with the given unit."""
+        if quantity.unit == kelvin:
+            new_number = (quantity.number / unit.value.number) - unit.zero_point.number
+        elif quantity.unit.dimensional_exponents == {
+            "T": 0,
+            "L": 0,
+            "M": 0,
+            "I": 0,
+            "Θ": 1,
+            "N": 0,
+            "J": 0,
+        }:
+            new_number = (quantity.base().number / unit.value.number) - unit.zero_point.number
+        else:
+            raise NotATemperatureError(
+                "Temperatures can only be converted from quantities with units of temperature."
+            )
+
+        if not quantity._uncertainty:
+            new_uncertainty = dec("0")
+        else:
+            new_uncertainty = quantity.uncertainty.to(unit)
+        # Make sure precision isn't ridiculous for an otherwise exact conversion
+        if str(new_number)[-5:] == "00000":
+            new_number = dec(str(float(new_number)))
+            if str(new_number)[-2:] == ".0":
+                new_number = dec(int(new_number))
+        return cls(new_number, unit, new_uncertainty)
 
     def to_absolute(self):
         """Return the temperature as a normal `Quantity` object with units of kelvin.

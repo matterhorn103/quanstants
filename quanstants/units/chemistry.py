@@ -1,6 +1,6 @@
 from ..unit import CompoundUnit, DerivedUnit
 from ..quantity import Quantity
-from ..si import *
+from .base import *
 from ..units.prefixed import centimetre
 
 # fmt: off

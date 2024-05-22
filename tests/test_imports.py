@@ -1,7 +1,7 @@
 """Simple tests to confirm the user won't have any problems importing anything."""
 
 
-from quanstants.units import default
+from quanstants.units import common
 
 
 class TestImports:

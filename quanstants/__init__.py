@@ -13,6 +13,7 @@ quanfig.find_toml()
 quanfig.load_toml(["config"])
 
 # Initialize namespace modules
+# No Unit, Prefix or Constant objects are created or loaded through this
 from . import units
 from . import prefixes
 from . import constants
@@ -30,16 +31,16 @@ from .quantity import Quantity
 # Definition modules are "unused" imports but do need to be imported so that
 # they are initiated and the unit/prefix/constant dictionaries get populated
 
-# The SI module is actually loaded already due to being
+# The SI base units module is actually loaded already due to being
 # used in other modules, but import here for clarity
-from . import si
+from .units import base
 
-# Make sure prefixes are loaded as later units rely on them
-from .prefixes import default
-
-# Then import whichever optional unit and constant modules should be provided by default
-from .units import default, prefixed
-from .constants import default
+# Import whichever prefix, unit, and constant submodules should be provided by default
+# Make sure prefixes are loaded first as many units rely on them
+# TODO Allow user to specify in `quanstants.toml` which submodules should be loaded
+from .prefixes import metric, binary
+from .units import si, common, prefixed
+from .constants import fundamental
 
 # Now load any custom units and constants defined by the user in their toml
 quanfig.load_toml(["units", "constants"])

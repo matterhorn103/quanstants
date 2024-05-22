@@ -3,6 +3,8 @@
 from ..config import quanfig
 from ..unicode import exponent_parser
 
+# Note there is no need to import units from other modules as they are
+# added to this namespace programmatically
 
 class UnitAlreadyDefinedError(Exception):
     pass

@@ -2,9 +2,8 @@ from decimal import Decimal as dec
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
-from .unit import Unit
+from .unit import Unit, BaseUnit
 from .quantity import Quantity
-from .si import *
 
 from . import units
 

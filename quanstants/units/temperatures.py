@@ -3,9 +3,9 @@ from ..temperature import TemperatureUnit
 # fmt: off
 
 # TODO
-from ..si import kelvin
-from ..si import degreeCelsius
-from .default import degreeFahrenheit
+from .base import kelvin
+from .base import degreeCelsius
+from .common import degreeFahrenheit
 
 degreeReaumur = TemperatureUnit(
     "°Re",

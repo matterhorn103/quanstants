@@ -1,3 +1,13 @@
+"""
+Constants defined in CODATA 2018.
+
+Only the useful subset is defined.
+Omitted are:
+* multiple definitions of the same constant in different units
+* values of units, including atomic and natural units
+* ratios of other constants or units
+"""
+
 from ..constant import Constant
 from .. import units as qu, prefixes as qp
 from . import fundamental
@@ -5,8 +15,6 @@ from . import fundamental
 # fmt: off
 
 # CODATA 2018
-# Only add the useful subset, don't include multiple definitions of the same constant in different units
-# or values of units, including atomic and natural units, or ratios of constants or units defined elsewhere
 alpha_particle_mass = Constant("m_α", "alpha_particle_mass", "6.6446573357e-27", qu.kg, "0.0000000020e-27", canon_symbol=False)
 atomic_mass_constant = Constant("m_u", "atomic_mass_constant", "1.66053906660e-27", qu.kg, "0.00000000050e-27", canon_symbol=False)
 Avogadro_constant = fundamental.Avogadro_constant

@@ -1,6 +1,7 @@
 from ..prefix import PrefixedUnit
-from ..prefixes.default import *
-from ..si import *
+from ..prefixes.metric import *
+from .base import *
+from .si import *
 
 # fmt: off
 

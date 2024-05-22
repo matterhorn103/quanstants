@@ -3,4 +3,4 @@ from decimal import Decimal as dec
 
 from ..unit import BaseUnit, DerivedUnit
 from ..quantity import Quantity
-from ..si import *
+from .base import *

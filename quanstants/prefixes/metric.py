@@ -1,7 +1,6 @@
-from ..prefix import Prefix, PrefixedUnit
+"""The metric prefixes defined by the BIPM as of 2022."""
 
-from ..si import *
-
+from ..prefix import Prefix
 
 # fmt: off
 
@@ -30,15 +29,5 @@ zetta = Prefix("Z", "zetta", "1E+21")
 yotta = Prefix("Y", "yotta", "1E+24")
 ronna = Prefix("R", "ronna", "1E+27")
 quetta = Prefix("Q", "quetta", "1E+30")
-
-# Binary prefixes
-kibi = Prefix("Ki", "kibi", 1024**1)
-mebi = Prefix("Mi", "mebi", 1024**2)
-gibi = Prefix("Gi", "gibi", 1024**3)
-tebi = Prefix("Ti", "tebi", 1024**4)
-pebi = Prefix("Pi", "pebi", 1024**5)
-exbi = Prefix("Ei", "exbi", 1024**6)
-zebi = Prefix("Zi", "zebi", 1024**7)
-yobi = Prefix("Yi", "yobi", 1024**8)
 
 # fmt: on

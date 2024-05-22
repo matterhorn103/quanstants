@@ -1,5 +1,8 @@
 """Namespace to contain all the constants, making them useable with qc.c notation."""
 
+# Note there is no need to import constants from other modules as they are
+# added to this namespace programmatically
+
 class ConstantAlreadyDefinedError(Exception):
     pass
 

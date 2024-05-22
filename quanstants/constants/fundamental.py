@@ -1,3 +1,5 @@
+"""The fundamental constants that in turn define the SI base units."""
+
 from ..constant import Constant
 from .. import units as qu
 

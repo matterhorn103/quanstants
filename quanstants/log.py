@@ -4,14 +4,15 @@ from .config import quanfig
 from .uncertainties import get_uncertainty
 from .unit import Unit
 from .quantity import Quantity
-from .si import *
+from .prefix import Prefix, AlreadyPrefixedError
+from .units.base import *
 
 
 class LogarithmicUnit:
     """A unit on a logarithmic scale, typically relative to a reference point.
     
     A quantity can be expressed in the unit as:
-    `preexp * log(value / reference, log_base) * unit` 
+    `prefactor * log(value / reference, log_base) * unit` 
     """
     
     # Most things typically possible with units shouldn't be allowed,
@@ -34,7 +35,7 @@ class LogarithmicUnit:
         suffix: str | None,
         name: str | None,
         log_base: str | int | float | dec,
-        prefactor: str | int | float | dec,
+        prefactor: str | int | float | dec | None = None,
         reference: Quantity | None = None,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
@@ -101,6 +102,13 @@ class LogarithmicUnit:
         elif quanfig.LOGARITHMIC_UNIT_STYLE == "SUFFIX":
             return f"{self.symbol}{self.suffix}"
     
+    # Allow prefixes
+    def __rmul__(self, other):
+        if isinstance(other, Prefix):
+            return PrefixedLogarithmicUnit
+        else:
+            return NotImplemented
+
     # Use U @ Q for referencing
     def __matmul__(self, other):
         if isinstance(other, Quantity):
@@ -132,6 +140,69 @@ class LogarithmicUnit:
             prefactor=self.prefactor,
             reference=reference,
             )
+    
+
+class PrefixedLogarithmicUnit(LogarithmicUnit):
+    """A unit created through the combination of a `LogarithmicUnit` with a `Prefix`.
+
+    For now acts almost exactly like a `LogarithmicUnit` except that it cannot be prefixed.
+    """
+
+    __slots__ = ("_prefix", "_unit")
+
+    def __init__(
+        self,
+        prefix: Prefix,
+        unit: LogarithmicUnit,
+        add_to_namespace: bool = False,
+        canon_symbol: bool = False,
+        alt_names: list | None = None,
+    ):
+        self._prefix = prefix
+        self._unit = unit
+
+        # Create prefixed symbol and name
+        concat_symbol = prefix.symbol + unit.symbol
+        if (prefix.name is not None) and (unit.name is not None):
+            concat_name = prefix.name + unit.name
+        else:
+            concat_name = None
+        # Automatically prefix any alternative names of the unit and add to list of alt names
+        if (prefix.name is not None) and (unit.alt_names is not None):
+            concat_alt_names = [] if alt_names is None else alt_names
+            for alt_name in unit.alt_names:
+                concat_alt_name = prefix.name + alt_name
+                concat_alt_names.append(concat_alt_name)
+        else:
+            concat_alt_names = None if alt_names is None else alt_names
+        # Determine new prefactor
+        prefactor = unit.prefactor / prefix.multiplier
+        super().__init__(
+            symbol=concat_symbol,
+            name=concat_name,
+            log_base=unit.log_base,
+            prefactor=prefactor,
+            reference=unit.reference,
+            add_to_namespace=add_to_namespace,
+            canon_symbol=canon_symbol,
+            alt_names=concat_alt_names,
+        )
+
+    @property
+    def prefix(self):
+        return self._prefix
+
+    @property
+    def unit(self):
+        return self._unit
+    
+    # Prevent prefixing again
+    def __rmul__(self, other):
+        if isinstance(other, Prefix):
+            raise AlreadyPrefixedError
+        else:
+            super().__rmul__(other)
+
 
 class LogarithmicQuantity:
     """A class representing quantities on a logarithmic scale relative to some reference quantity.

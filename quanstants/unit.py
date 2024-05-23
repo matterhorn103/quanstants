@@ -142,33 +142,6 @@ class Unit:
     def alt_names(self) -> list[str]:
         return self._alt_names
     
-    # Hashing and equalities by default use the implementations of `Quantity`
-    # These are fallback methods, subclasses often override these for various reasons
-    # Units must always hash and compare equal to quantities with an equivalent value
-    def __hash__(self):
-        return hash(self.value)
-
-    def __eq__(self, other):
-        if isinstance(other, (Unit, Quantity)):
-            # Compare the values (handled by `Quantity`)
-            return self.value == other.value
-        else:
-            return NotImplemented
-
-    def __gt__(self, other):
-        if isinstance(other, (Unit, Quantity)):
-            # Compare the values (handled by `Quantity`)
-            return self.value > other.value
-        else:
-            return NotImplemented
-
-    def __ge__(self, other):
-        if isinstance(other, (Unit, Quantity)):
-            # Compare the values (handled by `Quantity`)
-            return self.value >= other.value
-        else:
-            return NotImplemented
-    
     def add_to_namespace(self, add_symbol=False):
         """Add to units namespace to allow lookup under the provided name(s)."""
         if self.name is not None:
@@ -291,7 +264,7 @@ class LinearUnit(Unit):
                 return CompoundUnit(components=None, units=(self, other), concatenate_symbols=True)
             else:
                 return self
-        elif isinstance(other, Unit):
+        elif isinstance(other, LinearUnit):
             if concatenate_symbols:
                 return CompoundUnit(components=None, units=(self, other), concatenate_symbols=True)
             else:
@@ -312,7 +285,7 @@ class LinearUnit(Unit):
     def __truediv__(self, other):
         if isinstance(other, UnitlessUnit):
             return self
-        elif isinstance(other, Unit):
+        elif isinstance(other, LinearUnit):
             return CompoundUnit(self.components + other.inverse().components)
         elif isinstance(other, Quantity):
             return Quantity(1 / other.number, self / other.unit)
@@ -348,6 +321,33 @@ class LinearUnit(Unit):
                 ),
             )
             return CompoundUnit(new_components)
+        else:
+            return NotImplemented
+        
+    # Hashing and equalities by default use the implementations of `Quantity`
+    # These are fallback methods, subclasses often override these for various reasons
+    # Linear units must always hash and compare equal to quantities with an equal value
+    def __hash__(self):
+        return hash(self.value)
+
+    def __eq__(self, other):
+        if isinstance(other, (LinearUnit, Quantity)):
+            # Compare the values (handled by `Quantity`)
+            return self.value == other.value
+        else:
+            return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, (LinearUnit, Quantity)):
+            # Compare the values (handled by `Quantity`)
+            return self.value > other.value
+        else:
+            return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, (LinearUnit, Quantity)):
+            # Compare the values (handled by `Quantity`)
+            return self.value >= other.value
         else:
             return NotImplemented
 
@@ -475,25 +475,25 @@ class UnitlessUnit(BaseUnit):
         self._drop = drop
 
     def __mul__(self, other, concatenate_symbols: bool = False):
-        if self._drop and isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (LinearUnit, Quantity)):
             return other
         else:
             return super().__mul__(other, concatenate_symbols=concatenate_symbols)
 
     def __rmul__(self, other):
-        if self._drop and isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (LinearUnit, Quantity)):
             return other
         else:
             return super().__rmul__(other)
 
     def __truediv__(self, other):
-        if self._drop and isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (LinearUnit, Quantity)):
             return other.inverse()
         else:
             return super().__truediv__(other)
 
     def __rtruediv__(self, other):
-        if self._drop and isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (LinearUnit, Quantity)):
             return other
         else:
             return super().__rtruediv__(other)
@@ -599,7 +599,7 @@ class CompoundUnit(LinearUnit):
     def __eq__(self, other):
         return hash(self) == hash(other)
 
-    def _cancel_to_unit(self, force_drop_unitless=False) -> Unit:
+    def _cancel_to_unit(self, force_drop_unitless=False) -> LinearUnit:
         """Does everything that `self.cancel() does, but returns a unit."""
         new_components_dict = {}
         unitless_components_dict = {}

@@ -36,7 +36,11 @@ class TemperatureUnit(LinearUnit):
 
     Of key importance is that multiplication of a number and a `TemperatureUnit` will,
     as with any other unit, create a normal `Quantity` representing a multiple of the
-    unit - in this case representing something like a temperature difference, not an actual temperature on the respective scale.
+    unit - in this case representing something like a temperature difference, not an
+    actual temperature on the respective scale.
+
+    Also note that hashes and equalities are determined in the same way as for all
+    linear units. This means for example that °C is considered equal to K.
     ```
     """
 
@@ -49,7 +53,7 @@ class TemperatureUnit(LinearUnit):
         degree_value: str | int | float | dec | Quantity,
         zero_point: str | int | float | dec | Quantity,
         alt_names: list | None = None,
-        add_to_namespace: bool = False,
+        add_to_namespace: bool = True,
         canon_symbol: bool = False,
     ):
         if isinstance(degree_value, Quantity) and (degree_value.base().unit == kelvin):
@@ -158,6 +162,9 @@ class Temperature(Quantity):
                 )
         else:
             return NotImplemented
+    
+    def __radd__(self, other, correlation=0):
+        return NotImplemented
 
     def __sub__(self, other, correlation=0):
         # Allow finding the difference between two temperatures
@@ -187,26 +194,37 @@ class Temperature(Quantity):
                 return result.round_to_precision_of(self)
         else:
             return result
-        
+    
+    def __rsub__(self, other, correlation=0):
+        return NotImplemented
+
+    # For other mathematical operations, convert to kelvin and leave in kelvin
+    # Python recognises if the parent has been overridden and so for
+    # Quantity * Temperature it defers to Temperature.__rmul__() instead of using
+    # Quantity.__mul__()
+    # TODO However, still need to find a way to pass correlation on as if we do e.g.
+    # `return self.to_absolute().__mul__(other, correlation=correlation)`
+    # then Python doesn't recognise that we have overidden the parent any more
+    def __mul__(self, other, correlation=0):
+        return self.to_absolute() * other
+
+    def __rmul__(self, other, correlation=0):
+        return other * self.to_absolute()
+
+    def __truediv__(self, other, correlation=0):
+        return self.to_absolute() / other
+
+    def __rtruediv__(self, other, correlation=0):
+        return other / self.to_absolute()
+
+    def __pow__(self, other, correlation=0):
+        return self.to_absolute() ** other
+    
+    def __rpow__(self, other, correlation=0):
+        return NotImplemented
 
     def __neg__(self):
         return Temperature(-1 * self.number, self.unit, self._uncertainty)
-
-    # For other mathematical operations, convert to kelvin and leave in kelvin
-    def __mul__(self, other):
-        return self.to_absolute() * other
-
-    def __rmul__(self, other):
-        return other * self.to_absolute()
-
-    def __truediv__(self, other):
-        return self.to_absolute() / other
-
-    def __rtruediv__(self, other):
-        return other / self.to_absolute()
-
-    def __pow__(self, other):
-        return self.to_absolute() ** other
 
     # Equality functions of `Quantity` call `.base()` anyway, so super handles fine
 
@@ -258,9 +276,6 @@ class Temperature(Quantity):
                 kelvin,
                 self.uncertainty.to(kelvin),
             )
-
-    def with_uncertainty(self, uncertainty):
-        return Temperature(self.number, self.unit, uncertainty)
 
     def cancel(self):
         """Combine any like terms in the unit.

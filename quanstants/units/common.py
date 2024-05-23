@@ -34,7 +34,7 @@ year = DerivedUnit("yr", "year", Quantity(365, day), canon_symbol=True)
 julian_year = DerivedUnit("a", "julian_year", Quantity("365.25", day), canon_symbol=False)
 
 # Temperature
-degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", add_to_namespace=True, canon_symbol=True, alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"])
+degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", canon_symbol=True, alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"])
 
 # TODO
 # Standard states

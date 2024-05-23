@@ -41,7 +41,7 @@ siemens = DerivedUnit("S", "siemens", Quantity(1, kg**-1 * m**-2 * s**3 * A**2),
 weber = DerivedUnit("Wb", "weber", Quantity(1, kg * m**2 * s**-2 * A**-1), canon_symbol=True)
 tesla = DerivedUnit("T", "tesla", Quantity(1, kg * s**-2 * A**-1), canon_symbol=True)
 henry = DerivedUnit("H", "henry", Quantity(1, kg * m**2 * s**-2 * A**-2), canon_symbol=True)
-degreeCelsius = TemperatureUnit("°C", "degreeCelsius", "1", "273.15", add_to_namespace=True, canon_symbol=True, alt_names=["degree_Celsius", "degreeC", "celsius", "degreeCentigrade", "degree_Centigrade", "centigrade"])
+degreeCelsius = TemperatureUnit("°C", "degreeCelsius", "1", "273.15", canon_symbol=True, alt_names=["degree_Celsius", "degreeC", "celsius", "degreeCentigrade", "degree_Centigrade", "centigrade"])
 lumen = DerivedUnit("lm", "lumen", Quantity(1, cd * sr), canon_symbol=True)
 lux = DerivedUnit("lx", "lux", Quantity(1, cd * sr * m**-2), canon_symbol=True)
 becquerel = DerivedUnit("Bq", "becquerel", Quantity(1, s**-1), canon_symbol=True)
@@ -53,7 +53,7 @@ katal = DerivedUnit("kat", "katal", Quantity(1, s**-1 * mol), canon_symbol=True)
 arcminute = DerivedUnit("′", "arcminute", Quantity(dec(math.pi)/10800, rad), canon_symbol=True)
 arcsecond = DerivedUnit("″", "arcsecond", Quantity(dec(math.pi)/648000, rad), canon_symbol=True)
 astronomical_unit = DerivedUnit("au", "astronomical_unit", Quantity(149597870700, m), canon_symbol=True)
-bel = LogarithmicUnit("B", None, "bel", 10, add_to_namespace=True, canon_symbol=False) # let B be used by byte
+bel = LogarithmicUnit("B", None, "bel", 10, canon_symbol=False) # let B be used by byte
 dalton = DerivedUnit("Da", "dalton", Quantity("1.66053906660e-27", kg, "0.00000000050e-27"), canon_symbol=True, alt_names=["atomic_mass_unit", "unified_atomic_mass_unit"])
 day = DerivedUnit("d", "day", Quantity(86400, s), canon_symbol=True)
 decibel = PrefixedLogarithmicUnit(deci, bel, add_to_namespace=True, canon_symbol=True)
@@ -63,7 +63,7 @@ hectare = DerivedUnit("ha", "hectare", Quantity("1e4", m**2), canon_symbol=True)
 hour = DerivedUnit("h", "hour", Quantity(3600, s), canon_symbol=True)
 litre = DerivedUnit(quanfig.LITRE_SYMBOL, "litre", Quantity("1e-3", m**3), canon_symbol=True, alt_names=["liter"])
 minute = DerivedUnit("min", "minute", Quantity(60, s), canon_symbol=True)
-neper = LogarithmicUnit("Np", None, "neper", "e", add_to_namespace=True, canon_symbol=True)
+neper = LogarithmicUnit("Np", None, "neper", "e", canon_symbol=True)
 tonne = DerivedUnit("t", "tonne", Quantity(1000, kg), canon_symbol=True)
 
 # TODO

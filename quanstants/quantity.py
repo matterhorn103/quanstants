@@ -405,13 +405,15 @@ class Quantity:
     def log(self, base=None):
         if base is None:
             return self.ln()
+        elif base == 10:
+            return self.log10()
         elif not self.is_dimensionless():
             raise NotDimensionlessError(
                 "Cannot take the logarithm of a non-dimensionless quantity!"
             )
         else:
             dimensionless_quant = self.base()
-            new_number = math.log(dimensionless_quant.number, base)
+            new_number = dec(math.log(dimensionless_quant.number, base))
             new_uncertainty = get_uncertainty(new_number, "log", self, log_base=base)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
 

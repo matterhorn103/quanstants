@@ -300,7 +300,7 @@ Quantity(4.6096, m)
 If the units do not match, a `MismatchedUnitsError` will be raised, which serves as a useful sanity check:
 ```python
 >>> (4 * qu.metre) + (3 * qu.kilogram)
-quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
+MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
 ```
 
 Similarly, (in)equalities are implemented between quantities of the same dimension:
@@ -330,7 +330,7 @@ Quantity(1.386294361119890618834464243, (unitless))
 >>> (a/b).log10()
 Quantity(0.6020599913279623904274777894, (unitless))
 >>> a.log10()
-quanstants.quantity.NotDimensionlessError: Cannot take the logarithm of a non-dimensionless quantity!
+NotDimensionlessError: Cannot take the logarithm of a non-dimensionless quantity!
 ```
 
 You can easily check whether a quantity is dimensionless:
@@ -758,21 +758,67 @@ Quantity(1000, (unitless))
 A _referenced_ logarithmic unit can be created from an unreferenced one using the provided method:
 ```python
 >>> qu.decibel.with_reference(1 * qu.watt)
-LogarithmicUnit(dB, reference=(1, W))
+LogarithmicUnit(dB, reference=(1 W))
 >>> b = 30 @ qu.decibel.with_reference(1 * qu.watt)
 >>> b
-LogarithmicQuantity(30, dB, reference=(1, W))
->>> b.to(qu.watt)
-Quantity(1000 W)
+LogarithmicQuantity(30, dB (1 W))
+>>> b.to_absolute()
+Quantity(1000, W)
+>>> b.base()
+Quantity(1000, m² kg s⁻³)
+>>> b.to(qu.kilowatt)
+Quantity(1.000, kW)
 ```
 
-Some common logarithmic scales are already defined in `quanstants.units.logarithmic`, generally under their common "suffixed" symbols:
+As with temperatures, an absolute quantity can be expressed on a logarithmic scale using the `on_scale()` method:
+```python
+>>> (30 * qu.watt).on_scale(qu.dB.with_reference(1 * qu.watt))
+LogarithmicQuantity(14.77121254719662437295027903, dB (1 W))
+```
+
+If the units of the quantity and reference do not match, an error will be raised:
+```python
+>>> (30 * qu.watt).on_scale(qu.dB.with_reference(1 * qu.hertz))
+MismatchedUnitsError: Ratio of quantity to reference value is not dimensionless!
+```
+
+However, if the `LogarithmicUnit` passed is unreferenced, the reference value will be assumed to be 1 of the unit of the absolute quantity:
+```python
+>>> (30 * qu.watt).on_scale(qu.dB)
+LogarithmicQuantity(14.77121254719662437295027903, dB (1 W))
+```
+
+Arithmetic is possible with logarithmic quantities on the same scale, but is otherwise undefined:
+```python
+>>> c = 20 @ qu.decibel.with_reference(1 * qu.watt)
+>>> b + c
+LogarithmicQuantity(30.41392685158225040750199971, dB (1 W))
+>>> b - c
+LogarithmicQuantity(29.54242509439324874590055807, dB (1 W))
+>>> b * c
+LogarithmicQuantity(50, dB (1 W))
+>>> b / c
+LogarithmicQuantity(10, dB (1 W))
+>>> b + (100 * qu.watt)
+MismatchedUnitsError: Arithmetic is only possible between logarithmic quantities on the same scale!
+```
+
+Logarithmic quantities may have uncertainties, but these remain defined as absolute quantities as `quanstants` does not support asymmetrical uncertainties:
+```python
+>>> d = b.with_uncertainty(50 * qu.watt)
+>>> d
+LogarithmicQuantity(30, dB (1 W), uncertainty=(50 W))
+>>> d.to_absolute()
+Quantity(1000, W, uncertainty=50)
+```
+
+Some common logarithmic scales are already defined in `quanstants.units.logarithmic`, generally under their frequently used "suffixed" symbols:
 ```python
 >>> from quanstants.units import logarithmic
 >>> 30 @ qu.dBW
-LogarithmicQuantity(30, dB, reference=(1, W))
+LogarithmicQuantity(30, dB (1 W))
 >>> 30 @ qu.dBm
-LogarithmicQuantity(30, dB, reference=(1, mW))
+LogarithmicQuantity(30, dB (1 mW))
 ```
 Note that the actual symbol of the unit remains the non-suffixed version.
 

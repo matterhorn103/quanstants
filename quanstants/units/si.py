@@ -53,7 +53,7 @@ katal = DerivedUnit("kat", "katal", Quantity(1, s**-1 * mol), canon_symbol=True)
 arcminute = DerivedUnit("′", "arcminute", Quantity(dec(math.pi)/10800, rad), canon_symbol=True)
 arcsecond = DerivedUnit("″", "arcsecond", Quantity(dec(math.pi)/648000, rad), canon_symbol=True)
 astronomical_unit = DerivedUnit("au", "astronomical_unit", Quantity(149597870700, m), canon_symbol=True)
-bel = LogarithmicUnit("B", None, "bel", 10, add_to_namespace=True, canon_symbol=False) # let B be used by byte
+bel = LogarithmicUnit("B", None, "bel", 10, canon_symbol=False) # let B be used by byte
 dalton = DerivedUnit("Da", "dalton", Quantity("1.66053906660e-27", kg, "0.00000000050e-27"), alt_names=["atomic_mass_unit", "unified_atomic_mass_unit"], canon_symbol=True)
 day = DerivedUnit("d", "day", Quantity(86400, s), canon_symbol=True)
 decibel = PrefixedLogarithmicUnit(deci, bel, add_to_namespace=True, canon_symbol=True)
@@ -63,7 +63,7 @@ hectare = DerivedUnit("ha", "hectare", Quantity("1e4", m**2), canon_symbol=True)
 hour = DerivedUnit("h", "hour", Quantity(3600, s), canon_symbol=True)
 litre = DerivedUnit(quanfig.LITRE_SYMBOL, "litre", Quantity("1e-3", m**3), alt_names=["liter"], canon_symbol=True)
 minute = DerivedUnit("min", "minute", Quantity(60, s), canon_symbol=True)
-neper = LogarithmicUnit("Np", None, "neper", "e", add_to_namespace=True, canon_symbol=True)
+neper = LogarithmicUnit("Np", None, "neper", "e", canon_symbol=True)
 tonne = DerivedUnit("t", "tonne", Quantity(1000, kg), canon_symbol=True)
 
 # TODO

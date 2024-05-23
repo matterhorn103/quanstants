@@ -258,6 +258,7 @@ class LinearUnit(Unit):
 
     # Units must always come at the end of expressions,
     # so do not define Unit * num or Unit / num
+    # TODO * and / with a Quantity drops the uncertainty!
     def __mul__(self, other, concatenate_symbols: bool = False):
         if isinstance(other, UnitlessUnit):
             if concatenate_symbols and not other._drop_on_concat:

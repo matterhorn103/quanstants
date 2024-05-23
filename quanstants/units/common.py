@@ -21,7 +21,7 @@ from .si import joule, gram, day
 
 # Percent and other ratios
 # Unfortunately will have preceding space, matching SI style but contrary to popular use
-percent = DerivedUnit("%", "percent", Quantity("0.01", unitless), canon_symbol=True, alt_names=["per_cent"])
+percent = DerivedUnit("%", "percent", Quantity("0.01", unitless), alt_names=["per_cent"], canon_symbol=True)
 
 # Energy
 watthour = DerivedUnit("Wh", "watthour", Quantity("3.6E6", joule), canon_symbol=True)
@@ -34,7 +34,7 @@ year = DerivedUnit("yr", "year", Quantity(365, day), canon_symbol=True)
 julian_year = DerivedUnit("a", "julian_year", Quantity("365.25", day), canon_symbol=False)
 
 # Temperature
-degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", canon_symbol=True, alt_names=["degree_Fahrenheit", "degreeF", "fahrenheit"])
+degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.5555555555555555555555555555555555555555555555555556", "459.67", alt_names=["fahrenheit", "degree_Fahrenheit", "degreeF"], add_to_namespace=True, canon_symbol=True)
 
 # TODO
 # Standard states

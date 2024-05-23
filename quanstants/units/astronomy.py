@@ -4,6 +4,7 @@ from ..log import LogarithmicUnit
 from .base import *
 from .si import watt, hertz
 
+
 # fmt: off
 
 angstrom_star = DerivedUnit("Å*", "angstrom_star", Quantity("1.00001495e-10", m, "0.00000090e-10"), alt_names=["ångström_star"], canon_symbol=False)

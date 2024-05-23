@@ -35,21 +35,21 @@ class LogarithmicUnit(Unit):
         log_base: str | int | float | dec,
         prefactor: str | int | float | dec | None = None,
         reference: Quantity | None = None,
+        alt_names: list | None = None,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
-        alt_names: list | None = None,
     ):
         self._suffix = suffix
         self._log_base = "e" if log_base == "e" or log_base is None else float(log_base) if isinstance(log_base, (str, dec, float)) else log_base
-        self._prefactor = 1 if prefactor is None else float(prefactor) if isinstance(prefactor, (str, dec, float)) else prefactor
+        self._prefactor = dec("1") if prefactor is None else prefactor if isinstance(prefactor, dec) else prefactor
         self._reference = reference
         super().__init__(
             symbol=symbol,
             name=name,
             value=LogarithmicQuantity(1, self),
+            alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
-            alt_names=alt_names,
         )
     
     @property
@@ -137,9 +137,9 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
         self,
         prefix: Prefix,
         unit: LogarithmicUnit,
+        alt_names: list | None = None,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
-        alt_names: list | None = None,
     ):
         self._prefix = prefix
         self._unit = unit
@@ -167,9 +167,9 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
             log_base=unit.log_base,
             prefactor=prefactor,
             reference=unit._reference,
+            alt_names=concat_alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
-            alt_names=concat_alt_names,
         )
 
     @property
@@ -189,7 +189,7 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
 
 
 class LogarithmicQuantity(Quantity):
-    """A class representing quantities on a logarithmic scale relative to some reference quantity.
+    """Represents quantities on a logarithmic scale relative to some reference quantity.
     
     `quanstants` does not support asymmetric uncertainties. If an uncertainty is
     provided, it must be an absolute quantity rather than a logarithmic one.
@@ -214,22 +214,81 @@ class LogarithmicQuantity(Quantity):
             uncertainty=None,
             value=value,
         )
+        # If no value was provided, overwrite now
+        # The value of a logarithmic quantity should always be stored as an absolute
+        # quantity in the units of the reference
+        if value is None:
+            self._value = self.to_absolute()
         self._uncertainty = dec("0") if uncertainty is None else uncertainty
+
+    @property
+    def uncertainty(self):
+        # Override because here we store uncertainty as a quantity, not just a number
+        if not self._uncertainty:
+            return Quantity(0, unitless)
+        else:
+            return self._uncertainty
     
     def __repr__(self):
         as_quantity = super().__repr__()
         return as_quantity.replace("Quantity", "LogarithmicQuantity")
     
-    # def __str__(self):
-        # TODO can't let uncertainty be put in brackets
+    def __str__(self):
+        if not self._uncertainty:
+            return f"{self.number} {self.unit}"
+        else:
+            return f"{self.number} {self.unit} ± {self.uncertainty}"
+        
+    # Equality functions of `Quantity` call `.base()` anyway, so super handles fine
 
     @classmethod
     def from_absolute(cls, unit: LogarithmicUnit, quantity: Quantity):
+        """Convert a `Quantity` to the logarithmic scale defined by the given unit."""
         if quantity.unit.dimensional_exponents != unit.dimensional_exponents:
             raise MismatchedUnitsError("Ratio of quantity to reference value is not dimensionless!")
+        elif unit.log_base == 10:
+            new_number = unit.prefactor * math.log10((quantity / unit.reference).number)
+        elif unit.log_base == "e":
+            new_number = unit.prefactor * math.log((quantity / unit.reference).number)
+        elif unit.log_base == 2:
+            new_number = unit.prefactor * math.log2((quantity / unit.reference).number)
         else:
             new_number = unit.prefactor * math.log((quantity / unit.reference).number, unit.log_base)
-            return cls(new_number, unit, quantity.uncertainty)
+        return cls(new_number, unit, quantity.uncertainty)
 
     def to_absolute(self):
         return self.unit.reference * self.unit.log_base ** (self.number / self.unit.prefactor)
+
+    def cancel(self):
+        """Combine any like terms in the unit.
+
+        Has no effect for a LogarithmicQuantity.
+        """
+        return self
+
+    def fully_cancel(self):
+        """Combine any like terms in the unit, with units of the same dimension converted and combined.
+
+        Has no effect for a LogarithmicQuantity.
+        """
+        return self
+
+    def canonical(self):
+        """Express with its units in a canonical order.
+
+        Has no effect for a LogarithmicQuantity.
+        """
+        return self
+
+    def base(self):
+        """Return the absolute value expressed in terms of base units.
+        
+        The unit is always returned in a fully cancelled, canonical form.
+        """
+        return self.value.base()
+    
+    def to(self, other):
+        return self.value.to(other)
+
+    def on_scale(self, other):
+        return self.value.on_scale(other)

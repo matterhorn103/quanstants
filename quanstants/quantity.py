@@ -385,7 +385,7 @@ class Quantity:
                 "Cannot raise to the power of a non-dimensionless quantity!"
             )
         else:
-            dimensionless_quant = self.base().cancel()
+            dimensionless_quant = self.base()
             new_number = dimensionless_quant.number.exp()
             new_uncertainty = get_uncertainty(new_number, "exp", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
@@ -397,7 +397,7 @@ class Quantity:
                 "Cannot take the logarithm of a non-dimensionless quantity!"
             )
         else:
-            dimensionless_quant = self.base().cancel()
+            dimensionless_quant = self.base()
             new_number = dimensionless_quant.number.ln()
             new_uncertainty = get_uncertainty(new_number, "ln", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
@@ -405,8 +405,15 @@ class Quantity:
     def log(self, base=None):
         if base is None:
             return self.ln()
+        elif not self.is_dimensionless():
+            raise NotDimensionlessError(
+                "Cannot take the logarithm of a non-dimensionless quantity!"
+            )
         else:
-            raise NotImplementedError
+            dimensionless_quant = self.base()
+            new_number = math.log(dimensionless_quant.number, base)
+            new_uncertainty = get_uncertainty(new_number, "log", self, log_base=base)
+            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
 
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
@@ -474,8 +481,8 @@ class Quantity:
     def __ge__(self, other):
         if isinstance(other, Quantity):
             # Convert both to canonical base unit representations
-            a = self.base().cancel().canonical()
-            b = other.base().cancel().canonical()
+            a = self.base()
+            b = other.base()
             if a.unit.dimensional_exponents != b.unit.dimensional_exponents:
                 raise MismatchedUnitsError
             elif (
@@ -728,7 +735,7 @@ class Quantity:
         )
 
     def fully_cancel(self):
-        """Combine any like terms in the unit, with units of the same dimension converted and combined."""
+        """Combine any terms of the same dimension in the unit."""
         if not self._uncertainty:
             return self.number * self.unit.fully_cancel()
         else:

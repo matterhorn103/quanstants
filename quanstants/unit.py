@@ -182,7 +182,7 @@ class Unit:
         if (add_symbol) and (self.symbol != self.name):
             units.add(self.symbol, self)
     
-    # Some methods that subclasses might need to redefine
+    # The following are all methods that subclasses might need to redefine
     def is_dimensionless(self) -> bool:
         raise NotImplementedError
 
@@ -193,10 +193,8 @@ class Unit:
         """Combine any like terms and return as a `Quantity`."""
         raise NotImplementedError
 
-    # Sometimes necessary to redefine but defaults to cancel() if not
     def fully_cancel(self):
-        """Combine any like terms and return as a `Quantity`, with units of the same
-        dimension converted and also combined."""
+        """Combine any terms of the same dimension and return as a `Quantity`."""
         return self.cancel()
 
     def canonical(self):
@@ -428,14 +426,14 @@ class BaseUnit(LinearUnit):
             return False
 
     def cancel(self) -> Quantity:
-        """Combine any like terms and return as a Quantity.
+        """Combine any like terms and return as a `Quantity`.
         
         For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
         """
         return self.value
 
     def canonical(self) -> Quantity:
-        """Order terms into a reproducible order and return as a Quantity.
+        """Order terms into a reproducible order and return as a `Quantity`.
         
         For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
         """
@@ -629,7 +627,7 @@ class CompoundUnit(LinearUnit):
             return CompoundUnit(new_components)
 
     def cancel(self, force_drop_unitless=False) -> Quantity:
-        """Combine any like terms.
+        """Combine any like terms and return as a `Quantity`.
         
         Note that "like" means that the units are equivalent in value, not that they are
         the same Unit object.
@@ -639,8 +637,7 @@ class CompoundUnit(LinearUnit):
         return Quantity(1, self._cancel_to_unit(force_drop_unitless=force_drop_unitless))
 
     def fully_cancel(self) -> Quantity:
-        """Combine any like terms, with units of the same dimension converted and also
-        combined.
+        """Combine any terms of the same dimension and return as a `Quantity`.
         
         Units of the same dimension are converted to whichever unit is a base unit, and
         otherwise to whichever occurs first.
@@ -690,7 +687,6 @@ class CompoundUnit(LinearUnit):
             return Quantity(result_number, CompoundUnit(new_components))
 
     def canonical(self) -> Quantity:
-        """Order terms into a reproducible order and return as a Quantity."""
         ordered_components = tuple(sorted(self.components, key=get_priority))
         # Now that the components have the canonical order, make sure the order of units in the
         # generated symbol is the same by passing appropriate settings
@@ -702,13 +698,10 @@ class CompoundUnit(LinearUnit):
         )
 
     def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity.
-        
-        Do without creating any intermediate compound units.
-        Drop unitless units, cancel like terms, and put in canonical order so that
-        different units with equal values give _identical_ results
-        """
+        # Do without creating any intermediate compound units.
         # Check to see if it has been pre-calculated
+        # Drop unitless units, cancel like terms, and put in canonical order so that
+        # different units with equal values give _identical_ results.
         if self._value_base is not None:
             return self._value_base
         result_number = 1

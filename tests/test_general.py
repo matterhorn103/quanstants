@@ -105,6 +105,11 @@ class TestREADME:
     
     def test_temperatures(self):
         self.run_subsection(self.subsections["Temperatures"])
+    
+    def test_logs(self):
+        self.run_subsection(self.subsections["Logarithmic scales"])
+    
+    # Don't test the config section as the tomls make it complicated
 
 
 class TestQuantityCreation:

@@ -40,9 +40,9 @@ class Constant(Quantity):
         unit=None,
         uncertainty: str | int | float | dec | None = None,
         value: str | Quantity | None = None,
+        alt_names: list = None,
         add_to_namespace: bool = True,
         canon_symbol: str = False,
-        alt_names: list = None,
     ):
         if symbol is not None:
             self._symbol = symbol

@@ -1,6 +1,7 @@
 from ..unit import DerivedUnit
 from ..quantity import Quantity
-from ..si import *
+from .base import *
+from .si import litre
 
 # fmt: off
 

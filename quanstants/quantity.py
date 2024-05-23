@@ -161,15 +161,15 @@ class Quantity:
 
     def __repr__(self):
         if not self._uncertainty:
-            return f"Quantity({group_digits(self.number)}, {self.unit.symbol})"
+            return f"Quantity({group_digits(self.number)}, {self.unit})"
         else:
-            return f"Quantity({group_digits(self.number)}, {self.unit.symbol}, uncertainty={group_digits(self._uncertainty)})"
+            return f"Quantity({group_digits(self.number)}, {self.unit}, uncertainty={group_digits(self._uncertainty)})"
 
     def __str__(self):
         if quanfig.ROUND_BEFORE_PRINT:
             self = self.round()
         if not self._uncertainty:
-            return f"{group_digits(self.number)} {self.unit.symbol}"
+            return f"{group_digits(self.number)} {self.unit}"
         # Check that uncertainty is not more precise than the number via the exponent
         # More negative (smaller) exponent means more precise
         elif (
@@ -186,9 +186,9 @@ class Quantity:
                 ).replace("e", f"{bracketed_uncertainty}e")
             else:
                 number_string = number_string + bracketed_uncertainty
-            return f"{number_string} {self.unit.symbol}"
+            return f"{number_string} {self.unit}"
         else:
-            return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit.symbol}"
+            return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit}"
 
     def __int__(self):
         if not self.is_dimensionless():
@@ -385,7 +385,7 @@ class Quantity:
                 "Cannot raise to the power of a non-dimensionless quantity!"
             )
         else:
-            dimensionless_quant = self.base().cancel()
+            dimensionless_quant = self.base()
             new_number = dimensionless_quant.number.exp()
             new_uncertainty = get_uncertainty(new_number, "exp", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
@@ -397,7 +397,7 @@ class Quantity:
                 "Cannot take the logarithm of a non-dimensionless quantity!"
             )
         else:
-            dimensionless_quant = self.base().cancel()
+            dimensionless_quant = self.base()
             new_number = dimensionless_quant.number.ln()
             new_uncertainty = get_uncertainty(new_number, "ln", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
@@ -405,8 +405,17 @@ class Quantity:
     def log(self, base=None):
         if base is None:
             return self.ln()
+        elif base == 10:
+            return self.log10()
+        elif not self.is_dimensionless():
+            raise NotDimensionlessError(
+                "Cannot take the logarithm of a non-dimensionless quantity!"
+            )
         else:
-            raise NotImplementedError
+            dimensionless_quant = self.base()
+            new_number = dec(math.log(dimensionless_quant.number, base))
+            new_uncertainty = get_uncertainty(new_number, "log", self, log_base=base)
+            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
 
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
@@ -474,8 +483,8 @@ class Quantity:
     def __ge__(self, other):
         if isinstance(other, Quantity):
             # Convert both to canonical base unit representations
-            a = self.base().cancel().canonical()
-            b = other.base().cancel().canonical()
+            a = self.base()
+            b = other.base()
             if a.unit.dimensional_exponents != b.unit.dimensional_exponents:
                 raise MismatchedUnitsError
             elif (
@@ -728,7 +737,7 @@ class Quantity:
         )
 
     def fully_cancel(self):
-        """Combine any like terms in the unit, with units of the same dimension converted and combined."""
+        """Combine any terms of the same dimension in the unit."""
         if not self._uncertainty:
             return self.number * self.unit.fully_cancel()
         else:

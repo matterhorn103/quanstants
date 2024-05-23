@@ -1,4 +1,3 @@
-from collections import namedtuple, Counter
 from decimal import Decimal as dec
 from fractions import Fraction as frac
 
@@ -83,38 +82,24 @@ def get_priority(factor: tuple) -> int:
 
 
 class Unit:
-    """Parent class for all units, not intended for direct instantiation.
+    """Parent class for all units.
+    
+    Not intended for direct instantiation.
+    This class defines variables and methods common to all units.
 
-    Either `symbol` or `name` must be provided. If `symbol` is not provided, it will be set to the
-    value of `name`, so that all units have a symbolic representation that is used in printed
-    representations.
+    One of `symbol` or `name` must be provided. If `symbol` is not provided, it will be
+    set to the value of `name`, so that all units have a symbolic representation.
     `symbol` may be any Unicode string.
-    `name` must contain only ASCII letters and digits, and underscores. It must in addition be a valid
-    Python identifier, so it cannot start with a digit.
-    At minimum, `components` and one of `dimension` or `dimensional_exponents` must be specified.
-    `components` is a tuple of factors, where factors are simple tuples of `(unit, exponent)`.
-    If a unit only has a single base dimension without exponents, that dimension can be passed as
-    `dimension` as one of the strings "X" (for dimensionless), "T" (time), "L" (length), "M" (mass),
-    "I" (electric current), "Θ" (thermodynamic temperature), "N" (amount of substance), or "J" (luminous
-    intensity).
-    If a unit's dimension comprises multiple base dimensions or exponents, they should be passed as
-    `dimensional_exponents` as a dictionary of the form `{"T": 1, "M": 2, ...}` (only those with
-    non-zero exponents are required).
-    `add_to_namespace` specifies whether the unit should be added to `quanstants.units` under the
-    provided `name` and under any alternative names given as a list as `alt_names`.
-    If `canon_symbol` is set to `True`, the unit will also be added to `quanstants.units` under
-    `symbol`.
+    `name` must contain only ASCII letters and digits, and underscores. It must in
+    addition be a valid Python identifier, so it cannot start with a digit. The same
+    rules apply to alternative names listed in `alt_names`.
     """
 
-    # Using slots keeps the memory footprint down as there is no __dict__
-    # It also helps immutability as users can't add attributes
     __slots__ = (
         "_symbol",
         "_name",
-        "_components",
-        "_value",
-        "_dimensional_exponents",
         "_alt_names",
+        "_value",
         "_value_base",
     )
 
@@ -122,13 +107,10 @@ class Unit:
         self,
         symbol: str | None,
         name: str | None,
-        components: tuple[tuple, ...],
         value: Quantity | None = None,
-        dimension: str | None = None,
-        dimensional_exponents: dict | None = None,
+        alt_names: list[str] | None = None,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
-        alt_names: list[str] | None = None,
     ):
         if symbol is not None:
             self._symbol = symbol
@@ -139,6 +121,107 @@ class Unit:
         else:
             raise RuntimeError("Either a symbol or a name must be provided!")
         self._name = name
+        self._value = value if value is not None else Quantity(1, self)
+        self._alt_names = tuple(alt_names) if alt_names is not None else None
+        if add_to_namespace:
+            self.add_to_namespace(add_symbol=canon_symbol)
+    
+    @property
+    def symbol(self) -> str:
+        return self._symbol
+
+    @property
+    def name(self) -> str | None:
+        return self._name
+    
+    @property
+    def value(self) -> Quantity:
+        return self._value
+    
+    @property
+    def alt_names(self) -> list[str]:
+        return self._alt_names
+    
+    def add_to_namespace(self, add_symbol=False):
+        """Add to units namespace to allow lookup under the provided name(s)."""
+        if self.name is not None:
+            units.add(self.name, self)
+        # Also add under any alternative names e.g. meter vs metre
+        if self.alt_names is not None:
+            for alt_name in self.alt_names:
+                units.add(alt_name, self)
+        # Also add under the symbol if it has been indicated via canon_symbol
+        # that the symbol should uniquely refer to this unit
+        if (add_symbol) and (self.symbol != self.name):
+            units.add(self.symbol, self)
+    
+    # The following are all methods that subclasses might need to redefine
+    def is_dimensionless(self) -> bool:
+        raise NotImplementedError
+
+    def dimension(self) -> str:
+        raise NotImplementedError
+
+    def cancel(self):
+        """Combine any like terms and return as a `Quantity`."""
+        raise NotImplementedError
+
+    def fully_cancel(self):
+        """Combine any terms of the same dimension and return as a `Quantity`."""
+        return self.cancel()
+
+    def canonical(self):
+        """Order terms into a reproducible order and return as a `Quantity`."""
+        raise NotImplementedError
+    
+    def base(self):
+        """Return the unit's value in base units as a `Quantity`.
+        
+        This is always returned in a fully cancelled, canonical form.
+        """
+        if not hasattr(self, "_value_base"):
+            return self.value.base()
+        else:
+            return self._value_base
+
+
+class LinearUnit(Unit):
+    """Represents units on linear scales (i.e. most units).
+
+    These units can be multiplied with numbers, units, and quantities in a linear
+    fashion and can form part of compound units.
+    
+    If a unit only has a single base dimension without exponents, that dimension can
+    be passed as `dimension` as one of the strings "X" (for dimensionless), "M" (mass),
+    "L" (length), "T" (time), "I" (electric current), "Θ" (thermodynamic temperature),
+    "N" (amount of substance), or "J" (luminous intensity).
+    If a unit's dimension comprises multiple base dimensions or exponents, they should
+    be passed as `dimensional_exponents` as a dictionary of the form
+    `{"L": 1, "M": 2, ...}` (only those with non-zero exponents are required).
+    """
+
+    __slots__ = ("_components", "_dimensional_exponents")
+
+    def __init__(
+        self,
+        symbol: str | None,
+        name: str | None,
+        components: tuple[tuple, ...] | None = None,
+        value: Quantity | None = None,
+        dimension: str | None = None,
+        dimensional_exponents: dict | None = None,
+        alt_names: list[str] | None = None,
+        add_to_namespace: bool = False,
+        canon_symbol: bool = False,
+    ):
+        super().__init__(
+            symbol=symbol,
+            name=name,
+            value=value,
+            alt_names=alt_names,
+            add_to_namespace=add_to_namespace,
+            canon_symbol=canon_symbol,
+        )
         # Start with a dimensionless unit and add any provided ones
         self._dimensional_exponents = {
             "L": 0,
@@ -158,18 +241,6 @@ class Unit:
                 if dim in dimensional_exponents:
                     self._dimensional_exponents[dim] += dimensional_exponents[dim]
         self._components = components
-        self._value = Quantity(1, self) if value is None else value
-        self._alt_names = tuple(alt_names) if alt_names is not None else None
-        if add_to_namespace:
-            self.add_to_namespace(add_symbol=canon_symbol)
-
-    @property
-    def symbol(self) -> str:
-        return self._symbol
-
-    @property
-    def name(self) -> str | None:
-        return self._name
 
     @property
     def dimensional_exponents(self) -> dict:
@@ -178,17 +249,12 @@ class Unit:
     @property
     def components(self) -> tuple[tuple, ...]:
         return self._components
-    
-    @property
-    def value(self) -> Quantity:
-        return self._value
 
-    @property
-    def alt_names(self) -> list[str]:
-        return self._alt_names
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.symbol})"
 
     def __str__(self):
-        return f"Unit({self.symbol})"
+        return self.symbol
 
     # Units must always come at the end of expressions,
     # so do not define Unit * num or Unit / num
@@ -198,7 +264,7 @@ class Unit:
                 return CompoundUnit(components=None, units=(self, other), concatenate_symbols=True)
             else:
                 return self
-        elif isinstance(other, Unit):
+        elif isinstance(other, LinearUnit):
             if concatenate_symbols:
                 return CompoundUnit(components=None, units=(self, other), concatenate_symbols=True)
             else:
@@ -219,7 +285,7 @@ class Unit:
     def __truediv__(self, other):
         if isinstance(other, UnitlessUnit):
             return self
-        elif isinstance(other, Unit):
+        elif isinstance(other, LinearUnit):
             return CompoundUnit(self.components + other.inverse().components)
         elif isinstance(other, Quantity):
             return Quantity(1 / other.number, self / other.unit)
@@ -257,29 +323,29 @@ class Unit:
             return CompoundUnit(new_components)
         else:
             return NotImplemented
-
+        
     # Hashing and equalities by default use the implementations of `Quantity`
-    # Units are thus considered equal to quantities that have an equivalent value
-    # These are fallback methods, for efficiency some subclasses override these
+    # These are fallback methods, subclasses often override these for various reasons
+    # Linear units must always hash and compare equal to quantities with an equal value
     def __hash__(self):
         return hash(self.value)
 
     def __eq__(self, other):
-        if isinstance(other, (Unit, Quantity)):
+        if isinstance(other, (LinearUnit, Quantity)):
             # Compare the values (handled by `Quantity`)
             return self.value == other.value
         else:
             return NotImplemented
 
     def __gt__(self, other):
-        if isinstance(other, (Unit, Quantity)):
+        if isinstance(other, (LinearUnit, Quantity)):
             # Compare the values (handled by `Quantity`)
             return self.value > other.value
         else:
             return NotImplemented
 
     def __ge__(self, other):
-        if isinstance(other, (Unit, Quantity)):
+        if isinstance(other, (LinearUnit, Quantity)):
             # Compare the values (handled by `Quantity`)
             return self.value >= other.value
         else:
@@ -289,19 +355,6 @@ class Unit:
         """Return the inverse of the unit as a CompoundUnit."""
         # For now just reuse the __pow__ function
         return self**-1
-
-    def add_to_namespace(self, add_symbol=False):
-        # Add to units namespace to allow lookup under a provided name
-        if self.name is not None:
-            units.add(self.name, self)
-        # Also add under any alternative names e.g. meter vs metre
-        if self.alt_names is not None:
-            for alt_name in self.alt_names:
-                units.add(alt_name, self)
-        # Also add under the symbol if it has been indicated via canon_symbol
-        # that the symbol should uniquely refer to this unit
-        if (add_symbol) and (self.symbol != self.name):
-            units.add(self.symbol, self)
 
     def is_dimensionless(self) -> bool:
         if self.dimensional_exponents == {
@@ -330,29 +383,8 @@ class Unit:
                         result += generate_superscript(exponent)
             return result
 
-    # Some methods that subclasses might need to redefine
-    def cancel(self):
-        """Combine any like terms and return as a `Quantity`."""
-        raise NotImplementedError
 
-    # Sometimes necessary to redefine but defaults to cancel() if not
-    def fully_cancel(self):
-        """Combine any like terms and return as a `Quantity`, with units of the same dimension converted and also combined."""
-        return self.cancel()
-
-    def canonical(self):
-        """Order terms into a reproducible order and return as a `Quantity`."""
-        raise NotImplementedError
-    
-    def base(self):
-        """Return the unit's value in base units as a `Quantity`.
-        
-        This is always returned in a fully cancelled, canonical form.
-        """
-        return self._value_base
-
-
-class BaseUnit(Unit):
+class BaseUnit(LinearUnit):
     """SI base units and other base units that are not defined in terms of other units.
     
     The key property of a `BaseUnit` is that a request to express it in base units, to
@@ -366,19 +398,19 @@ class BaseUnit(Unit):
         self,
         symbol: str,
         name: str,
-        dimension: str,
+        dimension: str | None = None,
+        alt_names: list[str] = None,
         add_to_namespace: bool = True,
         canon_symbol: bool = True,
-        alt_names: list[str] = None,
     ):
         super().__init__(
             symbol,
             name,
             components=((self, 1),),
             dimension=dimension,
+            alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
-            alt_names=alt_names,
         )
         self._value_base = self.value
 
@@ -394,14 +426,14 @@ class BaseUnit(Unit):
             return False
 
     def cancel(self) -> Quantity:
-        """Combine any like terms and return as a Quantity.
+        """Combine any like terms and return as a `Quantity`.
         
         For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
         """
         return self.value
 
     def canonical(self) -> Quantity:
-        """Order terms into a reproducible order and return as a Quantity.
+        """Order terms into a reproducible order and return as a `Quantity`.
         
         For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
         """
@@ -427,41 +459,41 @@ class UnitlessUnit(BaseUnit):
         self,
         symbol: str | None = None,
         name: str | None = None,
+        alt_names: list[str] | None = None,
         add_to_namespace: bool = True,
         canon_symbol: bool = True,
-        alt_names: list[str] | None = None,
         drop: bool = False,
     ):
         super().__init__(
             symbol=symbol,
             name=name,
             dimension="X",
+            alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
-            alt_names=alt_names,
         )
         self._drop = drop
 
     def __mul__(self, other, concatenate_symbols: bool = False):
-        if self._drop and isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (LinearUnit, Quantity)):
             return other
         else:
             return super().__mul__(other, concatenate_symbols=concatenate_symbols)
 
     def __rmul__(self, other):
-        if self._drop and isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (LinearUnit, Quantity)):
             return other
         else:
             return super().__rmul__(other)
 
     def __truediv__(self, other):
-        if self._drop and isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (LinearUnit, Quantity)):
             return other.inverse()
         else:
             return super().__truediv__(other)
 
     def __rtruediv__(self, other):
-        if self._drop and isinstance(other, (Unit, Quantity)):
+        if self._drop and isinstance(other, (LinearUnit, Quantity)):
             return other
         else:
             return super().__rtruediv__(other)
@@ -489,22 +521,22 @@ class UnitlessUnit(BaseUnit):
 unitless = UnitlessUnit(
     symbol="(unitless)",
     name="unitless",
+    alt_names=None,
     add_to_namespace=True,
     canon_symbol=False,
-    alt_names=None,
     drop=True,
 )
 
 
-class CompoundUnit(Unit):
+class CompoundUnit(LinearUnit):
     """An effective unit created through multiplication of non-compound units.
 
-    Multiple units multiplied together are treated as a single `Unit` object with its constituent parts
-    gathered under `components`.
-    Generally, the constituent units are passed as a tuple of factors (tuples of the form
-    `(unit, exponent)`).
-    Alternatively, a tuple of `Unit` objects can be passed and the `components` attributes of each will
-    be combined automatically.
+    Multiple units multiplied together are treated as a single `Unit` object with its
+    constituent parts gathered under `components`.
+    Generally, the constituent units are passed as a tuple of factors (tuples of the
+    form `(unit, exponent)`).
+    Alternatively, a tuple of `Unit` objects can be passed and the `components`
+    attributes of each will be combined automatically.
     """
 
     __slots__ = ()
@@ -514,8 +546,8 @@ class CompoundUnit(Unit):
         components: tuple[tuple, ...] | None = None,
         units: tuple[Unit] | None = None,
         name: str | None = None,
-        add_to_namespace: bool = False,
         alt_names: list[str] | None = None,
+        add_to_namespace: bool = False,
         symbol_sort: str = "sign",
         symbol_inverse: str = quanfig.INVERSE_UNIT,
         concatenate_symbols: bool = False,
@@ -546,10 +578,10 @@ class CompoundUnit(Unit):
         super().__init__(
             symbol=symbol,
             name=name,
+            alt_names=alt_names,
             components=components,
             dimensional_exponents=dimensional_exponents,
             add_to_namespace=add_to_namespace,
-            alt_names=alt_names,
         )
         # Express the unit in terms of base units
         if is_canon_base:
@@ -567,7 +599,7 @@ class CompoundUnit(Unit):
     def __eq__(self, other):
         return hash(self) == hash(other)
 
-    def _cancel_to_unit(self, force_drop_unitless=False) -> Unit:
+    def _cancel_to_unit(self, force_drop_unitless=False) -> LinearUnit:
         """Does everything that `self.cancel() does, but returns a unit."""
         new_components_dict = {}
         unitless_components_dict = {}
@@ -595,20 +627,20 @@ class CompoundUnit(Unit):
             return CompoundUnit(new_components)
 
     def cancel(self, force_drop_unitless=False) -> Quantity:
-        """Combine any like terms.
+        """Combine any like terms and return as a `Quantity`.
         
         Note that "like" means that the units are equivalent in value, not that they are
         the same Unit object.
-        Terms of `Unitless` units which have `drop = True` will also be dropped; this is the case for
-        `quanstants.units.unitless`, but not for `radian` or `steradian`.
+        Terms of `Unitless` units which have `drop = True` will also be dropped; this is
+        the case for `quanstants.units.unitless`, but not for `radian` or `steradian`.
         """
         return Quantity(1, self._cancel_to_unit(force_drop_unitless=force_drop_unitless))
 
     def fully_cancel(self) -> Quantity:
-        """Combine any like terms, with units of the same dimension converted and also combined.
+        """Combine any terms of the same dimension and return as a `Quantity`.
         
-        Units of the same dimension are converted to whichever unit is a base unit, and otherwise to
-        whichever occurs first.
+        Units of the same dimension are converted to whichever unit is a base unit, and
+        otherwise to whichever occurs first.
         Any terms of `Unitless` units (i.e. equal to 1) will also be dropped.
         """
         result_number = 1
@@ -655,7 +687,6 @@ class CompoundUnit(Unit):
             return Quantity(result_number, CompoundUnit(new_components))
 
     def canonical(self) -> Quantity:
-        """Order terms into a reproducible order and return as a Quantity."""
         ordered_components = tuple(sorted(self.components, key=get_priority))
         # Now that the components have the canonical order, make sure the order of units in the
         # generated symbol is the same by passing appropriate settings
@@ -667,13 +698,10 @@ class CompoundUnit(Unit):
         )
 
     def base(self) -> Quantity:
-        """Return the unit's value in base units as a Quantity.
-        
-        Do without creating any intermediate compound units.
-        Drop unitless units, cancel like terms, and put in canonical order so that
-        different units with equal values give _identical_ results
-        """
+        # Do without creating any intermediate compound units.
         # Check to see if it has been pre-calculated
+        # Drop unitless units, cancel like terms, and put in canonical order so that
+        # different units with equal values give _identical_ results.
         if self._value_base is not None:
             return self._value_base
         result_number = 1
@@ -724,14 +752,15 @@ class CompoundUnit(Unit):
         return self._value_base
     
 
-class DerivedUnit(Unit):
+class DerivedUnit(LinearUnit):
     """Units derived from and defined with SI units.
 
-    `value` is a `Quantity` with both a number and a `Unit`, and optionally, an uncertainty.
+    `value` is a `Quantity` with both a number and a `Unit`, and optionally, an
+    uncertainty.
     A `symbol` must be provided, but a `name` is optional.
-    If a name is given and `add_to_namespace` is `True` (default), the unit will be added to
-    `quanstants.units` under that name (note that trying to replace an existing unit with that name
-    will raise an error).
+    If a name is given and `add_to_namespace` is `True` (default), the unit will be
+    added to `quanstants.units` under that name (note that trying to replace an existing
+    unit with that name will raise an error).
     The `dimensional_exponents` are set to that of the provided value's unit(s).
     """
 
@@ -742,9 +771,10 @@ class DerivedUnit(Unit):
         symbol: str,
         name: str,
         value: Quantity,
+        alt_names: list[str] | None = None,
         add_to_namespace: bool = True,
         canon_symbol: bool = False,
-        alt_names: list[str] | None = None,
+        
     ):
         super().__init__(
             symbol,
@@ -752,9 +782,9 @@ class DerivedUnit(Unit):
             components=((self, 1),),
             value=value,
             dimensional_exponents=value.unit.dimensional_exponents,
+            alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
-            alt_names=alt_names,
         )
         self._value_base = self.value.base()
 

@@ -300,7 +300,7 @@ Quantity(4.6096, m)
 If the units do not match, a `MismatchedUnitsError` will be raised, which serves as a useful sanity check:
 ```python
 >>> (4 * qu.metre) + (3 * qu.kilogram)
-quanstants.quantity.MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
+MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
 ```
 
 Similarly, (in)equalities are implemented between quantities of the same dimension:
@@ -330,7 +330,7 @@ Quantity(1.386294361119890618834464243, (unitless))
 >>> (a/b).log10()
 Quantity(0.6020599913279623904274777894, (unitless))
 >>> a.log10()
-quanstants.quantity.NotDimensionlessError: Cannot take the logarithm of a non-dimensionless quantity!
+NotDimensionlessError: Cannot take the logarithm of a non-dimensionless quantity!
 ```
 
 You can easily check whether a quantity is dimensionless:
@@ -738,6 +738,104 @@ Temperature(25.00, °C)
 Temperature(32, °F)
 ```
 
+### Logarithmic scales
+
+Logarithmic units are also a feature of `quanstants`.
+Similar to the creation of temperatures on a temperature scale above, a logarithmic quantity on a logarithmic scale is created using the `@` operator:
+```python
+>>> a = 30 @ qu.decibel
+>>> a
+LogarithmicQuantity(30, dB)
+```
+Logarithmic quantities cannot be created using the `*` operator.
+
+A logarithmic scale always expresses the ratio of two values; as such, a logarithmic unit without an associated reference value is considered to have a reference value of 1:
+```python
+>>> a.base()
+Quantity(1000, (unitless))
+```
+
+A _referenced_ logarithmic unit can be created from an unreferenced one using the provided method:
+```python
+>>> qu.decibel.with_reference(1 * qu.watt)
+LogarithmicUnit(dB, reference=(1 W))
+>>> b = 30 @ qu.decibel.with_reference(1 * qu.watt)
+>>> b
+LogarithmicQuantity(30, dB (1 W))
+>>> b.to_absolute()
+Quantity(1000, W)
+>>> b.base()
+Quantity(1000, m² kg s⁻³)
+>>> b.to(qu.kilowatt)
+Quantity(1.000, kW)
+```
+
+As with temperatures, an absolute quantity can be expressed on a logarithmic scale using the `on_scale()` method:
+```python
+>>> (30 * qu.watt).on_scale(qu.dB.with_reference(1 * qu.watt))
+LogarithmicQuantity(14.77121254719662437295027903, dB (1 W))
+```
+
+If the units of the quantity and reference do not match, an error will be raised:
+```python
+>>> (30 * qu.watt).on_scale(qu.dB.with_reference(1 * qu.hertz))
+MismatchedUnitsError: Ratio of quantity to reference value is not dimensionless!
+```
+
+However, if the `LogarithmicUnit` passed is unreferenced, the reference value will be assumed to be 1 of the unit of the absolute quantity:
+```python
+>>> (30 * qu.watt).on_scale(qu.dB)
+LogarithmicQuantity(14.77121254719662437295027903, dB (1 W))
+```
+
+Arithmetic is possible with logarithmic quantities on the same scale, but is otherwise undefined:
+```python
+>>> c = 20 @ qu.decibel.with_reference(1 * qu.watt)
+>>> b + c
+LogarithmicQuantity(30.41392685158225040750199971, dB (1 W))
+>>> b - c
+LogarithmicQuantity(29.54242509439324874590055807, dB (1 W))
+>>> b * c
+LogarithmicQuantity(50, dB (1 W))
+>>> b / c
+LogarithmicQuantity(10, dB (1 W))
+>>> b + (100 * qu.watt)
+MismatchedUnitsError: Arithmetic is only possible between logarithmic quantities on the same scale!
+```
+
+Logarithmic quantities may have uncertainties, but these remain defined as absolute quantities as `quanstants` does not support asymmetrical uncertainties:
+```python
+>>> d = b.with_uncertainty(50 * qu.watt)
+>>> d
+LogarithmicQuantity(30, dB (1 W), uncertainty=(50 W))
+>>> d.to_absolute()
+Quantity(1000, W, uncertainty=50)
+```
+
+Some common logarithmic scales are already defined in `quanstants.units.logarithmic`, generally under their frequently used "suffixed" symbols:
+```python
+>>> from quanstants.units import logarithmic
+>>> 30 @ qu.dBW
+LogarithmicQuantity(30, dB (1 W))
+>>> 30 @ qu.dBm
+LogarithmicQuantity(30, dB (1 mW))
+```
+Note that the actual symbol of the unit remains the non-suffixed version.
+
+Despite the common use of such suffixes to denote the use of a particular reference value, this is prohibited by the SI, and when printing logarithmic quantities `quanstants` by default follows the recommended style:
+```python
+>>> print(30 @ qu.dBm)
+30 dB (1 mW)
+```
+
+If desired, however, this can be changed by setting the appropriate variable:
+```python
+>>> from quanstants import quanfig
+>>> quanfig.LOGARITHMIC_UNIT_STYLE = "SUFFIX"
+>>> print(30 @ qu.dBm)
+30 dBm
+```
+
 ### Configuration
 
 The config object `quanstants.quanfig` provides access to many variables that change the behaviour of `quanstants` objects:
@@ -759,7 +857,46 @@ Quantity(3, m s⁻¹)
 Quantity(3, m/s)
 ```
 
-Custom units and constants can also be defined in `quanstants.toml`:
+Upon being imported for the first time, `quanstants` will look for a configuration file called `quanstants.toml`.
+If one is found, key/value pairs for configuration options within will override the defaults:
+```toml
+[config.rounding]
+ROUNDING_MODE = "ROUND_HALF_DOWN"
+ROUND_PAD = false
+
+[config.arithmetic]
+AUTO_CANCEL = false
+
+[config.printing]
+INVERSE_UNIT = "SLASH"
+```
+
+With the result being:
+```python
+>>> from quanstants import units as qu
+>>> print(3 * qu.m * qu.s * qu.s**-1)
+3 m s/s
+```
+
+Available configuration options are contained in `quanfig.options` as a dictionary or can be printed to `stdout` by calling the provided method on `quanfig`:
+```python
+>>> from quanstants import quanfig
+>>> quanfig.options
+>>> quanfig.print_options()
+```
+Alternatively, all options and their default values are contained within `./quanstants/config.toml`.
+
+Currently, the following locations are checked in the given order:
+1. The current working directory, from `pathlib.Path.cwd()`
+2. All parent directories of the above
+3. The user's config directory at `~/.config/quanstants/quanstants.toml` on macOS
+and Linux (or on Linux, `$XDG_CONFIG_HOME/quanstants/quanstants.toml`),
+or `%USERPROFILE%/AppData/Roaming/quanstants/quanstants.toml` on Windows.
+
+Any options specified in the first file found will override the defaults.
+Once a file has been found, any other files will be completely ignored.
+
+Custom units and constants can also be defined in `quanstants.toml` to enable easy reuse:
 ```toml
 [units.derived]
 thaum.symbol = "thm"
@@ -780,6 +917,11 @@ swallow_airspeed_velocity.alt_names = [ "european_swallow_airspeed_velocity", "u
 Unit(thm) 3.595E+16 J
 >>> print(qc.european_swallow_airspeed_velocity)
 swallow_airspeed_velocity = 9 m s⁻¹
+```
+
+Extra `.toml` files can be fed to `quanfig` and read for config options, units, and constants:
+```python
+>>> quanfig.load_toml(sections=["config", "units", "constants"], toml_path="my_toml.toml")
 ```
 
 ## Standards and naming

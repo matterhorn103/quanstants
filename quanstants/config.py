@@ -12,20 +12,50 @@ class QuanstantsConfig:
         # Open default options from file
         with open(Path(__file__).with_name("config.toml"), "rb") as f:
             defaults = tomllib.load(f)
+        super().__setattr__("options", {})
+        self.config_table = defaults["config"]
         self.init_config(defaults["config"])
         self.toml_list = []
 
+    def __getattribute__(self, name):
+        if name in super().__getattribute__("options"):
+            return super().__getattribute__("options")[name]["current"]
+        else:
+            return super().__getattribute__(name)
+
     def __setattr__(self, name, value):
-        if hasattr(self, f"_{name}"):
-            # Setting some options needs to trigger changes to other options too
-            if name == "PRETTYPRINT":
-                self._UNICODE_SUPERSCRIPTS = value
-                self._GROUP_DIGITS = value
-                self._PRETTYPRINT = value
+        if name in self.options:
+            # Make sure it's a valid option
+            if "choices" in self.options[name] and value not in self.options[name]["choices"]:
+                    raise TypeError(f"Value provided not amongst possible choices: {self.options[name]["choices"]}")
             else:
-                super().__setattr__(f"_{name}", value)
+                # Some options need custom handling
+                if name == "PRETTYPRINT":
+                    self.UNICODE_SUPERSCRIPTS = value
+                    self.GROUP_DIGITS = value
+                # Update current value stored in options dict
+                self.options[name]["current"] = value
         else:
             super().__setattr__(name, value)
+    
+    def print_options(self) -> None:
+        for category in self.config_table.keys():
+            print(f"[{category}]")
+            print()
+            for option, details in self.config_table[category].items():
+                print(option)
+                print("\t" + details["doc"].replace("\n", "\n\t"))
+                print()
+                if "choices" in details:
+                    print(f"\tPossible values: {details["choices"]}")
+                current = getattr(self, option)
+                if isinstance(current, str):
+                    print(f"\tCurrent value: '{current}'")
+                    print(f"\tDefault value: '{details["default"]}'")
+                else:
+                    print(f"\tCurrent value: {current}")
+                    print(f"\tDefault value: {details["default"]}")
+                print()
 
     def find_toml(self, *dirs) -> Path | None:
         """Look for a file called `quanstants.toml` in a couple of locations.
@@ -94,21 +124,16 @@ class QuanstantsConfig:
     def init_config(self, config_table: dict):
         # Initiate options dynamically
         # Tables within config are just for organization, ignore them
-        for section in config_table.keys():
-            for key, value in config_table[section].items():
-                # Set default values
-                setattr(self, f"_{key}", value["default"])
-                # Make each variable a property with a simple getter
-                # Handle setting of properties within __setattr__()
-                setattr(
-                    type(self),
-                    key,
-                    property(
-                        fget=lambda self, k=key: getattr(self, f"_{k}"),
-                        doc=value["doc"],
-                    ),
-                )
-    
+        # (Store them in option's table though)
+        for category in config_table.keys():
+            for option, details in config_table[category].items():
+                # Add category to dict
+                details["category"] = category
+                # Make default value current value
+                details["current"] = details["default"]
+                # Put into options dict
+                self.options[option] = details
+
     def load_config(self, config_table: dict):
         """Process configuration from a config table read from `quanstants.toml`.
         

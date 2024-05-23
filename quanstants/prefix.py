@@ -3,7 +3,7 @@ from decimal import Decimal as dec
 from .config import quanfig
 from .quantity import Quantity
 from .unit import BaseUnit, DerivedUnit
-from .si import kilogram
+from .units.base import kilogram
 
 from . import prefixes
 

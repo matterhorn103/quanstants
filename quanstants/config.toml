@@ -1,18 +1,17 @@
 [config.rounding.ROUNDING_MODE]
+choices = [ "ROUND_CEILING", "ROUND_DOWN", "ROUND_FLOOR", "ROUND_HALF_DOWN", "ROUND_HALF_EVEN", "ROUND_HALF_UP", "ROUND_UP", "ROUND_05UP" ]
 default = "ROUND_HALF_UP"
 doc = "Set the rounding behaviour for internal Decimal objects."
 
 [config.rounding.ROUND_TO_IF_UNCERTAINTY]
+choices = [ "PLACES", "FIGURES", "UNCERTAINTY" ]
 default = "UNCERTAINTY"
-doc = """Controls the default behaviour of round(Quantity) and Quantity.round() for quantities with an uncertainty.
-
-Options: \"PLACES\", \"FIGURES\", \"UNCERTAINTY\"."""
+doc = "The default behaviour of round(Quantity) and Quantity.round() for quantities with an uncertainty."
 
 [config.rounding.ROUND_TO_IF_EXACT]
+choices = [ "PLACES", "FIGURES", "UNCERTAINTY" ]
 default = "FIGURES"
-doc = """Controls the default behaviour of round(Quantity) and Quantity.round() for exact quantities.
-
-Options: \"PLACES\", \"FIGURES\", \"UNCERTAINTY\"."""
+doc = "The default behaviour of round(Quantity) and Quantity.round() for exact quantities."
 
 [config.rounding.NDIGITS_PLACES]
 default = 2
@@ -30,24 +29,29 @@ This determines the number of significant figures the uncertainty is rounded to.
 The number is then rounded to the same precision."""
 
 [config.rounding.ROUND_PAD]
+choices = [ true, false ]
 default = true
 doc = "Like siunitx, determines if extra zeroes should be added to reach desired number of digits."
 
 [config.arithmetic.AUTO_CANCEL]
+choices = [ true, false ]
 default = true
 doc = "Whether identical units should be cancelled and combined automatically after arithmetic."
 
 [config.conversion.CONVERT_FLOAT_AS_STR]
+choices = [ true, false ]
 default = true
 doc = "Whether floats should be converted to Decimal via str or directly."
 
 [config.printing.PRETTYPRINT]
+choices = [ true, false ]
 default = true
 doc = """Whether to format printed strings in a nice way.
 
-Changing this setting also changes various of the other settings below to match."""
+Changing this setting also changes various of the other [printing] settings to match."""
 
 [config.printing.ROUND_BEFORE_PRINT]
+choices = [ true, false ]
 default = false
 doc = """Whether the string form of quantities should be rounded or kept unrounded.
 
@@ -57,10 +61,14 @@ calls `__str__` on the quantity will return a rounded representation.
 The rounding is that of `Quantity.round()` with the default parameters."""
 
 [config.printing.UNCERTAINTY_STYLE]
+choices = [ "PARENTHESES", "PLUSMINUS" ]
 default = "PARENTHESES"
-doc = """How uncertainties of quantities should be formatted.
+doc = "How uncertainties of quantities should be formatted."
 
-Options: \"PARENTHESES\", \"PLUSMINUS\"."""
+[config.printing.LOGARITHMIC_UNIT_STYLE]
+choices = [ "SIMPLE", "REFERENCE", "SUFFIX" ]
+default = "REFERENCE"
+doc = "How a referenced logarithmic unit should be formatted."
 
 [config.printing.UNIT_SEPARATOR]
 default = " "
@@ -69,20 +77,21 @@ doc = """Unicode character used to separate unit terms.
 Default is a normal space."""
 
 [config.printing.INVERSE_UNIT]
+choices = [ "NEGATIVE_SUPERSCRIPT", "SLASH" ]
 default = "NEGATIVE_SUPERSCRIPT"
-doc = """How units with negative exponents should be formatted.
-
-Options: \"NEGATIVE_SUPERSCRIPT\", \"SLASH\"."""
+doc = "How units with negative exponents should be formatted."
 
 [config.printing.UNICODE_SUPERSCRIPTS]
 default = true
 doc = "Whether exponents of units should be formatted with Unicode superscript characters."
 
 [config.printing.GROUP_DIGITS]
+choices = [ true, false ]
 default = false
 doc = "Whether numbers should be printed with separators between groups of digits."
 
 [config.printing.GROUP_DIGITS_STYLE]
+choices = [ "integer", "decimal", "all" ]
 default = "all"
 doc = "Whether to group digits before (`\"integer\"`) the decimal point, after (`\"decimal\"`), or both (`\"all\"`)."
 
@@ -98,5 +107,6 @@ A comma \",\" or a full stop \".\" are commonly used, but are discouraged by the
 Python itself often allows or makes use of an underscore \"_\"."""
 
 [config.misc.LITRE_SYMBOL]
+choices = [ "l", "L" ]
 default = "L"
 doc = "Whether to use a lowercase l or uppercase L as the symbol for the litre."

@@ -1,13 +1,10 @@
 from decimal import Decimal as dec
-import types
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
-from .unit import Unit
+from .unit import LinearUnit, BaseUnit
 from .quantity import Quantity
-from .si import *
 
-from . import units
 
 # Define the most important unit of temperature, though as a BaseUnit not a TemperatureUnit
 kelvin = BaseUnit("K", "kelvin", dimension="Θ")
@@ -17,45 +14,33 @@ class NotATemperatureError(Exception):
     pass
 
 
-class TemperatureUnit(Unit):
-    """A unit of temperature with a potentially non-linear relationship to the kelvin scale.
+class TemperatureUnit(LinearUnit):
+    """A unit of temperature on a relative rather than absolute scale.
 
-    `degree_value` should be the size of the unit itself.
-    `zero_point` should be the value of 0° on this scale.
-    Both should ideally be given as a numerical value with a type parseable by `Decimal` (including
-    `str`), in which case the unit is assumed to be kelvin, or as a `Quantity`.
+    `degree_value` is the size of the unit itself.
+    `zero_point` is the value of 0° on this scale.
+    Both should ideally be given as a numerical value with a type parseable by `Decimal`
+    (including `str`) - in which case the unit is assumed to be kelvin - or, optionally,
+    as a `Quantity`.
 
-    As is always the case with relative temperatures, be careful of the trap presented by the double
-    meaning of "20 °C" or "50 °F" arising from a single unit being used for both relative and absolute
-    temperatures. In this package, absolute temperatures are always represented by `Quantity` objects,
-    while relative temperatures on a scale are represented by `Temperature` objects.
+    As is always the case with relative temperatures, be careful of the trap presented
+    by the double meaning of "20 °C" or "50 °F" arising from a single unit being used
+    for both relative and absolute temperatures. In this package, absolute temperatures
+    are always represented by `Quantity` objects, while relative temperatures on a scale
+    are represented by `Temperature` objects.
 
-    To create a _relative_ `Temperature`, i.e. a point on the respective temperature scale, use the
-    `@` operator with a number on the left and the `TemperatureUnit` on the right, in a similar fashion
-    to multiplication. The `@` can be thought of as representing "on" (the scale).
+    To create a _relative_ `Temperature`, i.e. a point on the respective temperature
+    scale, use the `@` operator with a number on the left and the `TemperatureUnit` on
+    the right, in a similar fashion to multiplication. The `@` can be thought of as
+    representing "on" (the scale).
 
-    Of key importance is that multiplication of a number and a `TemperatureUnit` will, as with any other
-    unit, create a normal `Quantity` representing a multiple of the unit - in this case representing
-    something like a temperature difference, not an actual temperature on the respective scale.
+    Of key importance is that multiplication of a number and a `TemperatureUnit` will,
+    as with any other unit, create a normal `Quantity` representing a multiple of the
+    unit - in this case representing something like a temperature difference, not an
+    actual temperature on the respective scale.
 
-    For example:
-
-    ```python
-    >>> from quanstants import units as qu, Quantity
-    >>> rel_temp = 50 @ qu.degreeCelsius
-    >>> print(rel_temp)
-    50 °C
-    >>> rel_temp.base()
-    Quantity(323.15, K)
-    >>> abs_temp = 50 * qu.degreeCelsius
-    >>> abs_temp.base()
-    Quantity(50, K)
-    >>> rel_temp + rel_temp
-    Quantity(646.30, K)
-    >>> abs_temp + abs_temp
-    Quantity(100, °C)
-    >>> rel_temp + abs_temp
-    Temperature(100, °C)
+    Also note that hashes and equalities are determined in the same way as for all
+    linear units. This means for example that °C is considered equal to K.
     ```
     """
 
@@ -67,9 +52,9 @@ class TemperatureUnit(Unit):
         name: str,
         degree_value: str | int | float | dec | Quantity,
         zero_point: str | int | float | dec | Quantity,
-        add_to_namespace: bool = False,
-        canon_symbol: bool = False,
         alt_names: list | None = None,
+        add_to_namespace: bool = True,
+        canon_symbol: bool = False,
     ):
         if isinstance(degree_value, Quantity) and (degree_value.base().unit == kelvin):
             self._degree_value = degree_value.base()
@@ -83,18 +68,18 @@ class TemperatureUnit(Unit):
             symbol=symbol,
             name=name,
             components=((self, 1),),
-            value = self._degree_value,
+            value=self._degree_value,
             dimension="Θ",
+            alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
-            alt_names=alt_names,
         )
         self._value_base = self._degree_value
 
     # Not strictly necessary to override `super().value()` but aids clarity
     @property
     def value(self) -> Quantity:
-        """Return the value of the unit itself, a degree in this scale, i.e. (x+1)° - (x)°, in kelvin."""
+        """Return the value of a degree in this scale, i.e. (x+1)° - (x)°, in kelvin."""
         return self._degree_value
 
     @property
@@ -109,47 +94,13 @@ class TemperatureUnit(Unit):
         else:
             return NotImplemented
 
-    def _to_kelvin(self, number: dec) -> dec:
-        """Return the equivalent in kelvin of the specified temperature on this scale."""
-        return (number + self.zero_point.number) * self.value.number
-
-    def _from_kelvin(self, number: dec) -> dec:
-        """Return the equivalent temperature on this scale of the specified number of kelvin."""
-        return (number / self.value.number) - self.zero_point.number
-
     def from_absolute(self, other: Quantity):
-        """Convert an absolute `Quantity` with temperature units to a relative `Temperature` with this unit.
+        """Convert an absolute `Quantity` to a relative `Temperature` on this scale.
 
-        When `Quantity.on_scale()` is called on a quantity and the target unit is an instance of
-        `TemperatureUnit`, this method of the target unit will be called.
+        When `Quantity.on_scale()` is called on a quantity and the target unit is an
+        instance of `TemperatureUnit`, this method of the target unit will be called.
         """
-        if other.unit == kelvin:
-            new_number = self._from_kelvin(other.number)
-        elif other.unit.dimensional_exponents == {
-            "T": 0,
-            "L": 0,
-            "M": 0,
-            "I": 0,
-            "Θ": 1,
-            "N": 0,
-            "J": 0,
-        }:
-            new_number = self._from_kelvin(other.base().number)
-        else:
-            raise NotATemperatureError(
-                "Temperatures can only be converted from quantities with units of temperature."
-            )
-
-        if not other._uncertainty:
-            new_uncertainty = dec("0")
-        else:
-            new_uncertainty = other.uncertainty.to(self)
-        # Make sure precision isn't ridiculous for an otherwise exact conversion
-        if str(new_number)[-5:] == "00000":
-            new_number = dec(str(float(new_number)))
-            if str(new_number)[-2:] == ".0":
-                new_number = dec(int(new_number))
-        return Temperature(new_number, self, new_uncertainty)
+        return Temperature.from_absolute(self, other)
 
     def cancel(self):
         """Combine any like terms and return as a Quantity."""
@@ -161,11 +112,7 @@ class TemperatureUnit(Unit):
 
 
 class Temperature(Quantity):
-    """A class representing relative temperatures on a scale rather than an absolute temperature in kelvin.
-
-    As most scales have a different zero point, a temperature is first converted internally to kelvin
-    before it can be manipulated mathematically.
-    """
+    """Represents relative temperatures on a scale."""
 
     __slots__ = ()
 
@@ -185,23 +132,6 @@ class Temperature(Quantity):
         as_quantity = super().__repr__()
         return as_quantity.replace("Quantity", "Temperature")
 
-    def _to_kelvin(self):
-        """Return the temperature as a normal `Quantity` object with units of kelvin.
-
-        This is only necessary for use by the arithmetic functions below and does not need to be in the
-        public API - `Temperature.base()` is essentially an alias, and users can call
-        `Temperature.to(kelvin)` without an issue, as it goes via conversion of the temperature to kelvin
-        with `Temperature.base()`.
-        """
-        if not self._uncertainty:
-            return Quantity(self.unit._to_kelvin(self.number), kelvin)
-        else:
-            return Quantity(
-                self.unit._to_kelvin(self.number),
-                kelvin,
-                self.uncertainty.to(kelvin),
-            )
-
     # For addition and subtraction, convert to quantities in kelvin to do the maths as
     # then the uncertainty will be taken care of by `Quantity`'s dunder methods
     # Then convert back to a Temperature but only if appropriate
@@ -209,14 +139,14 @@ class Temperature(Quantity):
         # Allow the addition of non-kelvin temperatures but return in kelvin to make it clear that
         # two absolute temperatures have been summed
         if isinstance(other, Temperature):
-            return self._to_kelvin().__add__(
-                other._to_kelvin(), correlation=correlation
+            return self.to_absolute().__add__(
+                other.to_absolute(), correlation=correlation
             )
         # Allow Quantity with dimension of temperature to be added to Temperature
         elif isinstance(other, Quantity):
             if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
                 result = (
-                    self._to_kelvin().__add__(other.to(kelvin), correlation=correlation)
+                    self.to_absolute().__add__(other.to(kelvin), correlation=correlation)
                 ).on_scale(self.unit)
                 # Have to round if precision has increased due to conversion to kelvin
                 if result.precision() < self.precision() and result.precision() < other.precision():
@@ -232,6 +162,9 @@ class Temperature(Quantity):
                 )
         else:
             return NotImplemented
+    
+    def __radd__(self, other, correlation=0):
+        return NotImplemented
 
     def __sub__(self, other, correlation=0):
         # Allow finding the difference between two temperatures
@@ -239,13 +172,13 @@ class Temperature(Quantity):
         # calculated, not a temperature
         if isinstance(other, Temperature):
             result = (
-                self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)
+                self.to_absolute().__sub__(other.to(kelvin), correlation=correlation)
             ).to(self.unit)
         # Allow Quantity with dimension of temperature to be subtracted from Temperature
         elif isinstance(other, Quantity):
             if isinstance(other.unit, TemperatureUnit) or other.unit == kelvin:
                 result = (
-                    self._to_kelvin().__sub__(other.to(kelvin), correlation=correlation)
+                    self.to_absolute().__sub__(other.to(kelvin), correlation=correlation)
                 ).on_scale(self.unit)
             else:
                 raise NotATemperatureError(
@@ -261,60 +194,116 @@ class Temperature(Quantity):
                 return result.round_to_precision_of(self)
         else:
             return result
-        
+    
+    def __rsub__(self, other, correlation=0):
+        return NotImplemented
+
+    # For other mathematical operations, convert to kelvin and leave in kelvin
+    # Python recognises if the parent has been overridden and so for
+    # Quantity * Temperature it defers to Temperature.__rmul__() instead of using
+    # Quantity.__mul__()
+    # TODO However, still need to find a way to pass correlation on as if we do e.g.
+    # `return self.to_absolute().__mul__(other, correlation=correlation)`
+    # then Python doesn't recognise that we have overidden the parent any more
+    def __mul__(self, other, correlation=0):
+        return self.to_absolute() * other
+
+    def __rmul__(self, other, correlation=0):
+        return other * self.to_absolute()
+
+    def __truediv__(self, other, correlation=0):
+        return self.to_absolute() / other
+
+    def __rtruediv__(self, other, correlation=0):
+        return other / self.to_absolute()
+
+    def __pow__(self, other, correlation=0):
+        return self.to_absolute() ** other
+    
+    def __rpow__(self, other, correlation=0):
+        return NotImplemented
 
     def __neg__(self):
         return Temperature(-1 * self.number, self.unit, self._uncertainty)
 
-    # For other mathematical operations, convert to kelvin and leave in kelvin
-    def __mul__(self, other):
-        return self._to_kelvin() * other
+    # Equality functions of `Quantity` call `.base()` anyway, so super handles fine
 
-    def __rmul__(self, other):
-        return other * self._to_kelvin()
+    @classmethod
+    def from_absolute(cls, unit: TemperatureUnit, quantity: Quantity):
+        """Convert an absolute `Quantity` to a relative `Temperature` on the given scale."""
+        if quantity.unit == kelvin:
+            new_number = (quantity.number / unit.value.number) - unit.zero_point.number
+        elif quantity.unit.dimensional_exponents == {
+            "T": 0,
+            "L": 0,
+            "M": 0,
+            "I": 0,
+            "Θ": 1,
+            "N": 0,
+            "J": 0,
+        }:
+            new_number = (quantity.base().number / unit.value.number) - unit.zero_point.number
+        else:
+            raise NotATemperatureError(
+                "Temperatures can only be converted from quantities with units of temperature."
+            )
 
-    def __truediv__(self, other):
-        return self._to_kelvin() / other
+        if not quantity._uncertainty:
+            new_uncertainty = dec("0")
+        else:
+            new_uncertainty = quantity.uncertainty.to(unit)
+        # Make sure precision isn't ridiculous for an otherwise exact conversion
+        if str(new_number)[-5:] == "00000":
+            new_number = dec(str(float(new_number)))
+            if str(new_number)[-2:] == ".0":
+                new_number = dec(int(new_number))
+        return cls(new_number, unit, new_uncertainty)
 
-    def __rtruediv__(self, other):
-        return other / self._to_kelvin()
+    def to_absolute(self):
+        """Return the temperature as a normal `Quantity` object with units of kelvin.
 
-    def __pow__(self, other):
-        return self._to_kelvin() ** other
-
-    # Equality functions of `Quantity` call `.base()` anyway, so are handled fine by super
-
-    def with_uncertainty(self, uncertainty):
-        """Return a new quantity with the provided uncertainty."""
-        return Temperature(self.number, self.unit, uncertainty)
-
-    def base(self):
-        """Return the temperature as a Quantity expressed in kelvin."""
-        return self._to_kelvin()
+        This is only necessary for use by the arithmetic functions below and does not need to be in the
+        public API - `Temperature.base()` is essentially an alias, and users can call
+        `Temperature.to(kelvin)` without an issue, as it goes via conversion of the temperature to kelvin
+        with `Temperature.base()`.
+        """
+        new_number = (self.number + self.unit.zero_point.number) * self.unit.value.number
+        if not self._uncertainty:
+            return Quantity(new_number, kelvin)
+        else:
+            return Quantity(
+                new_number,
+                kelvin,
+                self.uncertainty.to(kelvin),
+            )
 
     def cancel(self):
         """Combine any like terms in the unit.
 
-        Has no effect for a Temperature.
+        Has no effect for a `Temperature`.
         """
         return self
 
     def fully_cancel(self):
-        """Combine any like terms in the unit, with units of the same dimension converted and combined.
+        """Combine any terms of the same dimension in the unit.
 
-        Has no effect for a Temperature.
+        Has no effect for a `Temperature`.
         """
         return self
 
     def canonical(self):
         """Express with its units in a canonical order.
 
-        Has no effect for a Temperature.
+        Has no effect for a `Temperature`.
         """
         return self
+    
+    def base(self):
+        """Return the temperature as a `Quantity` expressed in kelvin."""
+        return self.to_absolute()
 
     def to(self, other):
-        return self._to_kelvin().to(other)
+        return self.to_absolute().to(other)
 
     def on_scale(self, other):
-        return self._to_kelvin().on_scale(other)
+        return self.to_absolute().on_scale(other)

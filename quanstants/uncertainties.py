@@ -4,7 +4,13 @@ from .config import quanfig
 
 
 def get_uncertainty(
-    numerical_result, operation, quantityA, quantityB=None, numberx=None, correlation=0
+    numerical_result,
+    operation,
+    quantityA,
+    quantityB=None,
+    numberx=None,
+    correlation=0,
+    log_base=None,
 ):
     """Find the uncertainty in the result of an operation on a quantity.
 
@@ -113,6 +119,9 @@ def get_uncertainty(
     # C = log10(A)
     elif operation == "log10":
         sigma_c = abs(sigma_a / (dec(10).ln() * A))
+    # C = logx(A)
+    elif operation == "log":
+        sigma_c = abs(sigma_a / (dec(log_base).ln() * A))
     # C = e**A
     elif operation == "exp":
         sigma_c = abs(C) * abs(sigma_a)

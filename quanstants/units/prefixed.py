@@ -15,7 +15,7 @@ for p in common_prefixes[1:6]:
 for p in common_prefixes[1:7]:
     if p.name != "micro":
         PrefixedUnit(p, metre, add_to_namespace=True)
-PrefixedUnit(micro, metre, add_to_namespace=True, alt_names=["micron"])
+PrefixedUnit(micro, metre, alt_names=["micron"], add_to_namespace=True)
 # Have a variable pointing to the centimetre for easier import by other modules
 centimetre = PrefixedUnit(centi, metre, add_to_namespace=True)
 PrefixedUnit(deci, metre, add_to_namespace=True)
@@ -47,8 +47,8 @@ for p in common_prefixes[6:9]:
     PrefixedUnit(p, pascal, add_to_namespace=True)
 
 PrefixedUnit(milli, ohm, add_to_namespace=True)
-PrefixedUnit(kilo, ohm, add_to_namespace=True, alt_names=["kilohm"])
-PrefixedUnit(mega, ohm, add_to_namespace=True, alt_names=["megohm"])
+PrefixedUnit(kilo, ohm, alt_names=["kilohm"], add_to_namespace=True)
+PrefixedUnit(mega, ohm, alt_names=["megohm"], add_to_namespace=True)
 
 for p in common_prefixes[2:7]:
     PrefixedUnit(p, volt, add_to_namespace=True)

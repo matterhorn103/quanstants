@@ -53,7 +53,7 @@ lattice_spacing_of_ideal_Si_220 = Constant(None, "lattice_spacing_of_ideal_Si_22
 #Loschmidt_constant_27315_K_101325_kPa = Constant(None, "Loschmidt_constant_27315_K_101325_kPa", "2.686780111...e25", qu.m**-3, 0), canon_symbol=False)
 luminous_efficacy = fundamental.luminous_efficacy_540_THz
 #mag_flux_quantum = Constant(None, "mag_flux_quantum", "2.067833848...e-15", qu.Wb, 0), canon_symbol=False)
-molar_gas_constant = Constant("R", "molar_gas_constant", "8.31446261815324", qu.J * qu.mol**-1 * qu.K**-1, 0, canon_symbol=True, alt_names=["gas_constant"])
+molar_gas_constant = Constant("R", "molar_gas_constant", "8.31446261815324", qu.J * qu.mol**-1 * qu.K**-1, 0, alt_names=["gas_constant"], canon_symbol=True)
 molar_mass_of_carbon_12 = Constant(None, "molar_mass_of_carbon_12", "11.9999999958e-3", qu.kg * qu.mol**-1, "0.0000000036e-3", canon_symbol=False)
 molar_volume_of_silicon = Constant(None, "molar_volume_of_silicon", "1.205883199e-5", qu.m**3 * qu.mol**-1, "0.000000060e-5", canon_symbol=False)
 Molybdenum_x_unit = Constant(None, "Molybdenum_x_unit", "1.00209952e-13", qu.m, "0.00000053e-13", canon_symbol=False)

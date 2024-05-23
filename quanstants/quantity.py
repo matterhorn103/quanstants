@@ -726,7 +726,7 @@ class Quantity:
         """Return a new quantity with the provided uncertainty."""
         return type(self)(self.number, self.unit, uncertainty)
 
-    def plusminus(self, uncertainty):
+    def plus_minus(self, uncertainty):
         """Alias for `with_uncertainty()`."""
         return self.with_uncertainty(uncertainty)
 
@@ -814,11 +814,11 @@ class Quantity:
         The unit string is parsed by `quanstants.units.parse()`, so it must follow the same rules as for that.
         """
         try:
-            # Look for uncertainty shown with plusminus symbol
-            if any(plusminus in string for plusminus in ["±", "+/-"]):
-                split_by_plusminus = string.replace("+/-", "±").split("±")
-                number = split_by_plusminus[0].rstrip()
-                uncertainty_and_unit = split_by_plusminus[1].lstrip().split(maxsplit=1)
+            # Look for uncertainty shown with plus_minus symbol
+            if any(plus_minus in string for plus_minus in ["±", "+/-"]):
+                split_by_plus_minus = string.replace("+/-", "±").split("±")
+                number = split_by_plus_minus[0].rstrip()
+                uncertainty_and_unit = split_by_plus_minus[1].lstrip().split(maxsplit=1)
                 uncertainty = uncertainty_and_unit[0]
                 unit = uncertainty_and_unit[1]
             else:

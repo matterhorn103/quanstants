@@ -11,7 +11,7 @@ from quanstants import (
 
 class TestRounding:
     def test_round_default(self):
-        q = (123.456789 * qu.m).plusminus(0.000543)
+        q = (123.456789 * qu.m).plus_minus(0.000543)
 
 
 class TestParser:
@@ -40,28 +40,28 @@ class TestParser:
         string_to_parse = "1.234(56) m s-2"
         assert Quantity(number, unit, uncertainty) == Quantity(string_to_parse)
 
-    def test_parser_with_uncertainty_plusminus_unicode(self):
+    def test_parser_with_uncertainty_plus_minus_unicode(self):
         number = "1.234"
         unit = qu.m * qu.s**-2
         uncertainty = "0.056"
         string_to_parse = "1.234 ± 0.056 m s-2"
         assert Quantity(number, unit, uncertainty) == Quantity(string_to_parse)
 
-    def test_parser_with_uncertainty_plusminus_unicode_nospaces(self):
+    def test_parser_with_uncertainty_plus_minus_unicode_nospaces(self):
         number = "1.234"
         unit = qu.m * qu.s**-2
         uncertainty = "0.056"
         string_to_parse = "1.234±0.056 m s-2"
         assert Quantity(number, unit, uncertainty) == Quantity(string_to_parse)
 
-    def test_parser_with_uncertainty_plusminus_ascii(self):
+    def test_parser_with_uncertainty_plus_minus_ascii(self):
         number = "1.234"
         unit = qu.m * qu.s**-2
         uncertainty = "0.056"
         string_to_parse = "1.234 +/- 0.056 m/s2"
         assert Quantity(number, unit, uncertainty) == Quantity(string_to_parse)
 
-    def test_parser_with_uncertainty_plusminus_ascii_nospaces(self):
+    def test_parser_with_uncertainty_plus_minus_ascii_nospaces(self):
         number = "1.234"
         unit = qu.m * qu.s**-2
         uncertainty = "0.056"

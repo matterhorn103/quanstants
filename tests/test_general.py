@@ -215,17 +215,17 @@ class TestUncertainties:
         gravity = ("6.67430e-11" * qu.newton * qu.metre**2 * qu.kilogram**-2).with_uncertainty("0.00015e-11")
         assert repr(gravity) == "Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)"
 
-    def test_plusminus(self):
-        assert repr(("4.2" * qu.m).plusminus("0.2")) == "Quantity(4.2, m, uncertainty=0.2)"
+    def test_plus_minus(self):
+        assert repr(("4.2" * qu.m).plus_minus("0.2")) == "Quantity(4.2, m, uncertainty=0.2)"
     
     def test_uncertainty_as_quantity(self):
-        assert repr(("4.2" * qu.metre).plusminus("20" * qu.centimetre)) == "Quantity(4.2, m, uncertainty=0.20)"
+        assert repr(("4.2" * qu.metre).plus_minus("20" * qu.centimetre)) == "Quantity(4.2, m, uncertainty=0.20)"
 
     def test_str_parentheses(self):
         assert str(("6.67430e-11" * qu.newton * qu.metre**2 * qu.kilogram**-2).with_uncertainty("0.00015e-11")) == "6.67430(15)E-11 N m² kg⁻²"
 
-    def test_str_plusminus(self):
-        assert str(("4.2" * qu.metre).plusminus("20" * qu.centimetre)) == "4.2 ± 0.20 m"
+    def test_str_plus_minus(self):
+        assert str(("4.2" * qu.metre).plus_minus("20" * qu.centimetre)) == "4.2 ± 0.20 m"
 
     def test_set_uncertainty_style(self):
         quanfig.UNCERTAINTY_STYLE = "PLUSMINUS"
@@ -257,7 +257,7 @@ class TestParsing:
     def test_uncertainty_parentheses(self):
         assert repr(Quantity("6.67430(15)E-11 N m² kg⁻²")) == "Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)"
         
-    def test_uncertainty_plusminus(self):
+    def test_uncertainty_plus_minus(self):
         assert repr(Quantity("8.293 ± 0.010 V")) == "Quantity(8.293, V, uncertainty=0.010)"
     
     def test_uncertainty_plusslashminus(self):
@@ -353,44 +353,44 @@ class TestArithmetic:
         assert (a / b).is_dimensionless()
 
     def test_21(self):
-        a = (3 * qu.m).plusminus(0.1)
-        b = (2 * qu.m).plusminus(0.2)
+        a = (3 * qu.m).plus_minus(0.1)
+        b = (2 * qu.m).plus_minus(0.2)
         result = repr(a + b)
         assert result == "Quantity(5, m, uncertainty=0.22360679774997896)"
 
     def test_22(self):
-        a = (3 * qu.m).plusminus(0.1)
-        b = (2 * qu.m).plusminus(0.2)
+        a = (3 * qu.m).plus_minus(0.1)
+        b = (2 * qu.m).plus_minus(0.2)
         result = repr(a - b)
         assert result == "Quantity(1, m, uncertainty=0.22360679774997896)"
 
     def test_23(self):
-        a = (3 * qu.m).plusminus(0.1)
-        b = (2 * qu.m).plusminus(0.2)
+        a = (3 * qu.m).plus_minus(0.1)
+        b = (2 * qu.m).plus_minus(0.2)
         result = repr(a * b)
         assert result == "Quantity(6, m², uncertainty=0.6324555320336759)"
 
     def test_24(self):
-        a = (3 * qu.m).plusminus(0.1)
-        b = (2 * qu.m).plusminus(0.2)
+        a = (3 * qu.m).plus_minus(0.1)
+        b = (2 * qu.m).plus_minus(0.2)
         result = repr(a / b)
         assert result == "Quantity(1.5, (unitless), uncertainty=0.15811388300841897)"
 
     def test_25(self):
-        a = (3 * qu.m).plusminus(0.1)
-        b = (2 * qu.m).plusminus(0.2)
+        a = (3 * qu.m).plus_minus(0.1)
+        b = (2 * qu.m).plus_minus(0.2)
         result = repr(2**(a/b))
         assert result == "Quantity(2.828427124746190097603377448, (unitless), uncertainty=0.3099848428288717)"
 
     def test_26(self):
-        a = (3 * qu.m).plusminus(0.1)
-        b = (2 * qu.m).plusminus(0.2)
+        a = (3 * qu.m).plus_minus(0.1)
+        b = (2 * qu.m).plus_minus(0.2)
         result = repr(a.__add__(b, correlation=0.7))
         assert result == "Quantity(5, m, uncertainty=0.2792848008753788)"
 
     def test_27(self):
-        a = (3 * qu.m).plusminus(0.1)
-        b = (2 * qu.m).plusminus(0.2)
+        a = (3 * qu.m).plus_minus(0.1)
+        b = (2 * qu.m).plus_minus(0.2)
         result = repr(a.__sub__(b, correlation=1))
         assert result == "Quantity(1, m, uncertainty=0.1)"
 
@@ -445,7 +445,7 @@ class TestEqualities:
         assert 3 * qu.kilometre == 3000 * qu.metre
 
     def test_uncertainties(self):
-        assert 3 * qu.kilometre == (3000 * qu.metre).plusminus(20)
+        assert 3 * qu.kilometre == (3000 * qu.metre).plus_minus(20)
 
     def test_units(self):
         assert qu.watt == qu.joule / qu.second
@@ -493,7 +493,7 @@ class TestConstants:
 
 class TestRounding:
     a = (324.9 * qu.J) * (1.674 * qu.mol**-1)
-    b = a.plusminus(0.03)
+    b = a.plus_minus(0.03)
 
     def test_round_to_places(self):
         result = self.a.round_to_places(3)

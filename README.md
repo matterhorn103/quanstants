@@ -209,16 +209,16 @@ Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)
 ```
 The uncertainty can be given as a number with the same units as the quantity, or as a `Quantity` itself:
 ```python
->>> ("4.2" * qu.m).plusminus("0.2")  # Alias for with_uncertainty()
+>>> ("4.2" * qu.m).plus_minus("0.2")  # Alias for with_uncertainty()
 Quantity(4.2, m, uncertainty=0.2)
->>> ("4.2" * qu.metre).plusminus("20" * qu.centimetre)
+>>> ("4.2" * qu.metre).plus_minus("20" * qu.centimetre)
 Quantity(4.2, m, uncertainty=0.20)
 ```
 When printed, uncertainties are shown by parentheses if possible, or with `±` as a fallback:
 ```python
 >>> print(("6.67430e-11" * qu.newton * qu.metre**2 * qu.kilogram**-2).with_uncertainty("0.00015e-11"))
 6.67430(15)E-11 N m² kg⁻²
->>> print(("4.2" * qu.metre).plusminus("20" * qu.centimetre))  # Precisions don't match
+>>> print(("4.2" * qu.metre).plus_minus("20" * qu.centimetre))  # Precisions don't match
 4.2 ± 0.20 m
 ```
 The use of ± at all times can be forced by setting `quanstants.quanfig.UNCERTAINTY_STYLE`.
@@ -341,8 +341,8 @@ True
 
 Uncertainties are kept track of correctly across arithmetic operations using uncertainty propagation rules:
 ```python
->>> a = (3 * qu.m).plusminus(0.1)
->>> b = (2 * qu.m).plusminus(0.2)
+>>> a = (3 * qu.m).plus_minus(0.1)
+>>> b = (2 * qu.m).plus_minus(0.2)
 >>> a + b
 Quantity(5, m, uncertainty=0.22360679774997896)
 >>> a - b
@@ -448,7 +448,7 @@ True
 
 This is the case even if the quantities have uncertainties, even if the uncertainties are different sizes:
 ```python
->>> 3 * qu.kilometre == (3000 * qu.metre).plusminus(20)
+>>> 3 * qu.kilometre == (3000 * qu.metre).plus_minus(20)
 True
 ```
 
@@ -563,14 +563,14 @@ Quantity(543.8826, J mol⁻¹)
 If a quantity has a known uncertainty, it can be useful to round the number off to the same precision as the uncertainty using `round_to_uncertainty()`.
 For this, the uncertainty is first rounded to either a provided number of significant figures, or to the number of significant figures set by `quanstants.quanfig.NDIGITS_UNCERTAINTY`, which is by default 1:
 ```python
->>> b = a.plusminus(0.03)
+>>> b = a.plus_minus(0.03)
 >>> b
 Quantity(543.8826, J mol⁻¹, uncertainty=0.03)
 >>> b.round_to_uncertainty()
 Quantity(543.88, J mol⁻¹, uncertainty=0.03)
->>> (1.2345 * qu.m).plusminus(0.071).round_to_uncertainty(1)
+>>> (1.2345 * qu.m).plus_minus(0.071).round_to_uncertainty(1)
 Quantity(1.23, m, uncertainty=0.07)
->>> (1.2345 * qu.m).plusminus(0.071).round_to_uncertainty(2)
+>>> (1.2345 * qu.m).plus_minus(0.071).round_to_uncertainty(2)
 Quantity(1.235, m, uncertainty=0.071)
 >>> a.round_to_uncertainty()  # Exact quantities are returned unchanged and remain exact
 Quantity(543.8826, J mol⁻¹)
@@ -578,9 +578,9 @@ Quantity(543.8826, J mol⁻¹)
 
 Here, padding is only done for the number to make its precision match the uncertainty; no padding is done for the uncertainty rounding, as this would imply an increase in precision:
 ```python
->>> (1.23 * qu.m).plusminus(0.0071).round_to_uncertainty(1, pad=True) # Note that True is default
+>>> (1.23 * qu.m).plus_minus(0.0071).round_to_uncertainty(1, pad=True) # Note that True is default
 Quantity(1.230, m, uncertainty=0.007)
->>> (1.23 * qu.m).plusminus(0.0071).round_to_uncertainty(5, pad=True)
+>>> (1.23 * qu.m).plus_minus(0.0071).round_to_uncertainty(5, pad=True)
 Quantity(1.2300, m, uncertainty=0.0071)
 ```
 

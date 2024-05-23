@@ -242,16 +242,17 @@ class LinearUnit(Unit):
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
         )
-        # Start with a dimensionless unit and add any provided ones
-        self._dimensional_exponents = Counter(empty_dimensional_dict)
-        if dimension == "X":
-            pass
+
+        if isinstance(dimensional_exponents, Counter):
+            self._dimensional_exponents = dimensional_exponents
+        elif dimensional_exponents:
+            self._dimensional_exponents = Counter(dimensional_exponents)
+        elif dimension == "X":
+            self._dimensional_exponents = Counter(empty_dimensional_dict)
         elif isinstance(dimension, str) and len(dimension) == 1:
-            self._dimensional_exponents[dimension] += 1
-        elif isinstance(dimensional_exponents, Counter):
-            self._dimensional_exponents += dimensional_exponents
-        else:
-            self._dimensional_exponents += Counter(dimensional_exponents)
+            self._dimensional_exponents = Counter(empty_dimensional_dict)
+            self._dimensional_exponents[dimension] = 1
+
         self._components = components
 
     @property

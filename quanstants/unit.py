@@ -299,8 +299,7 @@ class LinearUnit(Unit):
         if isinstance(other, UnitlessUnit):
             return self
         elif isinstance(other, LinearUnit):
-            other = other.inverse()
-            return CompoundUnit(self.components + other.components, (self, other))
+            return CompoundUnit(self.components + other.components_inverse())
         elif isinstance(other, Quantity):
             return Quantity(1 / other.number, self / other.unit)
         else:
@@ -365,10 +364,15 @@ class LinearUnit(Unit):
         else:
             return NotImplemented
 
+    def components_inverse(self):
+        """Return the inverse of the unit but just as its components."""
+        #return self.inverse().components
+        return tuple(((unit, -exponent) for unit, exponent in self.components),)
+
     def inverse(self):
         """Return the inverse of the unit as a CompoundUnit."""
-        # For now just reuse the __pow__ function
-        return self**-1
+        #return self ** -1
+        return CompoundUnit(self.components_inverse())
 
     def is_dimensionless(self) -> bool:
         if self.dimensional_exponents == empty_dimensional_dict:

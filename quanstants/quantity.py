@@ -196,7 +196,7 @@ class Quantity:
                 "Cannot cast a non-dimensionless quantity to an integer!"
             )
         else:
-            dimensionless_quant = self.base().cancel()
+            dimensionless_quant = self.base()
             return int(dimensionless_quant.number)
 
     def __float__(self):
@@ -205,10 +205,10 @@ class Quantity:
                 "Cannot cast a non-dimensionless quantity to a float!"
             )
         else:
-            dimensionless_quant = self.base().cancel()
+            dimensionless_quant = self.base()
             return float(dimensionless_quant.number)
 
-    # Arithmetic functions, both dunder methods and normal
+    # Arithmetic functions, both dunder methods and not
     def __add__(self, other, correlation=0):
         if isinstance(other, Quantity):
             if self.unit == other.unit:
@@ -356,7 +356,7 @@ class Quantity:
                 "Cannot raise to the power of a non-dimensionless quantity!"
             )
         else:
-            dimensionless_quant = self.base().cancel()
+            dimensionless_quant = self.base()
         if isinstance(other, (str, int, float, dec)):
             if quanfig.CONVERT_FLOAT_AS_STR:
                 other = dec(str(other))
@@ -424,7 +424,7 @@ class Quantity:
                 "Cannot take the logarithm of a non-dimensionless quantity!"
             )
         else:
-            dimensionless_quant = self.base().cancel()
+            dimensionless_quant = self.base()
             new_number = dimensionless_quant.number.log10()
             new_uncertainty = get_uncertainty(new_number, "log10", self)
             return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
@@ -687,11 +687,11 @@ class Quantity:
         # Never pad the uncertainty as that would be increasing its precision
         rounded_uncertainty = self.uncertainty.round_to_figures(ndigits, pad=False)
         # Now round the number to the same precision
-        return self.round_to_precision_of(rounded_uncertainty, pad=pad).with_uncertainty(
+        return self.round_to_resolution_of(rounded_uncertainty, pad=pad).with_uncertainty(
             rounded_uncertainty
         )
 
-    def round_to_precision_of(self, other, pad=quanfig.ROUND_PAD):
+    def round_to_resolution_of(self, other, pad=quanfig.ROUND_PAD):
         if self.unit != other.unit:
             raise MismatchedUnitsError
         places = other.number.as_tuple().exponent * -1
@@ -710,8 +710,14 @@ class Quantity:
         """
         return self.with_uncertainty(self.uncertainty.round(ndigits, mode, pad=False))
 
-    def precision(self):
-        """Return the precision of the quantity, ignoring the uncertainty."""
+    def resolution(self):
+        """Return the resolution of the quantity, ignoring the uncertainty.
+        
+        The resolution is the size of a unit of the smallest significant figure.
+
+        Termed "resolution" to avoid confusion between this and the computer science
+        concept of "precision", which typically refers to the number of digits.
+        """
         return Quantity(10 ** self.number.as_tuple().exponent, self.unit)
 
     def is_dimensionless(self):

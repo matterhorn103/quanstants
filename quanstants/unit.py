@@ -1,3 +1,4 @@
+from collections import Counter
 from decimal import Decimal as dec
 from fractions import Fraction as frac
 
@@ -48,15 +49,96 @@ def generate_symbol(
         return " ".join(terms)
 
 
+# Fastest if we have list and dict pregenerated
+dimensions = ["L", "M", "T", "I", "Θ", "N", "J"]
+empty_dimensional_dict = {"L": 0, "M": 0, "T": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
+
+# Tried using Counters for this but addition via dict comprehension was much faster
+# (286 ns vs 1.8 µs) as was an equality (36 ns vs 960 ns)
+# Sadly UserDict is also slow (755 ns and 3 µs respectively)
+
+# With dict comprehensions and the set of dimensions:
+# add takes 518 ns,
+# mul takes 439 ns,
+# eq takes 35 ns
+
+#class DimensionalExponents:
+#    def __init__(self, *args, **kwargs):
+#        self.dims = dict(*args, **kwargs)
+#    
+#    def __add__(self, other):
+#        # 894 ns
+#        self.dims = {d: self.dims[d] + other.dims[d] for d in dimensions}
+#        return self
+#
+#    def __mul__(self, other):
+#        # 5.4 µs
+#        self.dims = {d: self.dims[d] * other for d in dimensions}
+#        return self
+    
+class DimensionalExponents(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __add__(self, other):
+        # 880 ns
+        for d in dimensions:
+            self[d] = self[d] + other[d]
+        return self
+        # 1.3 µs
+        #return DimensionalExponents({k: self[k] + other[k] for k in dimensions})
+
+    def __sub__(self, other):
+        for d in dimensions:
+            self[d] = self[d] - other[d]
+        return self
+    
+    def __mul__(self, other):
+        # 5.8 µs
+        #if other == 0:
+        #    return DimensionalExponents(empty_dimensional_dict)
+        #elif isinstance(other, int):
+        #    orig = self.copy()
+        #    if other > 0:
+        #        for i in range(other - 1):
+        #            self += orig
+        #    else:
+        #        for i in range(other - 1):
+        #            self -= orig
+        #    return self
+        # 5.3 µs!
+        #for d in dimensions:
+        #    self[d] = self[d] * other
+        #return self
+        # 1.3 µs, no idea why
+        return DimensionalExponents({k: self[k] * other for k in dimensions})
+
+
 # Function to turn a tuple or other iterable of factors into a dimension
-def generate_dimensional_exponents(components: tuple[tuple, ...]) -> dict:
-    new_dimensional_exponents = {"L": 0, "M": 0, "T": 0, "I": 0, "Θ": 0, "N": 0, "J": 0}
-    for unit, exponent in components:
-        for dimension in new_dimensional_exponents.keys():
-            if dimension in unit.dimensional_exponents:
-                new_dimensional_exponents[dimension] += (
-                    unit.dimensional_exponents[dimension] * exponent
-                )
+def generate_dimensional_exponents(
+        components: tuple[tuple, ...] | None = None,
+        units: tuple | None = None,
+    ) -> Counter:
+    new_dimensional_exponents = DimensionalExponents(empty_dimensional_dict)
+    if components:
+        for unit, exponent in components:
+            if exponent == 1:
+                new_dimensional_exponents += unit.dimensional_exponents
+            elif exponent == -1:
+                new_dimensional_exponents -= unit.dimensional_exponents
+            elif exponent == 0:
+                continue
+            else:
+                new_dimensional_exponents += (unit.dimensional_exponents * exponent)
+    elif units:
+        for unit in units:
+            new_dimensional_exponents += unit.dimensional_exponents
+    #for unit, exponent in components:
+    #    for dimension in new_dimensional_exponents.keys():
+    #        if dimension in unit.dimensional_exponents:
+    #            new_dimensional_exponents[dimension] += (
+    #                unit.dimensional_exponents[dimension] * exponent
+    #            )
     return new_dimensional_exponents
 
 
@@ -112,14 +194,15 @@ class Unit:
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
     ):
-        if symbol is not None:
-            self._symbol = symbol
-        elif name is not None:
-            self._symbol = name
+        self._symbol = symbol
+        if symbol is None:
             # Symbol can't be canon if it wasn't even provided
             canon_symbol = False
-        else:
-            raise RuntimeError("Either a symbol or a name must be provided!")
+            if name is not None:
+                self._symbol = name
+        # Don't raise error any more to allow lazy evaluation of symbol
+        #else:
+            #raise RuntimeError("Either a symbol or a name must be provided!")
         self._name = name
         self._value = value if value is not None else Quantity(1, self)
         self._alt_names = tuple(alt_names) if alt_names is not None else None
@@ -196,8 +279,8 @@ class LinearUnit(Unit):
     "L" (length), "T" (time), "I" (electric current), "Θ" (thermodynamic temperature),
     "N" (amount of substance), or "J" (luminous intensity).
     If a unit's dimension comprises multiple base dimensions or exponents, they should
-    be passed as `dimensional_exponents` as a dictionary of the form
-    `{"L": 1, "M": 2, ...}` (only those with non-zero exponents are required).
+    be passed as `dimensional_exponents` as a dict of the form `{"L": 1, "M": 2, ...}`,
+    (only those with non-zero exponents are required), or as the analogous `Counter`.
     """
 
     __slots__ = ("_components", "_dimensional_exponents")
@@ -209,7 +292,7 @@ class LinearUnit(Unit):
         components: tuple[tuple, ...] | None = None,
         value: Quantity | None = None,
         dimension: str | None = None,
-        dimensional_exponents: dict | None = None,
+        dimensional_exponents: DimensionalExponents | None = None,
         alt_names: list[str] | None = None,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
@@ -222,28 +305,31 @@ class LinearUnit(Unit):
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
         )
-        # Start with a dimensionless unit and add any provided ones
-        self._dimensional_exponents = {
-            "L": 0,
-            "M": 0,
-            "T": 0,
-            "I": 0,
-            "Θ": 0,
-            "N": 0,
-            "J": 0,
-        }
-        if dimension == "X":
-            pass
+
+        #if isinstance(dimensional_exponents, Counter):
+        #    self._dimensional_exponents = dimensional_exponents
+        if dimensional_exponents:
+            self._dimensional_exponents = dimensional_exponents
+        elif dimension == "X":
+            self._dimensional_exponents = DimensionalExponents(empty_dimensional_dict)
         elif isinstance(dimension, str) and len(dimension) == 1:
-            self._dimensional_exponents[dimension] += 1
+            self._dimensional_exponents = DimensionalExponents(empty_dimensional_dict)
+            self._dimensional_exponents[dimension] = 1
         else:
-            for dim in self._dimensional_exponents.keys():
-                if dim in dimensional_exponents:
-                    self._dimensional_exponents[dim] += dimensional_exponents[dim]
+            self._dimensional_exponents = None
+
         self._components = components
 
     @property
-    def dimensional_exponents(self) -> dict:
+    def symbol(self) -> str:
+        if self._symbol is None:
+            self._symbol = generate_symbol(self.components)
+        return self._symbol
+
+    @property
+    def dimensional_exponents(self) -> DimensionalExponents:
+        if self._dimensional_exponents is None:
+            self._dimensional_exponents = generate_dimensional_exponents(self.components)
         return self._dimensional_exponents
 
     @property
@@ -262,14 +348,14 @@ class LinearUnit(Unit):
     def __mul__(self, other, concatenate_symbols: bool = False):
         if isinstance(other, UnitlessUnit):
             if concatenate_symbols and not other._drop_on_concat:
-                return CompoundUnit(components=None, units=(self, other), concatenate_symbols=True)
+                return CompoundUnit(units=(self, other), concatenate_symbols=True)
             else:
                 return self
         elif isinstance(other, LinearUnit):
             if concatenate_symbols:
-                return CompoundUnit(components=None, units=(self, other), concatenate_symbols=True)
+                return CompoundUnit(units=(self, other), concatenate_symbols=True)
             else:
-                return CompoundUnit(self.components + other.components)
+                return CompoundUnit(self.components + other.components, (self, other))
         elif isinstance(other, Quantity):
             return Quantity(other.number, self.__mul__(other.unit, concatenate_symbols=concatenate_symbols))
         else:
@@ -287,7 +373,7 @@ class LinearUnit(Unit):
         if isinstance(other, UnitlessUnit):
             return self
         elif isinstance(other, LinearUnit):
-            return CompoundUnit(self.components + other.inverse().components)
+            return CompoundUnit(self.components + other.components_inverse())
         elif isinstance(other, Quantity):
             return Quantity(1 / other.number, self / other.unit)
         else:
@@ -305,6 +391,8 @@ class LinearUnit(Unit):
     def __pow__(self, other):
         if other == 1:
             return self
+        elif other == 0:
+            return unitless
         elif isinstance(other, (int, frac)):
             # Tuple comprehensions don't exist so make a tuple from a generator
             new_components = tuple(
@@ -352,21 +440,18 @@ class LinearUnit(Unit):
         else:
             return NotImplemented
 
+    def components_inverse(self):
+        """Return the inverse of the unit but just as its components."""
+        #return self.inverse().components
+        return tuple(((unit, -exponent) for unit, exponent in self.components),)
+
     def inverse(self):
         """Return the inverse of the unit as a CompoundUnit."""
-        # For now just reuse the __pow__ function
-        return self**-1
+        #return self ** -1
+        return CompoundUnit(self.components_inverse())
 
     def is_dimensionless(self) -> bool:
-        if self.dimensional_exponents == {
-            "L": 0,
-            "M": 0,
-            "T": 0,
-            "I": 0,
-            "Θ": 0,
-            "N": 0,
-            "J": 0,
-        }:
+        if self.dimensional_exponents == empty_dimensional_dict:
             return True
         else:
             return False
@@ -540,7 +625,7 @@ class CompoundUnit(LinearUnit):
     attributes of each will be combined automatically.
     """
 
-    __slots__ = ()
+    __slots__ = ("_symbol_sort", "_symbol_inverse")
 
     def __init__(
         self,
@@ -558,11 +643,14 @@ class CompoundUnit(LinearUnit):
         if components is None:
             # Repeated addition of tuples, starting with (), fastest method for low n (n < 10)
             components = sum([unit.components for unit in units], ())
+        
+        # Evaluate lazily, not immediately
+        #if units is not None:
+        #    dimensional_exponents = generate_dimensional_exponents(units=units)
+        #else:
+        #dimensional_exponents = generate_dimensional_exponents(components)
 
-        # Generate a new symbol based on passed options
-        if (units is None) or (not concatenate_symbols):
-            symbol = generate_symbol(components, symbol_sort, symbol_inverse)
-        else:
+        if (units is not None) and (concatenate_symbols):
             # Maintain visual separation of combined units in symbol
             # Put each unit's symbol in parentheses if they contain a slash
             symbols = []
@@ -572,16 +660,21 @@ class CompoundUnit(LinearUnit):
                 else:
                     symbols.append(unit.symbol)
             symbol = " ".join(symbols)
-            
-        dimensional_exponents = generate_dimensional_exponents(components)
+        else:
+            # Evaluate lazily
+            symbol = None
+        
         alt_names = alt_names if alt_names else None
+        self._symbol_sort = symbol_sort
+        self._symbol_inverse = symbol_inverse
+
         # Don't define a name etc., just a symbol and the components
         super().__init__(
             symbol=symbol,
             name=name,
             alt_names=alt_names,
             components=components,
-            dimensional_exponents=dimensional_exponents,
+            dimensional_exponents=None,
             add_to_namespace=add_to_namespace,
         )
         # Express the unit in terms of base units
@@ -589,6 +682,16 @@ class CompoundUnit(LinearUnit):
             self._value_base = self._value
         else:
             self._value_base = None
+
+    @property
+    def symbol(self) -> str:
+        if self._symbol is None:
+            self._symbol = generate_symbol(
+                self.components,
+                self._symbol_sort,
+                self._symbol_inverse
+            )
+        return self._symbol
 
     def __hash__(self) -> int:
         # Make the hashing faster by doing it directly, since we know that doing

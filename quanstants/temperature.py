@@ -149,11 +149,11 @@ class Temperature(Quantity):
                     self.to_absolute().__add__(other.to(kelvin), correlation=correlation)
                 ).on_scale(self.unit)
                 # Have to round if precision has increased due to conversion to kelvin
-                if result.precision() < self.precision() and result.precision() < other.precision():
-                    if other.precision() < self.precision():
-                        return result.round_to_precision_of(other)
+                if result.resolution() < self.resolution() and result.resolution() < other.resolution():
+                    if other.resolution() < self.resolution():
+                        return result.round_to_resolution_of(other)
                     else:
-                        return result.round_to_precision_of(self)
+                        return result.round_to_resolution_of(self)
                 else:
                     return result
             else:
@@ -187,11 +187,11 @@ class Temperature(Quantity):
         else:
             return NotImplemented
         # Have to round if precision has increased due to conversion to kelvin
-        if result.precision() < self.precision() and result.precision() < other.precision():
-            if other.precision() < self.precision():
-                return result.round_to_precision_of(other)
+        if result.resolution() < self.resolution() and result.resolution() < other.resolution():
+            if other.resolution() < self.resolution():
+                return result.round_to_resolution_of(other)
             else:
-                return result.round_to_precision_of(self)
+                return result.round_to_resolution_of(self)
         else:
             return result
     

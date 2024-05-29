@@ -56,10 +56,10 @@ class Prefix:
             # Make sure the user is not trying to add a second prefix to a prefixed unit
             if isinstance(other, PrefixedUnit):
                 raise AlreadyPrefixedError
-            # Create a new unit, don't add to `prefixes` to avoid overwrites
+            # Create a new unit, don't add to namespace to avoid overwrites
             return PrefixedUnit(
                 prefix=self,
-                unit=other,
+                root=other,
                 add_to_namespace=False,
                 canon_symbol=False,
             )
@@ -74,29 +74,29 @@ class PrefixedUnit(DerivedUnit):
     TODO: automatically adjust the prefix upon request (so that e.g. 2000 kJ becomes 2 MJ).
     """
 
-    __slots__ = ("_prefix", "_unit")
+    __slots__ = ("_prefix", "_root")
 
     def __init__(
         self,
         prefix: Prefix,
-        unit: BaseUnit | DerivedUnit,
+        root: BaseUnit | DerivedUnit,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
         alt_names: list | None = None,
     ):
         self._prefix = prefix
-        self._unit = unit
+        self._root = root
 
         # Create prefixed symbol and name
-        concat_symbol = prefix.symbol + unit.symbol
-        if (prefix.name is not None) and (unit.name is not None):
-            concat_name = prefix.name + unit.name
+        concat_symbol = prefix.symbol + root.symbol
+        if (prefix.name is not None) and (root.name is not None):
+            concat_name = prefix.name + root.name
         else:
             concat_name = None
         # Automatically prefix any alternative names of the unit and add to list of alt names
-        if (prefix.name is not None) and (unit.alt_names is not None):
+        if (prefix.name is not None) and (root.alt_names is not None):
             concat_alt_names = [] if alt_names is None else alt_names
-            for alt_name in unit.alt_names:
+            for alt_name in root.alt_names:
                 concat_alt_name = prefix.name + alt_name
                 concat_alt_names.append(concat_alt_name)
         else:
@@ -104,7 +104,7 @@ class PrefixedUnit(DerivedUnit):
         super().__init__(
             symbol=concat_symbol,
             name=concat_name,
-            value=Quantity(prefix.multiplier, unit),
+            value=Quantity(prefix.multiplier, root),
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=concat_alt_names,
@@ -115,5 +115,5 @@ class PrefixedUnit(DerivedUnit):
         return self._prefix
 
     @property
-    def unit(self):
-        return self._unit
+    def root(self):
+        return self._root

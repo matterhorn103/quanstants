@@ -88,7 +88,12 @@ class LogarithmicUnit(Unit):
     # Allow prefixes
     def __rmul__(self, other):
         if isinstance(other, Prefix):
-            return PrefixedLogarithmicUnit
+            return PrefixedLogarithmicUnit(
+                prefix=other,
+                root=self,
+                add_to_namespace=False,
+                canon_symbol=False,
+            )
         else:
             return NotImplemented
 
@@ -185,49 +190,49 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
     automatically generated ones will be used.
     """
 
-    __slots__ = ("_prefix", "_unit")
+    __slots__ = ("_prefix", "_root")
 
     def __init__(
         self,
         prefix: Prefix,
-        unit: LogarithmicUnit,
+        root: LogarithmicUnit,
         name: str | None = None,
         alt_names: list | None = None,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
     ):
         self._prefix = prefix
-        self._unit = unit
+        self._root = root
 
         # Create prefixed symbol
-        concat_symbol = prefix.symbol + unit.symbol
+        concat_symbol = prefix.symbol + root.symbol
 
         # Use provided names if given, otherwise generate prefixed ones
         if name is not None:
             concat_name = name
             concat_alt_names = alt_names
         else:
-            if (prefix.name is not None) and (unit.name is not None):
-                concat_name = prefix.name + unit.name
+            if (prefix.name is not None) and (root.name is not None):
+                concat_name = prefix.name + root.name
             else:
                 concat_name = None
             # Automatically prefix any alternative names of the unit and add to list of alt names
-            if (prefix.name is not None) and (unit.alt_names is not None):
+            if (prefix.name is not None) and (root.alt_names is not None):
                 concat_alt_names = [] if alt_names is None else alt_names
-                for alt_name in unit.alt_names:
+                for alt_name in root.alt_names:
                     concat_alt_name = prefix.name + alt_name
                     concat_alt_names.append(concat_alt_name)
             else:
                 concat_alt_names = None if alt_names is None else alt_names
         # Determine new prefactor
-        prefactor = unit.prefactor / prefix.multiplier
+        prefactor = root.prefactor / prefix.multiplier
         super().__init__(
             symbol=concat_symbol,
-            suffix=unit.suffix,
+            suffix=root.suffix,
             name=concat_name,
-            log_base=unit.log_base,
+            log_base=root.log_base,
             prefactor=prefactor,
-            reference=unit._reference,
+            reference=root._reference,
             alt_names=concat_alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
@@ -238,8 +243,8 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
         return self._prefix
 
     @property
-    def unit(self):
-        return self._unit
+    def root(self):
+        return self._root
     
     # Prevent prefixing again
     def __rmul__(self, other):
@@ -259,7 +264,7 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
         new_suffix = suffix if suffix is not None else self.suffix
         return PrefixedLogarithmicUnit(
             prefix=self.prefix,
-            unit=self.unit.with_reference(reference, new_suffix),
+            root=self.root.with_reference(reference, new_suffix),
             name=name,
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,

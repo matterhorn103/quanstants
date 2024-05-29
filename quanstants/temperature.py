@@ -102,11 +102,7 @@ class TemperatureUnit(LinearUnit):
         """
         return Temperature.from_absolute(self, other)
 
-    def cancel(self):
-        """Combine any like terms and return as a Quantity."""
-        raise NotImplementedError
-
-    def canonical(self):
+    def canonical(self) -> Quantity:
         """Order terms into a reproducible order and return as a Quantity."""
         return 1 * self
 

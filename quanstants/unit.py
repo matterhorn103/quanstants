@@ -244,10 +244,14 @@ class Unit:
 
     def dimension(self) -> str:
         raise NotImplementedError
+    
+    def _cancel_to_unit(self):
+        """Does everything that `self.cancel() does, but returns a `Unit`."""
+        raise NotImplementedError
 
     def cancel(self):
         """Combine any like terms and return as a `Quantity`."""
-        raise NotImplementedError
+        return Quantity(1, self._cancel_to_unit())
 
     def fully_cancel(self):
         """Combine any terms of the same dimension and return as a `Quantity`."""
@@ -510,6 +514,9 @@ class BaseUnit(LinearUnit):
             return True
         else:
             return False
+        
+    def _cancel_to_unit(self) -> LinearUnit:
+        return self
 
     def cancel(self) -> Quantity:
         """Combine any like terms and return as a `Quantity`.
@@ -697,8 +704,9 @@ class CompoundUnit(LinearUnit):
         # Make the hashing faster by doing it directly, since we know that doing
         # self.value.base() would just give self._value_base, and we've possibly
         # already calculated that
-        base_ids = ((id(u), e) for u, e in self.base().unit.components)
-        return hash((self.base().number, *base_ids))
+        base = self.base()
+        base_ids = ((id(u), e) for u, e in base.unit.components)
+        return hash((base.number, *base_ids))
 
     def __eq__(self, other):
         return hash(self) == hash(other)
@@ -735,8 +743,10 @@ class CompoundUnit(LinearUnit):
         
         Note that "like" means that the units are equivalent in value, not that they are
         the same Unit object.
+
         Terms of `Unitless` units which have `drop = True` will also be dropped; this is
         the case for `quanstants.units.unitless`, but not for `radian` or `steradian`.
+        Passing `force_drop_unitless = True` will cause these to be dropped too.
         """
         return Quantity(1, self._cancel_to_unit(force_drop_unitless=force_drop_unitless))
 
@@ -745,12 +755,15 @@ class CompoundUnit(LinearUnit):
         
         Units of the same dimension are converted to whichever unit is a base unit, and
         otherwise to whichever occurs first.
+
         Any terms of `Unitless` units (i.e. equal to 1) will also be dropped.
+        In contrast to `cancel()`, this means even those like `radian` and `steradian`
+        for which `drop = False` will be dropped.
         """
         result_number = 1
         new_components_dict = {}
         # First cancel like normal, this also gets rid of all UnitlessUnits
-        cancelled = self._cancel_to_unit()
+        cancelled = self._cancel_to_unit(force_drop_unitless=True)
         if cancelled is unitless:
             return Quantity(1, unitless)
         # Check if first component needs to be converted before we add it to result
@@ -891,9 +904,12 @@ class DerivedUnit(LinearUnit):
             canon_symbol=canon_symbol,
         )
         self._value_base = self.value.base()
+    
+    def _cancel_to_unit(self) -> LinearUnit:
+        return self
 
     def cancel(self) -> Quantity:
-        return 1 * self
+        return Quantity(1, self)
 
     def canonical(self) -> Quantity:
-        return 1 * self
+        return Quantity(1, self)

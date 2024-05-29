@@ -46,15 +46,19 @@ class Quantity:
     is to call `Quantity.parse(string)`.
     """
 
-    __slots__ = ("_number", "_unit", "_uncertainty")
+    __slots__ = ("_number", "_unit", "_uncertainty", "_pending_cancel")
 
+    # kwargs is for the things shown via comments that should be hidden from public API
     def __init__(
         self,
         number: str | int | float | dec | None = None,
         unit=None,
         uncertainty: str | int | float | dec | Self | None = None,
         value: str | Self | None = None,
+        **kwargs,
+    #   pending_cancel: bool,
     ):
+
         # Making a Quantity from a single string should be done with `Quantity.parse()`, but allow for the
         # fact that people might also just try to pass a string straight to `Quantity()`
         if (
@@ -130,24 +134,40 @@ class Quantity:
             self._uncertainty = dec(str(uncertainty))
         else:
             self._uncertainty = dec(uncertainty)
+        
+        # Variable that indicates unit needs cancelling but is initially uncancelled
+        self._pending_cancel = kwargs.get("pending_cancel", False)
 
-    # Generally access properties via self.x not self._x for consistency
-    # self._x is faster, in my tests 9.7 ns vs 48.6 ns
-    # However for most operations this is not a bottleneck e.g. for
-    # Quantity(2, m) * Quantity(3.4, s**-1) the time saving was only 1.5% (off ~10 μs)
+
+    # Generally accessing properties via self.x rather than self._x is safer
+    # self._x is faster though, in my tests 9.7 ns vs 48.6 ns
+    # However for most operations this is not a bottleneck
     @property
     def number(self):
         return self._number
 
+    # Note: auto_cancel is done lazily after arithmetic so accessing _unit directly
+    # should only be done with care as it may give an uncancelled unit
+    # Doing that may be desirable for chained arithmetic operations so that the units
+    # are only cancelled after all operations are done and the representation becomes
+    # relevant
+    # In most cases self.unit should be accessed so that cancellation can be done
     @property
     def unit(self):
+        if self._pending_cancel is True:
+            self._inplace_cancel()
+            self._pending_cancel = False
         return self._unit
 
-    # But note: the uncertainty is returned to the user as a Quantity, so internally
+    # Note: the uncertainty is returned to the user as a Quantity, so internally
     # usually the decimal value should be accessed directly with _uncertainty
     @property
     def uncertainty(self):
-        return Quantity(self._uncertainty, self._unit)
+        return Quantity(
+            self._uncertainty,
+            self._unit,
+            pending_cancel=self._pending_cancel,
+        )
     
     @property
     def value(self):
@@ -208,17 +228,20 @@ class Quantity:
             dimensionless_quant = self.base()
             return float(dimensionless_quant.number)
 
-    # Arithmetic functions, both dunder methods and not
+    # *** Arithmetic functions, both dunder methods and not ***
+    # In general, maintain laziness of auto cancel i.e. retain the uncancelled forms
+    # but perpetuate the state of pending cancellation so that it is eventually assessed
+
     def __add__(self, other, correlation=0):
         if isinstance(other, Quantity):
-            if self.unit == other.unit:
+            if self._unit == other._unit:
                 new_number = self.number + other.number
                 new_uncertainty = get_uncertainty(
                     new_number, "add", self, quantityB=other, correlation=correlation
                 )
             # Allow mixed units with the same dimension
-            elif self.unit.dimensional_exponents == other.unit.dimensional_exponents:
-                converted = other.to(self.unit)
+            elif self._unit.dimensional_exponents == other._unit.dimensional_exponents:
+                converted = other.to(self._unit)
                 new_number = self.number + converted.number
                 new_uncertainty = get_uncertainty(
                     new_number,
@@ -231,20 +254,25 @@ class Quantity:
                 raise MismatchedUnitsError(
                     f"Can't add quantity in {other.unit} to quantity in {self.unit}."
                 )
-            return Quantity(new_number, self.unit, new_uncertainty)
+            return Quantity(
+                new_number,
+                self._unit,
+                new_uncertainty,
+                pending_cancel=self._pending_cancel,
+            )
         else:
             return NotImplemented
 
     def __sub__(self, other, correlation=0):
         if isinstance(other, Quantity):
-            if self.unit == other.unit:
+            if self._unit == other._unit:
                 new_number = self.number - other.number
                 new_uncertainty = get_uncertainty(
                     new_number, "sub", self, quantityB=other, correlation=correlation
                 )
             # Allow mixed units with the same dimension
-            elif self.unit.dimensional_exponents == other.unit.dimensional_exponents:
-                converted = other.to(self.unit)
+            elif self._unit.dimensional_exponents == other._unit.dimensional_exponents:
+                converted = other.to(self._unit)
                 new_number = self.number - converted.number
                 new_uncertainty = get_uncertainty(
                     new_number,
@@ -257,7 +285,12 @@ class Quantity:
                 raise MismatchedUnitsError(
                     f"Can't subtract quantity in {other.unit} from quantity in {self.unit}."
                 )
-            return Quantity(new_number, self.unit, new_uncertainty)
+            return Quantity(
+                new_number,
+                self._unit,
+                new_uncertainty,
+                pending_cancel=self._pending_cancel,
+            )
         else:
             return NotImplemented
 
@@ -271,15 +304,25 @@ class Quantity:
             new_uncertainty = get_uncertainty(
                 new_number, "mul", self, numberx=other, correlation=correlation
             )
-            return Quantity(new_number, self.unit, new_uncertainty)
+            return Quantity(
+                new_number,
+                self._unit,
+                new_uncertainty,
+                pending_cancel=self._pending_cancel,
+            )
         elif isinstance(other, Quantity):
             new_number = self.number * other.number
             new_uncertainty = get_uncertainty(
                 new_number, "mul", self, quantityB=other, correlation=correlation
             )
+            # Use uncancelled form of units for lazy cancellation
+            # Mark for later automatic cancellation if desired
             return Quantity(
-                new_number, self.unit * other.unit, new_uncertainty
-            )._auto_cancel()
+                new_number,
+                self._unit * other._unit,
+                new_uncertainty,
+                pending_cancel=quanfig.AUTO_CANCEL,
+            )
         else:
             return NotImplemented
 
@@ -293,7 +336,12 @@ class Quantity:
             new_uncertainty = get_uncertainty(
                 new_number, "mul", self, numberx=other, correlation=correlation
             )
-            return Quantity(new_number, self.unit, new_uncertainty)
+            return Quantity(
+                new_number,
+                self._unit,
+                new_uncertainty,
+                pending_cancel=self._pending_cancel,
+            )
         else:
             return NotImplemented
 
@@ -307,15 +355,24 @@ class Quantity:
             new_uncertainty = get_uncertainty(
                 new_number, "truediv", self, numberx=other, correlation=correlation
             )
-            return Quantity(new_number, self.unit, new_uncertainty)
+            return Quantity(
+                new_number,
+                self._unit,
+                new_uncertainty,
+                pending_cancel=self._pending_cancel,
+            )
         elif isinstance(other, Quantity):
             new_number = self.number / other.number
             new_uncertainty = get_uncertainty(
                 new_number, "truediv", self, quantityB=other, correlation=correlation
             )
+            # Automatically cancel if desired
             return Quantity(
-                new_number, self.unit / other.unit, new_uncertainty
-            )._auto_cancel()
+                new_number,
+                self._unit / other._unit,
+                new_uncertainty,
+                pending_cancel=quanfig.AUTO_CANCEL,
+            )
         else:
             return NotImplemented
 
@@ -329,7 +386,12 @@ class Quantity:
             new_uncertainty = get_uncertainty(
                 new_number, "rtruediv", self, numberx=other, correlation=correlation
             )
-            return Quantity(new_number, self.unit.inverse(), new_uncertainty)
+            return Quantity(
+                new_number,
+                self._unit.inverse(),
+                new_uncertainty,
+                pending_cancel=self._pending_cancel,
+            )
         else:
             return NotImplemented
 
@@ -338,14 +400,24 @@ class Quantity:
         if isinstance(other, int):
             new_number = self.number**other
             new_uncertainty = get_uncertainty(new_number, "pow", self, numberx=other)
-            return Quantity(new_number, self.unit**other, new_uncertainty)
+            return Quantity(
+                new_number,
+                self._unit**other,
+                new_uncertainty,
+                pending_cancel=self._pending_cancel,
+            )
         elif isinstance(other, frac):
             frac_as_dec = dec(str(float(other)))
             new_number = self.number**frac_as_dec
             new_uncertainty = get_uncertainty(
                 new_number, "pow", self, numberx=frac_as_dec
             )
-            return Quantity(new_number, self.unit**other, new_uncertainty)
+            return Quantity(
+                new_number,
+                self.unit**other,
+                new_uncertainty,
+                pending_cancel=self._pending_cancel,
+            )
         else:
             return NotImplemented
 
@@ -362,15 +434,23 @@ class Quantity:
                 other = dec(str(other))
             else:
                 other = dec(other)
-            new_number = other**dimensionless_quant.number
+            new_number = other ** dimensionless_quant.number
             new_uncertainty = get_uncertainty(
                 new_number, "rpow", self, numberx=other, correlation=correlation
             )
             return Quantity(new_number, None, new_uncertainty)
         elif isinstance(other, Quantity):
-            # For now don't support as Unit only supports integer or fractional exponents, and the
-            # chances of dimensionless_quant.number being those is very low
-            return NotImplemented
+            # Unit only supports integer or fractional exponents
+            ratio = dimensionless_quant.number.as_integer_ratio()
+            if ratio.denominator == 1:
+                exponent = ratio.numerator
+            else:
+                exponent = frac(*ratio)
+            new_number = other.number ** exponent
+            new_unit = other._unit ** exponent
+            new_uncertainty = get_uncertainty(
+                new_number, "rpow", self, quantityB=other, correlation=correlation 
+            )
         else:
             return NotImplemented
 
@@ -446,15 +526,12 @@ class Quantity:
         if self.number == 0:
             return 0 == other
         # Check if unitless
-        elif self.unit == 1:
+        elif self._unit == 1:
             return self.number == other
         elif isinstance(other, Quantity):
             # Convert both to canonical base unit representations
             a = self.base()
             b = other.base()
-            # Have to use all three of symbol, name, dimension as unique symbols and
-            # names cannot be guaranteed and there may be different base units in
-            # different systems with the same dimension (and number = 1)
             if ((a.number == b.number) and (a.unit == b.unit)):
                 return True
             else:
@@ -463,6 +540,7 @@ class Quantity:
             return NotImplemented
 
     def __gt__(self, other):
+        # TODO match hash and eq
         if isinstance(other, Quantity):
             # Convert both to canonical base unit representations
             a = self.base()
@@ -481,6 +559,7 @@ class Quantity:
             return NotImplemented
 
     def __ge__(self, other):
+        # TODO match hash and eq
         if isinstance(other, Quantity):
             # Convert both to canonical base unit representations
             a = self.base()
@@ -499,7 +578,11 @@ class Quantity:
             return NotImplemented
 
     def __neg__(self):
-        return Quantity(-1 * self.number, self.unit, self._uncertainty)
+        return Quantity(
+            -1 * self.number,
+            self._unit,
+            self._uncertainty,
+            )
 
     def __pos__(self):
         return self
@@ -631,7 +714,10 @@ class Quantity:
                 ctx.rounding = quanfig.ROUNDING_MODE
                 rounded_significand = round(significand, ndigits - 1)
             return type(self)(
-                rounded_significand * dec(f"1E{exponent}"), self.unit, self._uncertainty
+                rounded_significand * dec(f"1E{exponent}"),
+                self._unit,
+                self._uncertainty,
+                pending_cancel=self._pending_cancel,
             )
         # If request is for more sigfigs than currently, only pad if asked/permitted to do so
         elif (ndigits > current_sigfigs) and (not pad):
@@ -645,8 +731,9 @@ class Quantity:
             new_exponent = self.number.as_tuple().exponent - n_digits_to_add
             return type(self)(
                 dec((self.number.as_tuple().sign, new_digits, new_exponent)),
-                self.unit,
+                self._unit,
                 self._uncertainty,
+                pending_cancel=self._pending_cancel,
             )
 
     def round_to_sigfigs(self, ndigits=None, pad=quanfig.ROUND_PAD):
@@ -692,7 +779,7 @@ class Quantity:
         )
 
     def round_to_resolution_of(self, other, pad=quanfig.ROUND_PAD):
-        if self.unit != other.unit:
+        if self._unit != other._unit:
             raise MismatchedUnitsError
         places = other.number.as_tuple().exponent * -1
         return self.round_to_places(places, pad=pad)
@@ -718,19 +805,28 @@ class Quantity:
         Termed "resolution" to avoid confusion between this and the computer science
         concept of "precision", which typically refers to the number of digits.
         """
-        return Quantity(10 ** self.number.as_tuple().exponent, self.unit)
+        return Quantity(
+            10 ** self.number.as_tuple().exponent,
+            self._unit,
+            pending_cancel=self._pending_cancel,
+        )
 
     def is_dimensionless(self):
         """Check if unit is dimensionless."""
-        return self.unit.is_dimensionless()
+        return self._unit.is_dimensionless()
 
     def dimension(self):
         """Return the dimension as a nice string."""
-        return self.unit.dimension()
+        return self._unit.dimension()
 
     def with_uncertainty(self, uncertainty):
         """Return a new quantity with the provided uncertainty."""
-        return type(self)(self.number, self.unit, uncertainty)
+        return type(self)(
+            self.number,
+            self._unit,
+            uncertainty,
+            pending_cancel=self._pending_cancel,
+        )
 
     def plus_minus(self, uncertainty):
         """Alias for `with_uncertainty()`."""
@@ -738,21 +834,44 @@ class Quantity:
 
     def cancel(self):
         """Combine any like terms in the unit."""
-        return (self.number * self.unit.cancel()).with_uncertainty(
-            self._uncertainty
+        return Quantity(
+            self.number,
+            self._unit.cancel(),
+            self._uncertainty,
         )
+    
+    def _inplace_cancel(self):
+        """Cancel without returning new quantity.
+        
+        We can do cancellation in place as the unit will still have the same value and
+        hash, so we aren't truly compromising our immutability.
+
+        The principal idea is that a Quantity with an uncancelled unit and a
+        `_pending_cancel = True` flag is identical to one with the same unit cancelled.
+
+        Generally methods in the API return a new object, so keep normal cancel() the
+        way it is and make this one private to avoid confusion.
+        """
+        self._unit = self._unit._cancel_to_unit()
+        return None
 
     def fully_cancel(self):
         """Combine any terms of the same dimension in the unit."""
+        # The unit may not have the same value afterwards
+        # e.g. CompoundUnit(m km) cancels to Quantity(1000 m^2)
+        # so we can't do this in place
         if not self._uncertainty:
-            return self.number * self.unit.fully_cancel()
+            return Quantity(self.number, self._unit.fully_cancel())
         else:
-            return (self.number * self.unit.fully_cancel()).with_uncertainty(
-                self.uncertainty.fully_cancel().number
+            return Quantity(
+                self.number,
+                self._unit.fully_cancel(),
+                self.uncertainty.fully_cancel().number,
             )
 
     def _auto_cancel(self):
         """Apply automatic cancelling if specified by `quanstants.quanfig.AUTO_CANCEL`."""
+        # DEPRECATED
         if quanfig.AUTO_CANCEL:
             return self.cancel()
         else:
@@ -761,11 +880,13 @@ class Quantity:
     def canonical(self):
         """Express the quantity with its units in a canonical order."""
         if not self._uncertainty:
-            return self.number * self.unit.canonical()
+            return Quantity(self.number, self.unit.canonical())
         else:
-            return (self.number * self.unit.canonical()).with_uncertainty(
-                self._uncertainty
-        )
+            return Quantity(
+                self.number,
+                self.unit.canonical(),
+                self._uncertainty,
+            )
 
     def base(self):
         """Return the quantity expressed in terms of base units.
@@ -773,10 +894,12 @@ class Quantity:
         The unit is always returned in a fully cancelled, canonical form.
         """
         if not self._uncertainty:
-            return self.number * self.unit.base()
+            return Quantity(self.number, self._unit.base())
         else:
-            return (self.number * self.unit.base()).with_uncertainty(
-                self.uncertainty.base().number
+            return Quantity(
+                self.number,
+                self._unit.base(),
+                self.uncertainty.base().number,
             )
 
     def to(self, other):

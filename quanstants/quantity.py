@@ -208,7 +208,7 @@ class Quantity:
             dimensionless_quant = self.base()
             return float(dimensionless_quant.number)
 
-    # Arithmetic functions, both dunder methods and normal
+    # Arithmetic functions, both dunder methods and not
     def __add__(self, other, correlation=0):
         if isinstance(other, Quantity):
             if self.unit == other.unit:

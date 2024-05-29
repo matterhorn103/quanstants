@@ -8,13 +8,32 @@ from platformdirs import user_config_dir
 # contained in quanstants/config.toml
 
 class QuanstantsConfig:
+    """Manages environment variables, user preferences, and custom definitions.
+    
+    An instance called `quanfig` is created at the end of this file, which is imported
+    around the rest of the package and treated as a singleton.
+
+    The environment variables/preferences make up the config itself and are accessible
+    as attributes of a 
+    """
     def __init__(self):
         # Open default options from file
         with open(Path(__file__).with_name("config.toml"), "rb") as f:
             defaults = tomllib.load(f)
+        
+        # Create options dict – this plays the same role as self.__dict__ but contains
+        # just the key:value pairs of the config options in a flat structure
+        # Have to create it like this as we have overridden __setattr__ and setting it
+        # normally causes recursion
         super().__setattr__("options", {})
         self.config_table = defaults["config"]
         self.init_config(defaults["config"])
+
+        # A list to hold any toml files discovered or loaded
+        # On import of quanstants for the first time, find_toml() gets called without
+        # arguments, so the first entry in the list (if there is one) will either have
+        # been the one used automatically for user-specific setup or the first one
+        # loaded deliberately by the user
         self.toml_list = []
 
     def __getattribute__(self, name):
@@ -157,6 +176,12 @@ class QuanstantsConfig:
         for section in config_table.keys():
             for key, value in config_table[section].items():
                 setattr(self, key, value)
+    
+    def save_config(self, toml_path: Path = None):
+        """Save the current configuration to a `quanstants.toml` file.
+        
+        If a path is provided as an argument, 
+        """
 
     def load_units(self, units_table: dict):
         """Create units from a specification contained in a units table read from `quanstants.toml`.

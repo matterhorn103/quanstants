@@ -27,7 +27,7 @@ class QuanstantsConfig:
         if name in self.options:
             # Make sure it's a valid option
             if "choices" in self.options[name] and value not in self.options[name]["choices"]:
-                    raise TypeError(f"Value provided not amongst possible choices: {self.options[name]['choices']}")
+                    raise TypeError(f"Value provided not amongst possible choices: {self.options[name]["choices"]}")
             else:
                 # Some options need custom handling
                 if name == "PRETTYPRINT":
@@ -47,14 +47,14 @@ class QuanstantsConfig:
                 print("\t" + details["doc"].replace("\n", "\n\t"))
                 print()
                 if "choices" in details:
-                    print(f"\tPossible values: {details['choices']}")
+                    print(f"\tPossible values: {details["choices"]}")
                 current = getattr(self, option)
                 if isinstance(current, str):
-                    print(f"\tCurrent value: '{current}'")
-                    print(f"\tDefault value: '{details['default']}'")
+                    print(f"\tCurrent value: "{current}"")
+                    print(f"\tDefault value: "{details["default"]}"")
                 else:
                     print(f"\tCurrent value: {current}")
-                    print(f"\tDefault value: {details['default']}")
+                    print(f"\tDefault value: {details["default"]}")
                 print()
 
     def find_toml(self, *dirs) -> Path | None:

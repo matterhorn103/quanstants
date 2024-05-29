@@ -177,7 +177,7 @@ class Quantity:
         ) and (quanfig.UNCERTAINTY_STYLE == "PARENTHESES"):
             number_string = group_digits(self.number)
             bracketed_uncertainty = (
-                f"({''.join([str(n) for n in self._uncertainty.as_tuple().digits])})"
+                f"({"".join([str(n) for n in self._uncertainty.as_tuple().digits])})"
             )
             # Insert before exponential if present
             if any(x in number_string for x in ["E", "e"]):

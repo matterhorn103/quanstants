@@ -790,8 +790,12 @@ class Quantity:
             else:
                 return Quantity(0, other, self.uncertainty.to(other))
         else:
-            # Convert both args to quantities in base units, then divide, then cancel to get ratio
+            # Convert both args to quantities in base units, then divide, then cancel to
+            # get ratio
             result = (self.base() / other.base()).cancel()
+            # Before the implementation of lazy cancelling the above line took 96 µs in
+            # one test on a slow PC, vs 186 for (self/other).base()
+            # and 427 for (a/b).fully_cancel()
             if not self._uncertainty:
                 return Quantity(result.number, result.unit.__mul__(other, concatenate_symbols=True))
             else:

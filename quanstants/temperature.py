@@ -114,11 +114,13 @@ class Temperature(Quantity):
         number: str | int | float | dec,
         unit: TemperatureUnit,
         uncertainty: str | int | float | dec | Quantity | None = None,
+        **kwargs,
     ):
         super().__init__(
             number,
             unit,
             uncertainty,
+            **kwargs,
         )
 
     def __repr__(self):

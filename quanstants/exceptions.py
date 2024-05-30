@@ -10,6 +10,9 @@ class AlreadyDefinedError(QuanstantsError):
 class AlreadyPrefixedError(QuanstantsError):
     pass
 
+class IncompleteDimensionsError(QuanstantsError):
+    pass
+
 class MismatchedUnitsError(QuanstantsError):
     pass
 

@@ -291,6 +291,7 @@ class LogarithmicQuantity(Quantity):
         unit: LogarithmicUnit | None = None,
         uncertainty: Quantity | None = None,
         value: Quantity | None = None,
+        **kwargs,
     ):  
         # Ignore value if number was provided
         if (number is not None):
@@ -304,6 +305,7 @@ class LogarithmicQuantity(Quantity):
             unit=unit,
             uncertainty=None,
             value=value,
+            **kwargs,
         )
         # Assuming no value was provided, overwrite now
         # The value of a logarithmic quantity should always be stored as an absolute

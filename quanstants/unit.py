@@ -115,27 +115,43 @@ class Unit:
         """Does everything that `self.cancel() does, but returns a `Unit`."""
         raise NotImplementedError
 
-    def cancel(self):
-        """Combine any like terms and return as a `Quantity`."""
+    def cancel(self, force_drop_unitless: bool = False) -> Quantity:
+        """Combine any like terms and return as a `Quantity`.
+        
+        Note that "like" means that the units are equivalent in value, not that they are
+        the same Unit object.
+
+        Terms of `Unitless` units which have `drop = True` will also be dropped; this is
+        the case for `quanstants.units.unitless`, but not for `radian` or `steradian`.
+        Passing `force_drop_unitless = True` will cause these to be dropped too.
+        """
         return Quantity(1, self._cancel_to_unit())
 
-    def fully_cancel(self):
-        """Combine any terms of the same dimension and return as a `Quantity`."""
+    def fully_cancel(self) -> Quantity:
+        """Combine any terms with the same dimensions and return as a `Quantity`.
+        
+        Component units with the same dimensions are converted to whichever unit is a
+        base unit, or otherwise to whichever occurs first.
+
+        Any terms of `Unitless` units (i.e. equal to 1) will also be dropped.
+        In contrast to `cancel()`, this means even those for which `drop = False`, like
+        `radian` and `steradian`, will be dropped.
+        """
         return self.cancel()
 
     def canonical(self):
         """Order terms into a reproducible order and return as a `Quantity`."""
         raise NotImplementedError
     
-    def base(self):
+    def base(self) -> Quantity:
         """Return the unit's value in base units as a `Quantity`.
         
         This is always returned in a fully cancelled, canonical form.
         """
+        # Check for cached value
         if not hasattr(self, "_value_base"):
-            return self.value.base()
-        else:
-            return self._value_base
+            self._value_base = self.value.base()
+        return self._value_base
 
 
 class LinearUnit(Unit):
@@ -149,8 +165,8 @@ class LinearUnit(Unit):
     "L" (length), "T" (time), "I" (electric current), "Θ" (thermodynamic temperature),
     "N" (amount of substance), or "J" (luminous intensity).
     If a unit's dimensions comprise multiple base dimensions or exponents, they should
-    be passed as `dimensions` as a dict of the form `{"L": 1, "M": 2, ...}`,
-    (only those with non-zero exponents are required), or as the analogous `Counter`.
+    be passed as `dimensions` a `Dimensions` object or as an equivalent dict of the form
+    `{"L": 1, "M": 2, ...}`, in which all seven base dimensions must be specified.
     """
 
     __slots__ = ("_components", "_dimensions")
@@ -373,17 +389,9 @@ class BaseUnit(LinearUnit):
         return self
 
     def cancel(self) -> Quantity:
-        """Combine any like terms and return as a `Quantity`.
-        
-        For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
-        """
         return self.value
 
     def canonical(self) -> Quantity:
-        """Order terms into a reproducible order and return as a `Quantity`.
-        
-        For a `BaseUnit`, simply returns a `Quantity` of unity times the `BaseUnit`.
-        """
         return self.value
 
 
@@ -608,12 +616,12 @@ class CompoundUnit(LinearUnit):
     def fully_cancel(self) -> Quantity:
         """Combine any terms with the same dimensions and return as a `Quantity`.
         
-        Units with the same dimensions are converted to whichever unit is a base unit,
-        or otherwise to whichever occurs first.
+        Component units with the same dimensions are converted to whichever unit is a
+        base unit, or otherwise to whichever occurs first.
 
         Any terms of `Unitless` units (i.e. equal to 1) will also be dropped.
-        In contrast to `cancel()`, this means even those like `radian` and `steradian`
-        for which `drop = False` will be dropped.
+        In contrast to `cancel()`, this means even those for which `drop = False`, like
+        `radian` and `steradian`, will be dropped.
         """
         result_number = 1
         new_components_dict = {}

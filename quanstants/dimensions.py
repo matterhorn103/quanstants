@@ -1,3 +1,4 @@
+from .exceptions import IncompleteDimensionsError
 from .unicode import generate_superscript
 
 # Tried using Counters for this but addition via dict comprehension was much faster
@@ -58,11 +59,15 @@ class Dimensions(dict):
 
     def __init__(self, *args, **kwargs):
 
-        # If no arguments are passed, create a new dimensionless Dimensions
-        if len(args) == 0 and len(kwargs) == 0:
-            super().__init__(Dimensions._dimensionless)
-        else:
+        # If no positional arguments are passed, create a new dimensionless Dimensions
+        # then add anything specified as kwargs
+        if len(args) == 0:
+            super().__init__(Dimensions._dimensionless, **kwargs)
+        # Otherwise the passed iterable needs to have all 7 dimensions
+        elif len(args[0]) == 7:
             super().__init__(*args, **kwargs)
+        else:
+            raise IncompleteDimensionsError("If a mapping or iterable is provided, all seven base dimensions must be specified.")
     
     def __str__(self) -> str:
         """Return the dimension as a nice string."""

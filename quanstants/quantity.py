@@ -234,7 +234,7 @@ class Quantity:
                     new_number, "add", self, quantityB=other, correlation=correlation
                 )
             # Allow mixed units with the same dimension
-            elif self._unit.dimensionless == other._unit.dimensions:
+            elif self._unit.dimensions == other._unit.dimensions:
                 converted = other.to(self._unit)
                 new_number = self.number + converted.number
                 new_uncertainty = get_uncertainty(
@@ -833,7 +833,7 @@ class Quantity:
         """Combine any like terms in the unit."""
         return Quantity(
             self.number,
-            self._unit.cancel_to_unit(),
+            self._unit._cancel_to_unit(),
             self._uncertainty,
         )
     
@@ -857,14 +857,14 @@ class Quantity:
         # The unit may not have the same value afterwards
         # e.g. CompoundUnit(m km) cancels to Quantity(1000 m^2)
         # so we can't do this in place
-        if not self._uncertainty:
-            return Quantity(self.number, self._unit.fully_cancel().unit)
-        else:
-            return Quantity(
-                self.number,
-                self._unit.fully_cancel().unit,
-                self.uncertainty.fully_cancel().number,
-            )
+        # We need to multiply both the number and uncertainty by the number that results
+        # from the unit cancellation
+        cancelled = self._unit.fully_cancel()
+        return Quantity(
+            self.number * cancelled.number,
+            cancelled.unit,
+            self._uncertainty * cancelled.number,
+        )
 
     def _auto_cancel(self):
         """Apply automatic cancelling if specified by `quanstants.quanfig.AUTO_CANCEL`."""
@@ -876,28 +876,25 @@ class Quantity:
 
     def canonical(self):
         """Express the quantity with its units in a canonical order."""
-        if not self._uncertainty:
-            return Quantity(self.number, self.unit.canonical())
-        else:
-            return Quantity(
-                self.number,
-                self.unit.canonical(),
-                self._uncertainty,
-            )
+        return Quantity(
+            self.number,
+            self.unit.canonical().unit,
+            self._uncertainty,
+        )
 
     def base(self):
         """Return the quantity expressed in terms of base units.
         
         The unit is always returned in a fully cancelled, canonical form.
         """
-        if not self._uncertainty:
-            return Quantity(self.number, self._unit.base())
-        else:
-            return Quantity(
-                self.number,
-                self._unit.base(),
-                self.uncertainty.base().number,
-            )
+        # Need to be careful here as unit.base() might return a Quantity with a number
+        # other than 1
+        base = self._unit.base()
+        return Quantity(
+            self.number * base.number,
+            base.unit,
+            self._uncertainty * base.number,
+        )
 
     def to(self, other):
         """Express the quantity in terms of another unit."""

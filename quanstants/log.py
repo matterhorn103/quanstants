@@ -4,8 +4,9 @@ import math
 from .config import quanfig
 from .uncertainties import get_uncertainty
 from .unit import Unit, unitless
-from .quantity import Quantity, MismatchedUnitsError
-from .prefix import Prefix, AlreadyPrefixedError
+from .quantity import Quantity
+from .prefix import Prefix
+from .exceptions import AlreadyPrefixedError, MismatchedUnitsError
 from .units.base import *
 
 
@@ -129,9 +130,6 @@ class LogarithmicUnit(Unit):
         # Technically the answer is always True but this should only return True if
         # self.base() is dimensionless
         return self.reference.is_dimensionless()
-    
-    def dimension(self):
-        return f"log_{self.log_base}({self.reference.dimension()})"
     
     def from_absolute(self, other: Quantity):
         """Convert an absolute `Quantity` to a relative `LogarithmicQuantity` with this unit.

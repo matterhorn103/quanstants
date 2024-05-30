@@ -25,7 +25,7 @@ class TestREADME:
     is forgotten, it will still be tested by this automatic test.
     In this way, this test class provides a guarantee 
     """
-    with open("README.md", "r") as f:
+    with open("README.md", "r", encoding="utf-8") as f:
         readme = [line.rstrip() for line in f.readlines()]
     subsections = {}
     current_subsection = None

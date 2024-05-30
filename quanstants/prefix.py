@@ -1,14 +1,12 @@
 from decimal import Decimal as dec
 
 from .config import quanfig
+from .exceptions import AlreadyPrefixedError
 from .quantity import Quantity
 from .unit import BaseUnit, DerivedUnit
 from .units.base import kilogram
 
 from . import prefixes
-
-class AlreadyPrefixedError(Exception):
-    pass
 
 
 class Prefix:

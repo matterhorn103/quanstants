@@ -286,7 +286,7 @@ Quantity(9, W²)
 Quantity(4.472135954999579392818347337, m)
 ```
 
-Addition and subtraction is possible when it makes physical sense i.e. when the units of the two quantities are the same or have the same dimension:
+Addition and subtraction is possible when it makes physical sense i.e. when the units of the two quantities are the same or have the same dimensions:
 ```python
 >>> (4 * qu.metre) + (0.5 * qu.metre)
 Quantity(4.5, m)
@@ -303,7 +303,7 @@ If the units do not match, a `MismatchedUnitsError` will be raised, which serves
 MismatchedUnitsError: Can't add quantity in Unit(m) to quantity in Unit(kg).
 ```
 
-Similarly, (in)equalities are implemented between quantities of the same dimension:
+Similarly, (in)equalities are implemented between quantities of the same dimensions:
 ```python
 >>> (0.3 * qu.litre) > (150 * qu.millilitre)
 True
@@ -401,7 +401,7 @@ Note that by default `quanstants.quanfig.AUTO_CANCEL` is set to `True`, in which
 Quantity(45, m)
 ```
 
-Use `fully_cancel()` to additionally combine units with the same dimensionality:
+Use `fully_cancel()` to additionally combine units with the same dimensions:
 ```python
 >>> x = (30 * qu.kilowatt * qu.s) / (200 * qu.s * qu.watt**-1)
 >>> x.cancel()

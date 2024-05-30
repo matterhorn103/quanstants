@@ -2,7 +2,47 @@ from fractions import Fraction as frac
 
 from .config import quanfig
 
-# Dictionary of correspondence between a factor's exponent, which is just an integer,
+
+# Function to turn a tuple or other iterable of unit terms into a symbol
+def generate_symbol(
+    components: tuple[tuple, ...],
+    sort_by="sign",
+    inverse=quanfig.INVERSE_UNIT,
+) -> str:
+    # Create symbol as concatenation of symbols of components, with spaces
+    terms = []
+    positive_terms = []
+    negative_terms = []
+    for factor in components:
+        term = factor[0].symbol
+        if factor[1] >= 0:
+            term += generate_superscript(factor[1])
+            if sort_by == "sign":
+                positive_terms.append(term)
+            else:
+                terms.append(term)
+        elif factor[1] < 0:
+            if (inverse == "NEGATIVE_SUPERSCRIPT") or (sort_by != "sign"):
+                term += generate_superscript(factor[1])
+            elif (inverse == "SLASH") and (sort_by == "sign"):
+                term += generate_superscript(-1 * factor[1])
+            if sort_by == "sign":
+                negative_terms.append(term)
+            else:
+                terms.append(term)
+    if sort_by == "sign":
+        if len(negative_terms) > 0:
+            if inverse == "NEGATIVE_SUPERSCRIPT":
+                return " ".join(positive_terms) + " " + " ".join(negative_terms)
+            elif inverse == "SLASH":
+                return " ".join(positive_terms) + "/" + " ".join(negative_terms)
+        else:
+            return " ".join(positive_terms)
+    else:
+        return " ".join(terms)
+
+
+# Dictionary of correspondence between a term's exponent, which is just an integer,
 # and the appropriate Unicode symbol. For now, only hard-code up to |9|
 _unicode_superscripts = {
     1: "¹",

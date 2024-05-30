@@ -5,18 +5,12 @@ import math
 from typing import Self
 
 from .config import quanfig
+from .dimensions import Dimensions
+from .exceptions import MismatchedUnitsError, NotDimensionlessError
 from .format import group_digits
 from .uncertainties import get_uncertainty
 
 from . import units
-
-
-class MismatchedUnitsError(Exception):
-    pass
-
-
-class NotDimensionlessError(Exception):
-    pass
 
 
 class Quantity:
@@ -124,7 +118,7 @@ class Quantity:
         if uncertainty is None:
             self._uncertainty = dec("0")
         elif isinstance(uncertainty, Quantity):
-            if uncertainty.unit != self._unit:
+            if uncertainty._unit != self._unit:
                 self._uncertainty = uncertainty.to(self._unit).number
             else:
                 self._uncertainty = uncertainty.number
@@ -240,7 +234,7 @@ class Quantity:
                     new_number, "add", self, quantityB=other, correlation=correlation
                 )
             # Allow mixed units with the same dimension
-            elif self._unit.dimensional_exponents == other._unit.dimensional_exponents:
+            elif self._unit.dimensionless == other._unit.dimensions:
                 converted = other.to(self._unit)
                 new_number = self.number + converted.number
                 new_uncertainty = get_uncertainty(
@@ -271,7 +265,7 @@ class Quantity:
                     new_number, "sub", self, quantityB=other, correlation=correlation
                 )
             # Allow mixed units with the same dimension
-            elif self._unit.dimensional_exponents == other._unit.dimensional_exponents:
+            elif self._unit.dimensions == other._unit.dimensions:
                 converted = other.to(self._unit)
                 new_number = self.number - converted.number
                 new_uncertainty = get_uncertainty(
@@ -414,7 +408,7 @@ class Quantity:
             )
             return Quantity(
                 new_number,
-                self.unit**other,
+                self._unit**other,
                 new_uncertainty,
                 pending_cancel=self._pending_cancel,
             )
@@ -468,7 +462,7 @@ class Quantity:
             dimensionless_quant = self.base()
             new_number = dimensionless_quant.number.exp()
             new_uncertainty = get_uncertainty(new_number, "exp", self)
-            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
+            return Quantity(new_number, None, new_uncertainty)
 
     def ln(self):
         """Return the natural logarithm of the quantity, for dimensionless quantities only."""
@@ -480,7 +474,7 @@ class Quantity:
             dimensionless_quant = self.base()
             new_number = dimensionless_quant.number.ln()
             new_uncertainty = get_uncertainty(new_number, "ln", self)
-            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
+            return Quantity(new_number, None, new_uncertainty)
 
     def log(self, base=None):
         if base is None:
@@ -495,7 +489,7 @@ class Quantity:
             dimensionless_quant = self.base()
             new_number = dec(math.log(dimensionless_quant.number, base))
             new_uncertainty = get_uncertainty(new_number, "log", self, log_base=base)
-            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
+            return Quantity(new_number, None, new_uncertainty)
 
     def log10(self):
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
@@ -507,7 +501,7 @@ class Quantity:
             dimensionless_quant = self.base()
             new_number = dimensionless_quant.number.log10()
             new_uncertainty = get_uncertainty(new_number, "log10", self)
-            return Quantity(new_number, dimensionless_quant.unit, new_uncertainty)
+            return Quantity(new_number, None, new_uncertainty)
 
     def __hash__(self):
         base = self.base()
@@ -545,12 +539,12 @@ class Quantity:
             # Convert both to canonical base unit representations
             a = self.base()
             b = other.base()
-            if a.unit.dimensional_exponents != b.unit.dimensional_exponents:
+            if a.unit.dimensions != b.unit.dimensions:
                 raise MismatchedUnitsError
             elif (
                 (a.number > b.number)
                 and (a.unit.symbol == b.unit.symbol)
-                and (a.unit.dimensional_exponents == b.unit.dimensional_exponents)
+                and (a.unit.dimensions == b.unit.dimensions)
             ):
                 return True
             else:
@@ -564,12 +558,12 @@ class Quantity:
             # Convert both to canonical base unit representations
             a = self.base()
             b = other.base()
-            if a.unit.dimensional_exponents != b.unit.dimensional_exponents:
+            if a.unit.dimensions != b.unit.dimensions:
                 raise MismatchedUnitsError
             elif (
                 (a.number >= b.number)
                 and (a.unit.symbol == b.unit.symbol)
-                and (a.unit.dimensional_exponents == b.unit.dimensional_exponents)
+                and (a.unit.dimensions == b.unit.dimensions)
             ):
                 return True
             else:
@@ -674,7 +668,10 @@ class Quantity:
         with localcontext() as ctx:
             ctx.rounding = quanfig.ROUNDING_MODE
             rounded = type(self)(
-                round(self.number, ndigits), self.unit, self._uncertainty
+                round(self.number, ndigits),
+                self._unit,
+                self._uncertainty,
+                pending_cancel=self._pending_cancel,
             )
         return rounded
 
@@ -815,9 +812,9 @@ class Quantity:
         """Check if unit is dimensionless."""
         return self._unit.is_dimensionless()
 
-    def dimension(self):
-        """Return the dimension as a nice string."""
-        return self._unit.dimension()
+    def dimensions(self) -> Dimensions:
+        """Return the dimensions of the unit."""
+        return self._unit.dimension_string()
 
     def with_uncertainty(self, uncertainty):
         """Return a new quantity with the provided uncertainty."""
@@ -836,7 +833,7 @@ class Quantity:
         """Combine any like terms in the unit."""
         return Quantity(
             self.number,
-            self._unit.cancel(),
+            self._unit.cancel_to_unit(),
             self._uncertainty,
         )
     
@@ -861,11 +858,11 @@ class Quantity:
         # e.g. CompoundUnit(m km) cancels to Quantity(1000 m^2)
         # so we can't do this in place
         if not self._uncertainty:
-            return Quantity(self.number, self._unit.fully_cancel())
+            return Quantity(self.number, self._unit.fully_cancel().unit)
         else:
             return Quantity(
                 self.number,
-                self._unit.fully_cancel(),
+                self._unit.fully_cancel().unit,
                 self.uncertainty.fully_cancel().number,
             )
 

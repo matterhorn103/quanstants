@@ -3,7 +3,8 @@ from decimal import Decimal as dec
 from .config import quanfig
 from .exceptions import NotATemperatureError
 from .uncertainties import get_uncertainty
-from .unit import LinearUnit, BaseUnit
+from .unit import Unit, BaseUnit
+from .abstract_quantity import AbstractQuantity
 from .quantity import Quantity
 
 
@@ -11,7 +12,7 @@ from .quantity import Quantity
 kelvin = BaseUnit("K", "kelvin", dimensions="Θ")
 
 
-class TemperatureUnit(LinearUnit):
+class TemperatureUnit(Unit):
     """A unit of temperature on a relative rather than absolute scale.
 
     `degree_value` is the size of the unit itself.
@@ -65,7 +66,6 @@ class TemperatureUnit(LinearUnit):
             symbol=symbol,
             name=name,
             components=((self, 1),),
-            value=self._degree_value,
             dimensions="Θ",
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,
@@ -104,7 +104,7 @@ class TemperatureUnit(LinearUnit):
         return 1 * self
 
 
-class Temperature(Quantity):
+class Temperature(AbstractQuantity):
     """Represents relative temperatures on a scale."""
 
     __slots__ = ()
@@ -120,12 +120,15 @@ class Temperature(Quantity):
             number,
             unit,
             uncertainty,
-            **kwargs,
         )
 
-    def __repr__(self):
-        as_quantity = super().__repr__()
-        return as_quantity.replace("Quantity", "Temperature")
+        self._value = None
+
+    @property
+    def value(self) -> Quantity:
+        if self._value is None:
+            self._value = self.to_absolute()
+        return self._value
 
     # For addition and subtraction, convert to quantities in kelvin to do the maths as
     # then the uncertainty will be taken care of by `Quantity`'s dunder methods
@@ -157,9 +160,6 @@ class Temperature(Quantity):
                 )
         else:
             return NotImplemented
-    
-    def __radd__(self, other, correlation=0):
-        return NotImplemented
 
     def __sub__(self, other, correlation=0):
         # Allow finding the difference between two temperatures
@@ -189,9 +189,6 @@ class Temperature(Quantity):
                 return result.round_to_resolution_of(self)
         else:
             return result
-    
-    def __rsub__(self, other, correlation=0):
-        return NotImplemented
 
     # For other mathematical operations, convert to kelvin and leave in kelvin
     # Python recognises if the parent has been overridden and so for
@@ -214,14 +211,21 @@ class Temperature(Quantity):
 
     def __pow__(self, other, correlation=0):
         return self.to_absolute() ** other
-    
-    def __rpow__(self, other, correlation=0):
-        return NotImplemented
 
     def __neg__(self):
         return Temperature(-1 * self.number, self.unit, self._uncertainty)
 
-    # Equality functions of `Quantity` call `.base()` anyway, so super handles fine
+    def __hash__(self):
+        return hash(self.to_absolute())
+
+    def __eq__(self, other):
+        return self.to_absolute() == other
+
+    def __gt__(self, other):
+        return self.to_absolute() > other
+
+    def __ge__(self, other):
+        return self.to_absolute() >= other
 
     @classmethod
     def from_absolute(cls, unit: TemperatureUnit, quantity: Quantity):
@@ -271,7 +275,11 @@ class Temperature(Quantity):
                 kelvin,
                 self.uncertainty.to(kelvin),
             )
-
+        
+    # TODO Come up with some better way
+    def resolution(self):
+        return Quantity(10 ** self.number.as_tuple().exponent, self._unit)
+    
     def cancel(self):
         return self
 

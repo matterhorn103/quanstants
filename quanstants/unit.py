@@ -3,7 +3,7 @@ from fractions import Fraction as frac
 
 from .config import quanfig
 from .quantity import Quantity
-from .unitbase import AbstractUnit
+from .abstract_unit import AbstractUnit
 from .dimensions import Dimensions, generate_dimensions
 from .unicode import generate_symbol
 
@@ -29,10 +29,7 @@ def get_priority(factor: tuple) -> int:
     return priority
 
 
-
-
-
-class LinearUnit(AbstractUnit):
+class Unit(AbstractUnit):
     """Represents units on linear scales (i.e. most units).
 
     These units can be multiplied with numbers, units, and quantities in a linear
@@ -47,7 +44,7 @@ class LinearUnit(AbstractUnit):
     `{"L": 1, "M": 2, ...}`, in which all seven base dimensions must be specified.
     """
 
-    __slots__ = ("_components", "_dimensions")
+    __slots__ = ("_components", "_dimensions", "_value", "_value_base")
 
     def __init__(
         self,
@@ -63,11 +60,12 @@ class LinearUnit(AbstractUnit):
         super().__init__(
             symbol=symbol,
             name=name,
-            value=value,
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
         )
+
+        self._value = value if value is not None else Quantity(1, self)
 
         if isinstance(dimensions, Dimensions):
             self._dimensions = dimensions
@@ -88,6 +86,10 @@ class LinearUnit(AbstractUnit):
         if self._symbol is None:
             self._symbol = generate_symbol(self.components)
         return self._symbol
+    
+    @property
+    def value(self) -> Quantity:
+        return self._value
 
     @property
     def dimensions(self) -> Dimensions:
@@ -114,7 +116,7 @@ class LinearUnit(AbstractUnit):
                 return CompoundUnit(units=(self, other), concatenate_symbols=True)
             else:
                 return self
-        elif isinstance(other, LinearUnit):
+        elif isinstance(other, Unit):
             if concatenate_symbols:
                 return CompoundUnit(units=(self, other), concatenate_symbols=True)
             else:
@@ -135,7 +137,7 @@ class LinearUnit(AbstractUnit):
     def __truediv__(self, other):
         if isinstance(other, UnitlessUnit):
             return self
-        elif isinstance(other, LinearUnit):
+        elif isinstance(other, Unit):
             return CompoundUnit(self.components + other.components_inverse())
         elif isinstance(other, Quantity):
             return Quantity(1 / other.number, self / other.unit)
@@ -183,21 +185,21 @@ class LinearUnit(AbstractUnit):
         return hash(self.value)
 
     def __eq__(self, other):
-        if isinstance(other, (LinearUnit, Quantity)):
+        if isinstance(other, (Unit, Quantity)):
             # Compare the values (handled by `Quantity`)
             return self.value == other.value
         else:
             return NotImplemented
 
     def __gt__(self, other):
-        if isinstance(other, (LinearUnit, Quantity)):
+        if isinstance(other, (Unit, Quantity)):
             # Compare the values (handled by `Quantity`)
             return self.value > other.value
         else:
             return NotImplemented
 
     def __ge__(self, other):
-        if isinstance(other, (LinearUnit, Quantity)):
+        if isinstance(other, (Unit, Quantity)):
             # Compare the values (handled by `Quantity`)
             return self.value >= other.value
         else:
@@ -218,9 +220,51 @@ class LinearUnit(AbstractUnit):
             return True
         else:
             return False
+    
+    def _cancel_to_unit(self, force_drop_unitless: bool = False):
+        """Does everything that `self.cancel() does, but returns a `Unit`."""
+        raise NotImplementedError
+
+    def cancel(self, force_drop_unitless: bool = False) -> Quantity:
+        """Combine any like terms and return as a `Quantity`.
+        
+        Note that "like" means that the units are equivalent in value, not that they are
+        the same Unit object.
+
+        Terms of `Unitless` units which have `drop = True` will also be dropped; this is
+        the case for `quanstants.units.unitless`, but not for `radian` or `steradian`.
+        Passing `force_drop_unitless = True` will cause these to be dropped too.
+        """
+        return Quantity(1, self._cancel_to_unit(force_drop_unitless=force_drop_unitless))
+
+    def fully_cancel(self) -> Quantity:
+        """Combine any terms with the same dimensions and return as a `Quantity`.
+        
+        Component units with the same dimensions are converted to whichever unit is a
+        base unit, or otherwise to whichever occurs first.
+
+        Any terms of `Unitless` units (i.e. equal to 1) will also be dropped.
+        In contrast to `cancel()`, this means even those for which `drop = False`, like
+        `radian` and `steradian`, will be dropped.
+        """
+        return self.cancel()
+
+    def canonical(self):
+        """Order terms into a reproducible order and return as a `Quantity`."""
+        raise NotImplementedError
+
+    def base(self) -> Quantity:
+        """Return the unit's value in base units as a `Quantity`.
+        
+        This is always returned in a fully cancelled, canonical form.
+        """
+        # Check for cached value
+        if not hasattr(self, "_value_base"):
+            self._value_base = self.value.base()
+        return self._value_base
 
 
-class BaseUnit(LinearUnit):
+class BaseUnit(Unit):
     """SI base units and other base units that are not defined in terms of other units.
     
     The key property of a `BaseUnit` is that a request to express it in base units, to
@@ -261,7 +305,7 @@ class BaseUnit(LinearUnit):
         else:
             return False
         
-    def _cancel_to_unit(self) -> LinearUnit:
+    def _cancel_to_unit(self) -> Unit:
         return self
 
     def canonical(self) -> Quantity:
@@ -303,25 +347,25 @@ class UnitlessUnit(BaseUnit):
         self._drop = drop
 
     def __mul__(self, other, concatenate_symbols: bool = False):
-        if self._drop and isinstance(other, (LinearUnit, Quantity)):
+        if self._drop and isinstance(other, (Unit, Quantity)):
             return other
         else:
             return super().__mul__(other, concatenate_symbols=concatenate_symbols)
 
     def __rmul__(self, other):
-        if self._drop and isinstance(other, (LinearUnit, Quantity)):
+        if self._drop and isinstance(other, (Unit, Quantity)):
             return other
         else:
             return super().__rmul__(other)
 
     def __truediv__(self, other):
-        if self._drop and isinstance(other, (LinearUnit, Quantity)):
+        if self._drop and isinstance(other, (Unit, Quantity)):
             return other.inverse()
         else:
             return super().__truediv__(other)
 
     def __rtruediv__(self, other):
-        if self._drop and isinstance(other, (LinearUnit, Quantity)):
+        if self._drop and isinstance(other, (Unit, Quantity)):
             return other
         else:
             return super().__rtruediv__(other)
@@ -344,7 +388,7 @@ class UnitlessUnit(BaseUnit):
     def __ge__(self, other):
         return 1 >= other
     
-    def _cancel_to_unit(self, force_drop_unitless: bool = False) -> LinearUnit:
+    def _cancel_to_unit(self, force_drop_unitless: bool = False) -> Unit:
         if self._drop:
             return unitless
         else:
@@ -365,7 +409,7 @@ unitless = UnitlessUnit(
 )
 
 
-class CompoundUnit(LinearUnit):
+class CompoundUnit(Unit):
     """An effective unit created through multiplication of non-compound units.
 
     Multiple units multiplied together are treated as a single `Unit` object with its
@@ -456,7 +500,7 @@ class CompoundUnit(LinearUnit):
     def __eq__(self, other):
         return hash(self) == hash(other)
 
-    def _cancel_to_unit(self, force_drop_unitless=False) -> LinearUnit:
+    def _cancel_to_unit(self, force_drop_unitless=False) -> Unit:
         """Does everything that `self.cancel() does, but returns a unit."""
         new_components_dict = {}
         unitless_components_dict = {}
@@ -614,7 +658,7 @@ class CompoundUnit(LinearUnit):
         return self._value_base
     
 
-class DerivedUnit(LinearUnit):
+class DerivedUnit(Unit):
     """Units derived from and defined with SI units.
 
     `value` is a `Quantity` with both a number and a `Unit`, and optionally, an
@@ -650,7 +694,7 @@ class DerivedUnit(LinearUnit):
         )
         self._value_base = self.value.base()
     
-    def _cancel_to_unit(self, force_drop_unitless: bool = False) -> LinearUnit:
+    def _cancel_to_unit(self, force_drop_unitless: bool = False) -> Unit:
         return self
 
     def canonical(self) -> Quantity:

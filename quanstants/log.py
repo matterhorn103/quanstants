@@ -3,9 +3,9 @@ import math
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
-from .unitbase import AbstractUnit
+from .abstract_unit import AbstractUnit
 from .unit import unitless
-from .quantitybase import AbstractQuantity
+from .abstract_quantity import AbstractQuantity
 from .quantity import Quantity
 from .prefix import Prefix
 from .exceptions import AlreadyPrefixedError, MismatchedUnitsError
@@ -49,7 +49,6 @@ class LogarithmicUnit(AbstractUnit):
         super().__init__(
             symbol=symbol,
             name=name,
-            value=LogarithmicQuantity(1, self),
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
@@ -285,7 +284,7 @@ class LogarithmicQuantity(AbstractQuantity):
     If both a `number` and a `value` are passed, `value` will be completely ignored.
     """
 
-    __slots__ = ("_value", "_reference")
+    __slots__ = ("_reference")
 
     def __init__(
         self,
@@ -306,14 +305,14 @@ class LogarithmicQuantity(AbstractQuantity):
             number=number,
             unit=unit,
             uncertainty=None,
-            value=value,
-            **kwargs,
         )
         # Assuming no value was provided, overwrite now
         # The value of a logarithmic quantity should always be stored as an absolute
         # quantity in the units of the reference
         if value is None:
             self._value = self.to_absolute()
+        else:
+            self._value = value
         self._uncertainty = dec("0") if uncertainty is None or uncertainty == 0 else uncertainty
 
     @property
@@ -333,8 +332,7 @@ class LogarithmicQuantity(AbstractQuantity):
         return self.unit.reference
     
     def __repr__(self):
-        as_quantity = super().__repr__()
-        result = as_quantity.replace("Quantity", "LogarithmicQuantity")
+        result = super().__repr__()
         if "uncertainty" in result:
             result = result.replace("uncertainty=", "uncertainty=(") + ")"
         return result
@@ -355,9 +353,6 @@ class LogarithmicQuantity(AbstractQuantity):
             raise MismatchedUnitsError("Arithmetic is only possible between logarithmic quantities on the same scale!")
         else:
             return NotImplemented
-    
-    def __radd__(self, other, correlation=0):
-        return NotImplemented
         
     def __sub__(self, other, correlation=0):
         if isinstance(other, LogarithmicQuantity) and self.unit == other.unit:
@@ -368,9 +363,6 @@ class LogarithmicQuantity(AbstractQuantity):
             raise MismatchedUnitsError("Arithmetic is only possible between logarithmic quantities on the same scale!")
         else:
             return NotImplemented
-    
-    def __rsub__(self, other, correlation=0):
-        return NotImplemented
     
     def __mul__(self, other, correlation=0):
         if isinstance(other, LogarithmicQuantity) and self.unit == other.unit:
@@ -391,9 +383,6 @@ class LogarithmicQuantity(AbstractQuantity):
         else:
             return NotImplemented
     
-    def __rmul__(self, other, correlation=0):
-        return NotImplemented
-    
     def __truediv__(self, other, correlation=0):
         if isinstance(other, LogarithmicQuantity) and self.unit == other.unit:
             result = LogarithmicQuantity(self.number - other.number, self.unit)
@@ -412,20 +401,18 @@ class LogarithmicQuantity(AbstractQuantity):
             raise MismatchedUnitsError("Arithmetic is only possible between logarithmic quantities on the same scale!")
         else:
             return NotImplemented
-    
-    def __rtruediv__(self, other, correlation=0):
-        return NotImplemented
-    
-    def __pow__(self, other):
-        return NotImplemented
-    
-    def __rpow__(self, other, correlation=0):
-        return NotImplemented
-    
-    def __neg__(self):
-        return NotImplemented
-        
-    # Equality functions of `Quantity` call `.base()` anyway, so super handles fine
+
+    def __hash__(self):
+        return hash(self.value)
+
+    def __eq__(self, other):
+        return self.value == other
+
+    def __gt__(self, other):
+        return self.value > other
+
+    def __ge__(self, other):
+        return self.value >= other
 
     @classmethod
     def from_absolute(cls, unit: LogarithmicUnit, quantity: Quantity):
@@ -449,6 +436,10 @@ class LogarithmicQuantity(AbstractQuantity):
             return (self.unit.reference * dec(math.e) ** (self.number / self.unit.prefactor)).with_uncertainty(self.uncertainty)
         else:
             return (self.unit.reference * self.unit.log_base ** (self.number / self.unit.prefactor)).with_uncertainty(self.uncertainty)
+
+    # TODO Come up with some better way
+    def resolution(self):
+        return LogarithmicQuantity(10 ** self.number.as_tuple().exponent, self._unit)
 
     def cancel(self):
         return self

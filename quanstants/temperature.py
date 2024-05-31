@@ -273,24 +273,12 @@ class Temperature(Quantity):
             )
 
     def cancel(self):
-        """Combine any like terms in the unit.
-
-        Has no effect for a `Temperature`.
-        """
         return self
 
     def fully_cancel(self):
-        """Combine any terms of the same dimension in the unit.
-
-        Has no effect for a `Temperature`.
-        """
         return self
 
     def canonical(self):
-        """Express with its units in a canonical order.
-
-        Has no effect for a `Temperature`.
-        """
         return self
     
     def base(self):

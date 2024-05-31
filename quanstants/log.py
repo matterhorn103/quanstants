@@ -3,14 +3,16 @@ import math
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
-from .unit import Unit, unitless
+from .unitbase import AbstractUnit
+from .unit import unitless
+from .quantitybase import AbstractQuantity
 from .quantity import Quantity
 from .prefix import Prefix
 from .exceptions import AlreadyPrefixedError, MismatchedUnitsError
 from .units.base import *
 
 
-class LogarithmicUnit(Unit):
+class LogarithmicUnit(AbstractUnit):
     """A unit on a logarithmic scale, typically relative to a reference point.
     
     A quantity can be expressed in the unit as:
@@ -270,7 +272,7 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
             )
 
 
-class LogarithmicQuantity(Quantity):
+class LogarithmicQuantity(AbstractQuantity):
     """Represents quantities on a logarithmic scale relative to some reference quantity.
     
     `quanstants` does not support asymmetric uncertainties. If an uncertainty is
@@ -449,31 +451,15 @@ class LogarithmicQuantity(Quantity):
             return (self.unit.reference * self.unit.log_base ** (self.number / self.unit.prefactor)).with_uncertainty(self.uncertainty)
 
     def cancel(self):
-        """Combine any like terms in the unit.
-
-        Has no effect for a LogarithmicQuantity.
-        """
         return self
 
     def fully_cancel(self):
-        """Combine any terms of the same dimension in the unit.
-
-        Has no effect for a LogarithmicQuantity.
-        """
         return self
 
     def canonical(self):
-        """Express with its units in a canonical order.
-
-        Has no effect for a LogarithmicQuantity.
-        """
         return self
 
     def base(self):
-        """Return the absolute value expressed in terms of base units.
-        
-        The unit is always returned in a fully cancelled, canonical form.
-        """
         return self.value.base()
     
     def to(self, other):

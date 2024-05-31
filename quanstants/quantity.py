@@ -8,39 +8,17 @@ from .config import quanfig
 from .dimensions import Dimensions
 from .exceptions import MismatchedUnitsError, NotDimensionlessError
 from .format import group_digits
+from .quantitybase import AbstractQuantity
 from .uncertainties import get_uncertainty
 
 from . import units
 
 
-class Quantity:
-    """A class that represents physical quantities.
-
-    The quantity is expressed as a numerical value `number` and a unit of measurement `unit`, with an
-    optional associated `uncertainty`, which is also a numerical value.
-    `number` is any type that can be converted to `Decimal`, including strings.
-    `unit` is any `BaseUnit` or `DerivedUnit`, or any `CompoundUnit` formed by multiplication thereof,
-    or any `UnitlessUnit` such as `quanstants.unit.unitless`.
-    `uncertainty` is also any type that can be converted to `Decimal`, including strings, however if
-    `uncertainty` is not specified or given as `0` or `None` (default) or anything else "falsy" then
-    the quantity`s uncertainty is set to `0`.
-    `uncertainty` may also be a `Quantity` itself, which is useful if it was calculated separately.
-
-    Normally, `number` and `unit` are both required. To create a unitless quantity, the special unitless
-    unit (found in the main units namespace i.e. under `quanstants.units.unitless`) should be provided.
-
-    Alternatively, all three may be left as `None` and `value` maybe specified instead as either a
-    string or another `Quantity`. Passing a string simply invokes `Quantity.parse(value)`.
-
-    If only a single string is passed to `number`, and no unit is provided, the string will be parsed
-    by `Quantity.parse()`, so if it contains both a number and a unit, an appropriate `Quantity` will
-    be created.
-
-    However, while both the above work, the preferred method for quantity creation from a single string
-    is to call `Quantity.parse(string)`.
+class Quantity(AbstractQuantity):
+    """A class that represents absolute physical quantities.
     """
 
-    __slots__ = ("_number", "_unit", "_uncertainty", "_pending_cancel")
+    __slots__ = ("_pending_cancel")
 
     # kwargs is for the things shown via comments that should be hidden from public API
     def __init__(
@@ -52,83 +30,13 @@ class Quantity:
         **kwargs,
     #   pending_cancel: bool,
     ):
+        super().__init__(
+            number,
+            unit,
+            uncertainty,
+            value,
+        )
 
-        # Making a Quantity from a single string should be done with `Quantity.parse()`, but allow for the
-        # fact that people might also just try to pass a string straight to `Quantity()`
-        if (
-            (isinstance(number, str))
-            and (unit is None)
-            and (uncertainty is None)
-            and (value is None)
-        ):
-            parsed = self.parse(number)
-            number, unit, uncertainty = parsed.number, parsed.unit, parsed.uncertainty
-
-        # Accept a string or other Quantity
-        if (number is None) and (unit is None) and (value is not None):
-            if isinstance(value, str):
-                parsed = self.parse(value)
-                number, unit, uncertainty = (
-                    parsed.number,
-                    parsed.unit,
-                    parsed.uncertainty,
-                )
-            else:
-                number, unit, uncertainty = value.number, value.unit, value.uncertainty
-
-        # Did extensive timings for this, shown in comments in ns in format:
-        # dec; str, int, float => sum(str, int, float)
-        # Prioritize fast dec as most Quantity creation is internal with a dec
-        # Also choose to prioritize float over int/str as performance-sensitive things
-        # are likely using floats
-        # Considered using function but adds around 40 ns overhead
-        # One-liner isn't faster than multi-line
-        # Timings tested with dec("3.2"); "3.2", 3, 3.2
-        # For reference, timings for conversion of each type directly and via str:
-        # _number = dec(number)  # 86; 703, 116, 708 => 1527
-        # _number = dec.from_float(number)  # N/A; N/A, 116, 719
-        # _number = dec(str(number))  # 516; 331, 185, 328 => 844
-        # 844 ns is presumably the lower limit for the total of the non-dec timings
-        # I have absolutely no idea why the latter should be 2x faster for str and float
-        # Naturally "3.2" vs 3 is unfair, but it is more relevant here
-        # For reference, timings for dec(number) with 3 in each type:  # 86; 143, 116, 318 => 577
-        # And for dec(str(number)):  # 217; 151, 191, 250 => 592
-
-        # Current method: # 18; 405, 244, 420 => 1069
-        if isinstance(number, dec):
-            self._number = number    
-        elif isinstance(number, float) and quanfig.CONVERT_FLOAT_AS_STR:
-            self._number = dec(str(number))
-        else:
-            self._number = dec(number)
-
-        # _number = number if isinstance(number, dec) else dec(str(number)) if (isinstance(number, float) and quanfig.CONVERT_FLOAT_AS_STR) else dec(number)  # 18; 430, 203, 422 => 1055
-        # _number = number if isinstance(number, dec) else dec(number) if isinstance(number, (int, str)) else dec(str(number)) if quanfig.CONVERT_FLOAT_AS_STR else dec(str(number)) # 18; 518, 184, 498 => 1200
-        # _number = number if isinstance(number, dec) else dec(number) if isinstance(number, (int, str)) or not quanfig.CONVERT_FLOAT_AS_STR else dec(str(number))  # 20; 483, 186, 493 => 1162
-        # Old method, very slow for decimals:
-        # _number = dec(str(number)) if quanfig.CONVERT_FLOAT_AS_STR else dec(number)  # 540; 368, 213, 367 => 948
-
-        if isinstance(unit, str):
-            self._unit = units.parse(unit)
-        elif unit is None:
-            self._unit = units.unitless
-        else:
-            self._unit = unit
-
-        if uncertainty is None:
-            self._uncertainty = dec("0")
-        elif isinstance(uncertainty, Quantity):
-            if uncertainty._unit != self._unit:
-                self._uncertainty = uncertainty.to(self._unit).number
-            else:
-                self._uncertainty = uncertainty.number
-        elif isinstance(uncertainty, dec):
-            self._uncertainty = uncertainty    
-        elif isinstance(uncertainty, float) and quanfig.CONVERT_FLOAT_AS_STR:
-            self._uncertainty = dec(str(uncertainty))
-        else:
-            self._uncertainty = dec(uncertainty)
-        
         # Variable that indicates unit needs cancelling but is initially uncancelled
         self._pending_cancel = kwargs.get("pending_cancel", False)
 

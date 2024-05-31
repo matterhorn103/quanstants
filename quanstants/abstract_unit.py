@@ -56,7 +56,7 @@ class AbstractUnit(metaclass=ABCMeta):
     
     @abstractmethod
     def is_dimensionless(self) -> bool:
-        pass
+        raise NotImplementedError
     
     def add_to_namespace(self, add_symbol=False):
         """Add to units namespace to allow lookup under the provided name(s)."""

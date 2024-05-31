@@ -8,13 +8,32 @@ from platformdirs import user_config_dir
 # contained in quanstants/config.toml
 
 class QuanstantsConfig:
+    """Manages environment variables, user preferences, and custom definitions.
+    
+    An instance called `quanfig` is created at the end of this file, which is imported
+    around the rest of the package and treated as a singleton.
+
+    The environment variables/preferences make up the config itself and are accessible
+    as attributes of a 
+    """
     def __init__(self):
         # Open default options from file
         with open(Path(__file__).with_name("config.toml"), "rb") as f:
             defaults = tomllib.load(f)
+        
+        # Create options dict – this plays the same role as self.__dict__ but contains
+        # just the key:value pairs of the config options in a flat structure
+        # Have to create it like this as we have overridden __setattr__ and setting it
+        # normally causes recursion
         super().__setattr__("options", {})
         self.config_table = defaults["config"]
         self.init_config(defaults["config"])
+
+        # A list to hold any toml files discovered or loaded
+        # On import of quanstants for the first time, find_toml() gets called without
+        # arguments, so the first entry in the list (if there is one) will either have
+        # been the one used automatically for user-specific setup or the first one
+        # loaded deliberately by the user
         self.toml_list = []
 
     def __getattribute__(self, name):
@@ -112,10 +131,12 @@ class QuanstantsConfig:
             self.toml_list.append(toml_path)
         with open(toml_path, "rb") as f:
             toml = tomllib.load(f)
+        print(toml)
         if sections is not None:
             valid_sections = set(sections) & set(toml.keys())
         else:
             valid_sections = toml.keys()
+        print(valid_sections)
         if "config" in valid_sections:
             self.load_config(toml["config"])
         if "units" in valid_sections:
@@ -157,6 +178,32 @@ class QuanstantsConfig:
         for section in config_table.keys():
             for key, value in config_table[section].items():
                 setattr(self, key, value)
+    
+    def save_config(self, toml_path: Path = None):
+        """Save the current configuration to a `quanstants.toml` file.
+        
+        If a path is provided as an argument, it will be used as the destination for the
+        file. Otherwise, the file will be the first one that was discovered or loaded.
+        Failing that, it will be saved in the current working directory.
+        """
+        import tomli_w
+
+        if toml_path is None:
+            if len(self.toml_list) > 0:
+                toml_path = self.toml_list[0]
+            else:
+                toml_path = Path.cwd() / "quanstants.toml"
+
+        to_save = {}
+        for option, details in self.options.items():
+            if details["category"] not in to_save:
+                to_save[details["category"]] = {}
+            to_save[details["category"]][option] = details["current"]
+        
+        config_table_to_save = {"config": to_save}
+        
+        with open(toml_path, "wb") as f:
+            tomli_w.dump(config_table_to_save, f)
 
     def load_units(self, units_table: dict):
         """Create units from a specification contained in a units table read from `quanstants.toml`.

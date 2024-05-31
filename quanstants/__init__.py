@@ -4,6 +4,7 @@ and optionally `from quanstants import Quantity`.
 """
 
 from decimal import Decimal as dec
+from importlib import import_module
 
 ### SETUP ###
 # Setup configuration first in case the user's preferences affect initial setup
@@ -35,12 +36,16 @@ from .quantity import Quantity
 # used in other modules, but import here for clarity
 from .units import base
 
-# Import whichever prefix, unit, and constant submodules should be provided by default
-# Make sure prefixes are loaded first as many units rely on them
-# TODO Allow user to specify in `quanstants.toml` which submodules should be loaded
-from .prefixes import metric, binary
-from .units import si, common, prefixed
-from .constants import fundamental
+# Dynamically import whichever prefix, unit, and constant submodules should be loaded at
+# import time
+# The defaults are specified in `quanstants/config.toml`
+# User can specify in `quanstants.toml` which submodules should be loaded
+for namespace in ["prefixes", "units", "constants"]:
+    for definition_set in getattr(quanfig, namespace.upper()):
+        import_module(f".{definition_set}", f"quanstants.{namespace}")
+# Each submodule imports whatever it needs directly rather than going via the namespaces
+# so it should be possible to import any module individually without relying on having
+# first imported any others
 
 # Now load any custom units and constants defined by the user in their toml
 quanfig.load_toml(["units", "constants"])

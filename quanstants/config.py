@@ -131,10 +131,12 @@ class QuanstantsConfig:
             self.toml_list.append(toml_path)
         with open(toml_path, "rb") as f:
             toml = tomllib.load(f)
+        print(toml)
         if sections is not None:
             valid_sections = set(sections) & set(toml.keys())
         else:
             valid_sections = toml.keys()
+        print(valid_sections)
         if "config" in valid_sections:
             self.load_config(toml["config"])
         if "units" in valid_sections:
@@ -180,8 +182,28 @@ class QuanstantsConfig:
     def save_config(self, toml_path: Path = None):
         """Save the current configuration to a `quanstants.toml` file.
         
-        If a path is provided as an argument, 
+        If a path is provided as an argument, it will be used as the destination for the
+        file. Otherwise, the file will be the first one that was discovered or loaded.
+        Failing that, it will be saved in the current working directory.
         """
+        import tomli_w
+
+        if toml_path is None:
+            if len(self.toml_list) > 0:
+                toml_path = self.toml_list[0]
+            else:
+                toml_path = Path.cwd() / "quanstants.toml"
+
+        to_save = {}
+        for option, details in self.options.items():
+            if details["category"] not in to_save:
+                to_save[details["category"]] = {}
+            to_save[details["category"]][option] = details["current"]
+        
+        config_table_to_save = {"config": to_save}
+        
+        with open(toml_path, "wb") as f:
+            tomli_w.dump(config_table_to_save, f)
 
     def load_units(self, units_table: dict):
         """Create units from a specification contained in a units table read from `quanstants.toml`.

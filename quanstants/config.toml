@@ -1,3 +1,15 @@
+[config.modules.PREFIXES]
+default = ["metric", "binary"]
+doc = "Choose which sets of prefixes should be loaded when quanstants is initialized."
+
+[config.modules.UNITS]
+default = ["si", "common", "prefixed"]
+doc = "Choose which sets of units should be loaded when quanstants is initialized."
+
+[config.modules.CONSTANTS]
+default = ["fundamental"]
+doc = "Choose which sets of constants should be loaded when quanstants is initialized."
+
 [config.rounding.ROUNDING_MODE]
 choices = [ "ROUND_CEILING", "ROUND_DOWN", "ROUND_FLOOR", "ROUND_HALF_DOWN", "ROUND_HALF_EVEN", "ROUND_HALF_UP", "ROUND_UP", "ROUND_05UP" ]
 default = "ROUND_HALF_UP"

@@ -316,6 +316,18 @@ class LogarithmicQuantity(AbstractQuantity):
         self._uncertainty = dec("0") if uncertainty is None or uncertainty == 0 else uncertainty
 
     @property
+    def number(self):
+        return self._number
+
+    @property
+    def unit(self):
+        return self._unit
+
+    @property
+    def uncertainty(self):
+        return self._uncertainty
+
+    @property
     def uncertainty(self):
         # Override because here we store uncertainty as a quantity, not just a number
         if not self._uncertainty:
@@ -436,6 +448,12 @@ class LogarithmicQuantity(AbstractQuantity):
             return (self.unit.reference * dec(math.e) ** (self.number / self.unit.prefactor)).with_uncertainty(self.uncertainty)
         else:
             return (self.unit.reference * self.unit.log_base ** (self.number / self.unit.prefactor)).with_uncertainty(self.uncertainty)
+
+    # Disallow rounding to uncertainty since units don't match
+    def round_to_uncertainty(self, ndigits=None, pad=quanfig.ROUND_PAD):
+        return MismatchedUnitsError(
+            "A LogarithmicQuantity has an absolute uncertainty so the precisions are not comparable."
+        )
 
     # TODO Come up with some better way
     def resolution(self):

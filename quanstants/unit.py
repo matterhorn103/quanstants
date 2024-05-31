@@ -84,7 +84,7 @@ class Unit(AbstractUnit):
     @property
     def symbol(self) -> str:
         if self._symbol is None:
-            self._symbol = generate_symbol(self.components)
+            self._symbol = self._name if self._name else "(no symbol)"
         return self._symbol
     
     @property

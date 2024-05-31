@@ -125,6 +125,18 @@ class Temperature(AbstractQuantity):
         self._value = None
 
     @property
+    def number(self):
+        return self._number
+
+    @property
+    def unit(self):
+        return self._unit
+
+    @property
+    def uncertainty(self):
+        return self._uncertainty
+
+    @property
     def value(self) -> Quantity:
         if self._value is None:
             self._value = self.to_absolute()

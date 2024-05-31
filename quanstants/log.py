@@ -3,14 +3,16 @@ import math
 
 from .config import quanfig
 from .uncertainties import get_uncertainty
-from .unit import Unit, unitless
+from .abstract_unit import AbstractUnit
+from .unit import unitless
+from .abstract_quantity import AbstractQuantity
 from .quantity import Quantity
 from .prefix import Prefix
 from .exceptions import AlreadyPrefixedError, MismatchedUnitsError
 from .units.base import *
 
 
-class LogarithmicUnit(Unit):
+class LogarithmicUnit(AbstractUnit):
     """A unit on a logarithmic scale, typically relative to a reference point.
     
     A quantity can be expressed in the unit as:
@@ -47,7 +49,6 @@ class LogarithmicUnit(Unit):
         super().__init__(
             symbol=symbol,
             name=name,
-            value=LogarithmicQuantity(1, self),
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
@@ -270,7 +271,7 @@ class PrefixedLogarithmicUnit(LogarithmicUnit):
             )
 
 
-class LogarithmicQuantity(Quantity):
+class LogarithmicQuantity(AbstractQuantity):
     """Represents quantities on a logarithmic scale relative to some reference quantity.
     
     `quanstants` does not support asymmetric uncertainties. If an uncertainty is
@@ -283,7 +284,7 @@ class LogarithmicQuantity(Quantity):
     If both a `number` and a `value` are passed, `value` will be completely ignored.
     """
 
-    __slots__ = ("_value", "_reference")
+    __slots__ = ("_reference")
 
     def __init__(
         self,
@@ -304,15 +305,27 @@ class LogarithmicQuantity(Quantity):
             number=number,
             unit=unit,
             uncertainty=None,
-            value=value,
-            **kwargs,
         )
         # Assuming no value was provided, overwrite now
         # The value of a logarithmic quantity should always be stored as an absolute
         # quantity in the units of the reference
         if value is None:
             self._value = self.to_absolute()
+        else:
+            self._value = value
         self._uncertainty = dec("0") if uncertainty is None or uncertainty == 0 else uncertainty
+
+    @property
+    def number(self):
+        return self._number
+
+    @property
+    def unit(self):
+        return self._unit
+
+    @property
+    def uncertainty(self):
+        return self._uncertainty
 
     @property
     def uncertainty(self):
@@ -331,8 +344,7 @@ class LogarithmicQuantity(Quantity):
         return self.unit.reference
     
     def __repr__(self):
-        as_quantity = super().__repr__()
-        result = as_quantity.replace("Quantity", "LogarithmicQuantity")
+        result = super().__repr__()
         if "uncertainty" in result:
             result = result.replace("uncertainty=", "uncertainty=(") + ")"
         return result
@@ -353,9 +365,6 @@ class LogarithmicQuantity(Quantity):
             raise MismatchedUnitsError("Arithmetic is only possible between logarithmic quantities on the same scale!")
         else:
             return NotImplemented
-    
-    def __radd__(self, other, correlation=0):
-        return NotImplemented
         
     def __sub__(self, other, correlation=0):
         if isinstance(other, LogarithmicQuantity) and self.unit == other.unit:
@@ -366,9 +375,6 @@ class LogarithmicQuantity(Quantity):
             raise MismatchedUnitsError("Arithmetic is only possible between logarithmic quantities on the same scale!")
         else:
             return NotImplemented
-    
-    def __rsub__(self, other, correlation=0):
-        return NotImplemented
     
     def __mul__(self, other, correlation=0):
         if isinstance(other, LogarithmicQuantity) and self.unit == other.unit:
@@ -389,9 +395,6 @@ class LogarithmicQuantity(Quantity):
         else:
             return NotImplemented
     
-    def __rmul__(self, other, correlation=0):
-        return NotImplemented
-    
     def __truediv__(self, other, correlation=0):
         if isinstance(other, LogarithmicQuantity) and self.unit == other.unit:
             result = LogarithmicQuantity(self.number - other.number, self.unit)
@@ -410,20 +413,18 @@ class LogarithmicQuantity(Quantity):
             raise MismatchedUnitsError("Arithmetic is only possible between logarithmic quantities on the same scale!")
         else:
             return NotImplemented
-    
-    def __rtruediv__(self, other, correlation=0):
-        return NotImplemented
-    
-    def __pow__(self, other):
-        return NotImplemented
-    
-    def __rpow__(self, other, correlation=0):
-        return NotImplemented
-    
-    def __neg__(self):
-        return NotImplemented
-        
-    # Equality functions of `Quantity` call `.base()` anyway, so super handles fine
+
+    def __hash__(self):
+        return hash(self.value)
+
+    def __eq__(self, other):
+        return self.value == other
+
+    def __gt__(self, other):
+        return self.value > other
+
+    def __ge__(self, other):
+        return self.value >= other
 
     @classmethod
     def from_absolute(cls, unit: LogarithmicUnit, quantity: Quantity):
@@ -448,32 +449,26 @@ class LogarithmicQuantity(Quantity):
         else:
             return (self.unit.reference * self.unit.log_base ** (self.number / self.unit.prefactor)).with_uncertainty(self.uncertainty)
 
-    def cancel(self):
-        """Combine any like terms in the unit.
+    # Disallow rounding to uncertainty since units don't match
+    def round_to_uncertainty(self, ndigits=None, pad=quanfig.ROUND_PAD):
+        return MismatchedUnitsError(
+            "A LogarithmicQuantity has an absolute uncertainty so the precisions are not comparable."
+        )
 
-        Has no effect for a LogarithmicQuantity.
-        """
+    # TODO Come up with some better way
+    def resolution(self):
+        return LogarithmicQuantity(10 ** self.number.as_tuple().exponent, self._unit)
+
+    def cancel(self):
         return self
 
     def fully_cancel(self):
-        """Combine any terms of the same dimension in the unit.
-
-        Has no effect for a LogarithmicQuantity.
-        """
         return self
 
     def canonical(self):
-        """Express with its units in a canonical order.
-
-        Has no effect for a LogarithmicQuantity.
-        """
         return self
 
     def base(self):
-        """Return the absolute value expressed in terms of base units.
-        
-        The unit is always returned in a fully cancelled, canonical form.
-        """
         return self.value.base()
     
     def to(self, other):

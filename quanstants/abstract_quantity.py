@@ -132,31 +132,31 @@ class AbstractQuantity(metaclass=ABCMeta):
         Termed "resolution" to avoid confusion between this and the computer science
         concept of "precision", which typically refers to the number of digits.
         """
-        pass
+        raise NotImplementedError
     
     @abstractmethod
     def cancel(self):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def fully_cancel(self):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def canonical(self):
-        pass
+        raise NotImplementedError
     
     @abstractmethod
     def base(self):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def to(self, other):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def on_scale(self, other):
-        pass
+        raise NotImplementedError
 
     def __repr__(self):
         if not self._uncertainty:

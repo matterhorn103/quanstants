@@ -9,13 +9,16 @@ Generally the units below are also imported by the appropriate submodule, so tha
 user is never told e.g. that `degreeFahrenheit` is not in `units.temperatures`.
 """
 
+from decimal import Decimal as dec
+import math
+
 from ..unit import DerivedUnit, unitless
 from ..temperature import TemperatureUnit
 from ..prefix import PrefixedUnit
 from ..prefixes.metric import kilo
 from ..quantity import Quantity
 from .base import *
-from .si import joule, gram, day
+from .si import joule, gram, day, rad, minute
 
 # fmt: off
 
@@ -45,7 +48,11 @@ degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.555555555555555
 carat = DerivedUnit("ct", "carat", Quantity("0.2", gram), canon_symbol=True)
 point = DerivedUnit(None, "point", Quantity("0.002", gram), canon_symbol=False)
 
+# Computing
 bit = DerivedUnit("bit", "bit", Quantity(1, unitless), canon_symbol=False)
 byte = DerivedUnit("B", "byte", Quantity(8, bit), canon_symbol=True)
+
+# Miscellaneous
+revolutions_per_minute = DerivedUnit("rpm", "revolutions_per_minute", Quantity(2 * dec(math.pi), rad * minute**-1), alt_names=["rev_per_min"], canon_symbol=True)
 
 # fmt: on

@@ -1,26 +1,23 @@
 """A central module for all errors that quanstants raises."""
 
-class QuanstantsError(Exception):
-    """Superclass from which all errors that quanstants raises are derived."""
+
+class AlreadyDefinedError(AttributeError):
     pass
 
-class AlreadyDefinedError(QuanstantsError):
+class AlreadyPrefixedError(TypeError):
     pass
 
-class AlreadyPrefixedError(QuanstantsError):
+class IncompleteDimensionsError(ValueError):
     pass
 
-class IncompleteDimensionsError(QuanstantsError):
+class MismatchedUnitsError(ValueError):
     pass
 
-class MismatchedUnitsError(QuanstantsError):
+class NotATemperatureError(ValueError):
     pass
 
-class NotATemperatureError(QuanstantsError):
+class NotDimensionlessError(ValueError):
     pass
 
-class NotDimensionlessError(QuanstantsError):
-    pass
-
-class ParsingError(QuanstantsError):
+class ParsingError(SyntaxError):
     pass

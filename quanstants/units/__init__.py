@@ -1,29 +1,23 @@
 """Namespace to contain all the units, making them useable with qu.m notation."""
 
 from ..config import quanfig
+from ..exceptions import AlreadyDefinedError, ParsingError
 from ..unicode import exponent_parser
 
 # Note there is no need to import units from other modules as they are
 # added to this namespace programmatically
-
-class UnitAlreadyDefinedError(Exception):
-    pass
-
-
-class ParsingError(Exception):
-    pass
 
 
 def add(name: str, unit):
     """Add a `Unit` object to the module under the provided name.
     This method provides a safe way to add units to the namespace.
     Names in the module's namespace cannot be overwritten in this way, and attempting to add a unit
-    under a name that is already defined will raise a `UnitAlreadyDefinedError`.
+    under a name that is already defined will raise an `AlreadyDefinedError`.
     If it is necessary to redefine a name, do it by setting the variable in the normal way i.e.
     `units.already_assigned_name = new_value`.
     """
     if name in globals():
-        raise UnitAlreadyDefinedError
+        raise AlreadyDefinedError
     globals()[name] = unit
 
 def list_names(include_prefixed=True, prefixed_only=False):

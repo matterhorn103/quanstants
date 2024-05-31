@@ -1,17 +1,14 @@
 from decimal import Decimal as dec
 
 from .config import quanfig
+from .exceptions import NotATemperatureError
 from .uncertainties import get_uncertainty
 from .unit import LinearUnit, BaseUnit
 from .quantity import Quantity
 
 
 # Define the most important unit of temperature, though as a BaseUnit not a TemperatureUnit
-kelvin = BaseUnit("K", "kelvin", dimension="Θ")
-
-
-class NotATemperatureError(Exception):
-    pass
+kelvin = BaseUnit("K", "kelvin", dimensions="Θ")
 
 
 class TemperatureUnit(LinearUnit):
@@ -69,7 +66,7 @@ class TemperatureUnit(LinearUnit):
             name=name,
             components=((self, 1),),
             value=self._degree_value,
-            dimension="Θ",
+            dimensions="Θ",
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
@@ -102,11 +99,7 @@ class TemperatureUnit(LinearUnit):
         """
         return Temperature.from_absolute(self, other)
 
-    def cancel(self):
-        """Combine any like terms and return as a Quantity."""
-        raise NotImplementedError
-
-    def canonical(self):
+    def canonical(self) -> Quantity:
         """Order terms into a reproducible order and return as a Quantity."""
         return 1 * self
 
@@ -121,11 +114,13 @@ class Temperature(Quantity):
         number: str | int | float | dec,
         unit: TemperatureUnit,
         uncertainty: str | int | float | dec | Quantity | None = None,
+        **kwargs,
     ):
         super().__init__(
             number,
             unit,
             uncertainty,
+            **kwargs,
         )
 
     def __repr__(self):
@@ -233,7 +228,7 @@ class Temperature(Quantity):
         """Convert an absolute `Quantity` to a relative `Temperature` on the given scale."""
         if quantity.unit == kelvin:
             new_number = (quantity.number / unit.value.number) - unit.zero_point.number
-        elif quantity.unit.dimensional_exponents == {
+        elif quantity.unit.dimensions == {
             "T": 0,
             "L": 0,
             "M": 0,

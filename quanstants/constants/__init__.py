@@ -1,22 +1,21 @@
 """Namespace to contain all the constants, making them useable with qc.c notation."""
 
+from ..exceptions import AlreadyDefinedError
+
 # Note there is no need to import constants from other modules as they are
 # added to this namespace programmatically
-
-class ConstantAlreadyDefinedError(Exception):
-    pass
 
 
 def add(name: str, constant):
     """Add a `Constant` object to the module under the provided name.
     This method provides a safe way to add constants to the module.
     Names in the module's namespace cannot be overwritten in this way, and attempting to add a
-    constant under a name that is already defined will raise a `ConstantAlreadyDefinedError`.
+    constant under a name that is already defined will raise an `AlreadyDefinedError`.
     If it is necessary to redefine a name, do it by setting the variable in the normal way i.e.
     `constants.already_assigned_name = new_value`.
     """
     if name in globals():
-        raise ConstantAlreadyDefinedError
+        raise AlreadyDefinedError
     globals()[name] = constant
 
 def list_names():

@@ -33,6 +33,8 @@ class QuanstantsConfig:
                 if name == "PRETTYPRINT":
                     self.UNICODE_SUPERSCRIPTS = value
                     self.GROUP_DIGITS = value
+                # TODO changing AUTO_CANCEL needs to trigger cancellation in all
+                # quantities with pending cancellation
                 # Update current value stored in options dict
                 self.options[name]["current"] = value
         else:

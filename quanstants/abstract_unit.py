@@ -35,15 +35,19 @@ class AbstractUnit(metaclass=ABCMeta):
         if symbol is None:
             # Symbol can't be canon if it wasn't even provided
             canon_symbol = False
-            if name is not None:
-                self._symbol = name
         self._name = name
         self._alt_names = tuple(alt_names) if alt_names is not None else None
         if add_to_namespace:
             self.add_to_namespace(add_symbol=canon_symbol)
     
+    # If None was passed for the symbol, it is usually done by a subclass so that it can
+    # be evaluated lazily
+    # If this property hasn't been overloaded in subclasses, though, and there is no
+    # symbol, default to the unit's name if there is one
     @property
     def symbol(self) -> str:
+        if self._symbol is None:
+            self._symbol = self._name if self._name else "(no symbol)"
         return self._symbol
 
     @property
@@ -68,5 +72,6 @@ class AbstractUnit(metaclass=ABCMeta):
                 units.add(alt_name, self)
         # Also add under the symbol if it has been indicated via canon_symbol
         # that the symbol should uniquely refer to this unit
-        if (add_symbol) and (self.symbol != self.name):
-            units.add(self.symbol, self)
+        if add_symbol:
+            if self.symbol != self.name:
+                units.add(self.symbol, self)

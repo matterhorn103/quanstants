@@ -86,7 +86,7 @@ class PrefixedUnit(DerivedUnit):
         self._root = root
 
         # Create prefixed symbol and name
-        concat_symbol = prefix.symbol + root.symbol
+        # Evaluate symbol lazily
         if (prefix.name is not None) and (root.name is not None):
             concat_name = prefix.name + root.name
         else:
@@ -100,13 +100,19 @@ class PrefixedUnit(DerivedUnit):
         else:
             concat_alt_names = None if alt_names is None else alt_names
         super().__init__(
-            symbol=concat_symbol,
+            symbol=None,
             name=concat_name,
             value=Quantity(prefix.multiplier, root),
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
             alt_names=concat_alt_names,
         )
+
+    @property
+    def symbol(self):
+        if self._symbol is None:
+            self._symbol = self._prefix.symbol + self._root.symbol
+        return self._symbol
 
     @property
     def prefix(self):

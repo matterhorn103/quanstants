@@ -1,5 +1,7 @@
 """Namespace to contain all the units, making them useable with qu.m notation."""
 
+import inspect
+
 from ..config import quanfig
 from ..exceptions import AlreadyDefinedError, ParsingError
 from ..unicode import exponent_parser
@@ -30,7 +32,7 @@ def list_names(include_prefixed=True, prefixed_only=False):
     and b) a unit is typically listed multiple times under different names, as well as under its symbol
     if it has `canon_symbol=True`.
     """
-    filtered_names = {name for name in globals().keys() if name[0] != "_"}
+    filtered_names = {name for name, obj in globals().items() if hasattr(obj, "alt_names")}
     prefixed = {
         name for name in filtered_names if hasattr(name, "prefix")
     }
@@ -65,16 +67,16 @@ def search(search_string: str) -> dict:
     all_names = list_names()
     for name in all_names:
         if search_string == name:
-            results["name"]["exact"].append(name)
+            name_results["exact"].append(name)
         elif search_string in name:
-            results["name"]["partial"].append(name)
+            name_results["partial"].append(name)
         if search_string == globals()[name].symbol:
-            results["symbol"]["exact"].append(name)
+            symbol_results["exact"].append(name)
         elif search_string in globals()[name].symbol:
-            results["symbol"]["partial"].append(name)
+            symbol_results["partial"].append(name)
     # Order each subset by length of name
-    symbol_results = {k: v.sort(key=len) for k, v in symbol_results.items()}
-    name_results = {k: v.sort(key=len) for k, v in name_results.items()}
+    symbol_results = {k: sorted(v, key=len) for k, v in symbol_results.items()}
+    name_results = {k: sorted(v, key=len) for k, v in name_results.items()}
     results = {"symbol": symbol_results, "name": name_results}
     return results
 

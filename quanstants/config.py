@@ -52,6 +52,13 @@ class QuanstantsConfig:
                 if name == "PRETTYPRINT":
                     self.UNICODE_SUPERSCRIPTS = value
                     self.GROUP_DIGITS = value
+                if name == "LITRE_SYMBOL":
+                    # Don't recreate litre/derivatives, just empty their symbol cache
+                    from . import units
+                    units.litre._symbol = value
+                    litre_derivatives = units.search("litre")["name"]["partial"]
+                    for u in litre_derivatives:
+                        getattr(units, u)._symbol = None
                 # TODO changing AUTO_CANCEL needs to trigger cancellation in all
                 # quantities with pending cancellation
                 # Update current value stored in options dict

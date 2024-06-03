@@ -67,7 +67,7 @@ class AbstractQuantity(metaclass=ABCMeta):
 
         # Current method: # 18; 405, 244, 420 => 1069
         if isinstance(number, dec):
-            self._number = number    
+            self._number = number
         elif isinstance(number, float) and quanfig.CONVERT_FLOAT_AS_STR:
             self._number = dec(str(number))
         else:
@@ -94,12 +94,12 @@ class AbstractQuantity(metaclass=ABCMeta):
             else:
                 self._uncertainty = uncertainty.number
         elif isinstance(uncertainty, dec):
-            self._uncertainty = uncertainty    
+            self._uncertainty = uncertainty
         elif isinstance(uncertainty, float) and quanfig.CONVERT_FLOAT_AS_STR:
             self._uncertainty = dec(str(uncertainty))
         else:
             self._uncertainty = dec(uncertainty)
-        
+
         if not hasattr(self, "_pending_cancel"):
             self._pending_cancel = False
 
@@ -108,7 +108,7 @@ class AbstractQuantity(metaclass=ABCMeta):
     # longer possible to create abstract properties
 
     @property
-    def number(self):
+    def number(self) -> dec:
         return self._number
 
     @property
@@ -116,55 +116,55 @@ class AbstractQuantity(metaclass=ABCMeta):
         return self._unit
 
     @property
-    def uncertainty(self):
+    def uncertainty(self) -> Self:
         return self._uncertainty
 
     @property
     def value(self):
         return self._value
-    
+
     @abstractmethod
-    def resolution(self):
+    def resolution(self) -> Self:
         """Return the resolution of the quantity, ignoring the uncertainty.
-        
+
         The resolution is the size of a unit of the smallest significant figure.
 
         Termed "resolution" to avoid confusion between this and the computer science
         concept of "precision", which typically refers to the number of digits.
         """
         raise NotImplementedError
-    
+
     @abstractmethod
-    def cancel(self):
+    def cancel(self) -> Self:
         raise NotImplementedError
 
     @abstractmethod
-    def fully_cancel(self):
+    def fully_cancel(self) -> Self:
         raise NotImplementedError
 
     @abstractmethod
-    def canonical(self):
-        raise NotImplementedError
-    
-    @abstractmethod
-    def base(self):
+    def canonical(self) -> Self:
         raise NotImplementedError
 
     @abstractmethod
-    def to(self, other):
+    def base(self) -> Self:
         raise NotImplementedError
 
     @abstractmethod
-    def on_scale(self, other):
+    def to(self, other) -> Self:
         raise NotImplementedError
 
-    def __repr__(self):
+    @abstractmethod
+    def on_scale(self, other) -> Self:
+        raise NotImplementedError
+
+    def __repr__(self) -> str:
         if not self._uncertainty:
             return f"{type(self).__name__}({group_digits(self.number)}, {self.unit})"
         else:
             return f"{type(self).__name__}({group_digits(self.number)}, {self.unit}, uncertainty={group_digits(self._uncertainty)})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         if quanfig.ROUND_BEFORE_PRINT:
             self = self.round()
         if not self._uncertainty:
@@ -189,7 +189,7 @@ class AbstractQuantity(metaclass=ABCMeta):
         else:
             return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit}"
 
-    def __round__(self, ndigits=None, mode=None, pad=quanfig.ROUND_PAD):
+    def __round__(self, ndigits=None, mode=None, pad=quanfig.ROUND_PAD) -> Self:
         """Alias for `Quantity.round()` to allow the use of the built-in `round()`."""
         return self.round(ndigits, mode, pad)
 
@@ -200,7 +200,7 @@ class AbstractQuantity(metaclass=ABCMeta):
         pad=quanfig.ROUND_PAD,
         mode_if_uncertainty=None,
         mode_if_exact=None,
-    ):
+    ) -> Self:
         """Return the quantity with the numerical part rounded by the set method.
 
         Calls one of `Quantity`'s other rounding methods depending on the value of `mode`:
@@ -246,7 +246,7 @@ class AbstractQuantity(metaclass=ABCMeta):
         elif selected_mode == "UNCERTAINTY":
             return self.round_to_uncertainty(ndigits, pad)
 
-    def round_to_places(self, ndigits=None, pad=quanfig.ROUND_PAD):
+    def round_to_places(self, ndigits=None, pad=quanfig.ROUND_PAD) -> Self:
         """Return the quantity with the numerical part rounded to the specified number of decimal places.
 
         If `ndigits` is not provided, the default set by `quanstants.quanfig.NDIGITS_PLACES` will be used.
@@ -283,7 +283,7 @@ class AbstractQuantity(metaclass=ABCMeta):
             )
         return rounded
 
-    def round_to_figures(self, ndigits=None, pad=quanfig.ROUND_PAD):
+    def round_to_figures(self, ndigits=None, pad=quanfig.ROUND_PAD) -> Self:
         """Return the quantity with the numerical part rounded to the specified number of significant figures.
 
         If `ndigits` is not provided, the default set by `quanstants.quanfig.NDIGITS_FIGURES` will be used.
@@ -341,11 +341,11 @@ class AbstractQuantity(metaclass=ABCMeta):
                 pending_cancel=self._pending_cancel,
             )
 
-    def round_to_sigfigs(self, ndigits=None, pad=quanfig.ROUND_PAD):
+    def round_to_sigfigs(self, ndigits=None, pad=quanfig.ROUND_PAD) -> Self:
         """Alias for `round_to_figures()`."""
         return self.round_to_figures(ndigits, pad)
 
-    def round_to_uncertainty(self, ndigits=None, pad=quanfig.ROUND_PAD):
+    def round_to_uncertainty(self, ndigits=None, pad=quanfig.ROUND_PAD) -> Self:
         """Round the uncertainty to the specified number of significant figures, then return the quantity with the numerical part rounded to the same precision.
 
         If `ndigits` is not provided, the default set by `quanstants.quanfig.NDIGITS_UNCERTAINTY` will be
@@ -383,13 +383,13 @@ class AbstractQuantity(metaclass=ABCMeta):
             rounded_uncertainty
         )
 
-    def round_to_resolution_of(self, other, pad=quanfig.ROUND_PAD):
+    def round_to_resolution_of(self, other, pad=quanfig.ROUND_PAD) -> Self:
         if self._unit != other._unit:
             raise MismatchedUnitsError
         places = other.number.as_tuple().exponent * -1
         return self.round_to_places(places, pad=pad)
 
-    def round_uncertainty(self, ndigits=None, mode=None):
+    def round_uncertainty(self, ndigits=None, mode=None) -> Self:
         """Round the uncertainty without changing the number.
 
         Calls `.round()` on the uncertainty with the passed options, so will otherwise default to the
@@ -402,7 +402,7 @@ class AbstractQuantity(metaclass=ABCMeta):
         """
         return self.with_uncertainty(self.uncertainty.round(ndigits, mode, pad=False))
 
-    def with_uncertainty(self, uncertainty):
+    def with_uncertainty(self, uncertainty) -> Self:
         """Return a new quantity with the provided uncertainty."""
         return type(self)(
             self.number,
@@ -411,10 +411,11 @@ class AbstractQuantity(metaclass=ABCMeta):
             pending_cancel=self._pending_cancel,
         )
 
-    def plus_minus(self, uncertainty):
+    def plus_minus(self, uncertainty) -> Self:
         """Alias for `with_uncertainty()`."""
         return self.with_uncertainty(uncertainty)
 
-    def is_dimensionless(self):
+    def is_dimensionless(self) -> bool:
         """Check if unit is dimensionless."""
         return self._unit.is_dimensionless()
+

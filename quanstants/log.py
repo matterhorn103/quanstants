@@ -313,7 +313,7 @@ class LogarithmicQuantity(AbstractQuantity):
             self._value = self.to_absolute()
         else:
             self._value = value
-        self._uncertainty = dec("0") if uncertainty is None or uncertainty == 0 else uncertainty
+        self._uncertainty = dec(0) if uncertainty is None or uncertainty == 0 else uncertainty
 
     @property
     def number(self):

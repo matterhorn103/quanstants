@@ -259,7 +259,7 @@ class Temperature(AbstractQuantity):
             )
 
         if not quantity._uncertainty:
-            new_uncertainty = dec("0")
+            new_uncertainty = dec(0)
         else:
             new_uncertainty = quantity.uncertainty.to(unit)
         # Make sure precision isn't ridiculous for an otherwise exact conversion

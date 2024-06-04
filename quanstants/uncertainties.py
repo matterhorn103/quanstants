@@ -30,7 +30,7 @@ def get_uncertainty(
     if quantityB:
         B, sigma_b = quantityB.number, quantityB._uncertainty
     else:
-        B, sigma_b = None, dec("0")
+        B, sigma_b = None, dec(0)
     C = numerical_result
     x = numberx
     if quanfig.CONVERT_FLOAT_AS_STR:
@@ -39,11 +39,16 @@ def get_uncertainty(
         correlation = dec(correlation)
     sigma_ab = correlation * sigma_a * sigma_b
 
-    # Ideally this would all be implemented using the `uncertainties` package but it unfortunately
-    # doesn't support Decimal, so just implement ourselves for a limited set of operations
-
+    # Ideally this would all be implemented using another package -
+    # `uncertainties` would be a candidate for example, but it unfortunately sometimes
+    # fails inexplicably and it  doesn't support Decimal, so just implement the
+    # calculations ourselves for a limited set of operations
+    
+    # Exact quantities always give an exact quantity
+    if sigma_a == sigma_b == 0:
+        sigma_c = dec(0)
     # C = A + B
-    if operation == "add":
+    elif operation == "add":
         if B is None:
             raise TypeError("Operation 'add' is only supported for Q + Q.")
         sigma_c = ((sigma_a**2) + (sigma_b**2) + (2 * sigma_ab)).sqrt()

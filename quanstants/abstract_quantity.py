@@ -87,7 +87,7 @@ class AbstractQuantity(metaclass=ABCMeta):
             self._unit = unit
 
         if not uncertainty:
-            self._uncertainty = dec("0")
+            self._uncertainty = dec(0)
         elif isinstance(uncertainty, AbstractQuantity):
             if uncertainty._unit != self._unit:
                 self._uncertainty = uncertainty.to(self._unit).number

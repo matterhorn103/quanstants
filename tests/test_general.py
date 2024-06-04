@@ -532,11 +532,11 @@ class TestRounding:
         assert repr(result) == "Quantity(543.8826, J mol⁻¹)"
     
     def test_round_mode_exact(self):
-        result = self.a.round(mode_if_uncertainty="PLACES", mode_if_exact="FIGURES")
+        result = self.a.round(method_if_uncertainty="PLACES", method_if_exact="FIGURES")
         assert repr(result) == "Quantity(544, J mol⁻¹)"
     
     def test_round_mode_uncert(self):
-        result = self.b.round(mode_if_uncertainty="PLACES", mode_if_exact="FIGURES")
+        result = self.b.round(method_if_uncertainty="PLACES", method_if_exact="FIGURES")
         assert repr(result) == "Quantity(543.88, J mol⁻¹, uncertainty=0.03)"
 
     def test_round_default(self):

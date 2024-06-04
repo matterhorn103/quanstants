@@ -584,18 +584,18 @@ Quantity(1.230, m, uncertainty=0.007)
 Quantity(1.2300, m, uncertainty=0.0071)
 ```
 
-A general `round()` method is provided, which can take arguments for the rounding mode to use with all quantities or for only those with or without uncertainties:
+A general `round()` method is provided, which can take arguments for the rounding method to use with all quantities or for only those with or without uncertainties:
 ```python
->>> a.round(mode_if_uncertainty="PLACES", mode_if_exact="FIGURES")
+>>> a.round(method_if_uncertainty="PLACES", method_if_exact="FIGURES")
 Quantity(544, J mol⁻¹)
->>> b.round(mode_if_uncertainty="PLACES", mode_if_exact="FIGURES")
+>>> b.round(method_if_uncertainty="PLACES", method_if_exact="FIGURES")
 Quantity(543.88, J mol⁻¹, uncertainty=0.03)
->>> a.round(mode="UNCERTAINTY")
+>>> a.round(method="UNCERTAINTY")
 Quantity(543.8826, J mol⁻¹)
->>> b.round(mode="UNCERTAINTY")
+>>> b.round(method="UNCERTAINTY")
 Quantity(543.88, J mol⁻¹, uncertainty=0.03)
 ```
-`ndigits` and `pad` can also be passed to `round()`, in which case they are passed on to the respective rounding function.
+`ndigits`, `pad`, and `mode` can also be passed to `round()`, in which case they are passed on to the respective rounding function.
 
 The defaults are set such that calling `round()` without any arguments is a quick and convenient way to get a sensibly rounded number -- exact quantities are rounded to 3 s.f. and quantities with uncertainties have their uncertainty rounded to 1 s.f. and the quantity is then rounded to the same precision.
 ```python
@@ -604,7 +604,7 @@ Quantity(544, J mol⁻¹)
 >>> b.round()
 Quantity(543.88, J mol⁻¹, uncertainty=0.03)
 ```
-The modes used can be overruled by setting `quanstants.quanfig.ROUND_TO_IF_UNCERTAINTY` and `quanstants.quanfig.ROUND_TO_IF_EXACT`.
+The methods used can be overruled by setting `quanstants.quanfig.ROUND_TO_IF_UNCERTAINTY` and `quanstants.quanfig.ROUND_TO_IF_EXACT`.
 
 Passing a `Quantity` to Python's built-in `round()` simply calls `Quantity.round()`:
 ```python
@@ -635,6 +635,8 @@ Quantity(1.2, m)
 Quantity(1.3, m)
 ```
 
+Note the distinction in `quanstants` between a rounding "method" (to decimal places/significant figures/uncertainty) and rounding "mode" (how to round the final digit i.e. up or down).
+
 The rounding takes place in a `decimal.localcontext()`, meaning that the user's choices of rounding mode for `Decimal` and `quanstants` are kept separate:
 ```python
 >>> from decimal import Decimal
@@ -652,13 +654,13 @@ Quantity(1.2, m)
 ```
 
 Finally, a method is provided to round just the uncertainty of a quantity without changing the number.
-If `ndigits` and `mode` are not specified, they default to `quanstants.quanfig.NDIGITS_<rounding mode>` and `quanstants.quanfig.ROUND_TO_IF_EXACT` respectively (so by default 3 s.f.), and the uncertainty is never padded when rounded in this manner:
+If `ndigits` and `method` are not specified, they default to `quanstants.quanfig.NDIGITS_<rounding method>` and `quanstants.quanfig.ROUND_TO_IF_EXACT` respectively (so by default 3 s.f.), and the uncertainty is never padded when rounded in this manner:
 ```python
 >>> quanfig.ROUNDING_MODE = "ROUND_HALF_UP"
 >>> c = a.with_uncertainty("0.0323")
 >>> c.round_uncertainty(1)
 Quantity(543.8826, J mol⁻¹, uncertainty=0.03)
->>> c.round_uncertainty(3, mode="PLACES")
+>>> c.round_uncertainty(3, method="PLACES")
 Quantity(543.8826, J mol⁻¹, uncertainty=0.032)
 ```
 

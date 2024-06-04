@@ -1,41 +1,41 @@
 from abc import ABCMeta, abstractmethod
-from decimal import localcontext
 from decimal import Decimal as dec
-from fractions import Fraction as frac
-import math
 from typing import Self
 
 from .config import quanfig
 from .exceptions import MismatchedUnitsError
 from .format import group_digits
 from . import units
+from . import rounding
 
 
 class AbstractQuantity(metaclass=ABCMeta):
     """Parent class for all quantities of all flavours, both absolute and relative.
 
-    The quantity is expressed as a numerical value `number` and a unit of measurement `unit`, with an
-    optional associated `uncertainty`, which is also a numerical value.
+    The quantity is expressed as a numerical value `number` and a unit of measurement
+    `unit`, with an optional associated `uncertainty`, which is also a numerical value.
     `number` is any type that can be converted to `Decimal`, including strings.
-    `unit` is any `BaseUnit` or `DerivedUnit`, or any `CompoundUnit` formed by multiplication thereof,
-    or any `UnitlessUnit` such as `quanstants.unit.unitless`.
-    `uncertainty` is also any type that can be converted to `Decimal`, including strings, however if
-    `uncertainty` is not specified or given as `0` or `None` (default) or anything else "falsy" then
-    the quantity`s uncertainty is set to `0`.
-    `uncertainty` may also be a `Quantity` itself, which is useful if it was calculated separately.
+    `unit` is any subclass of `AbstractUnit`.
+    `uncertainty` is also any type that can be converted to `Decimal`, including
+    strings, however if `uncertainty` is not specified or given as `0` or `None`
+    (default) or anything else "falsy" then the quantity`s uncertainty is set to `0`.
+    `uncertainty` may also be a `Quantity` itself, which is useful if it was calculated
+    separately.
 
-    Normally, `number` and `unit` are both required. To create a unitless quantity, the special unitless
-    unit (found in the main units namespace i.e. under `quanstants.units.unitless`) should be provided.
+    Normally, `number` and `unit` are both required. To create a unitless quantity, the
+    special unitless unit (found in the main units namespace i.e. under
+    `quanstants.units.unitless`) should be provided.
 
-    Alternatively, all three may be left as `None` and `value` maybe specified instead as either a
-    string or another `Quantity`. Passing a string simply invokes `Quantity.parse(value)`.
+    Alternatively, all three may be left as `None` and `value` may be specified instead
+    as either a string or another `Quantity`. Passing a string simply invokes
+    `Quantity.parse(value)`.
 
-    If only a single string is passed to `number`, and no unit is provided, the string will be parsed
-    by `Quantity.parse()`, so if it contains both a number and a unit, an appropriate `Quantity` will
-    be created.
+    If only a single string is passed to `number`, and no unit is provided, the string
+    will be parsed by `Quantity.parse()`, so if it contains both a number and a unit, an
+    appropriate `Quantity` will be created.
 
-    However, while both the above work, the preferred method for quantity creation from a single string
-    is to call `Quantity.parse(string)`.
+    However, while both the above work, the preferred method for quantity creation from
+    a single string is to call `Quantity.parse(string)`.
     """
 
     __slots__ = ("_number", "_unit", "_uncertainty", "_value", "_pending_cancel")
@@ -86,7 +86,7 @@ class AbstractQuantity(metaclass=ABCMeta):
         else:
             self._unit = unit
 
-        if uncertainty is None:
+        if not uncertainty:
             self._uncertainty = dec("0")
         elif isinstance(uncertainty, AbstractQuantity):
             if uncertainty._unit != self._unit:
@@ -189,185 +189,140 @@ class AbstractQuantity(metaclass=ABCMeta):
         else:
             return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit}"
 
-    def __round__(self, ndigits=None, mode=None, pad=quanfig.ROUND_PAD) -> Self:
+    def __round__(self, ndigits=None, method=None, pad=quanfig.ROUND_PAD) -> Self:
         """Alias for `Quantity.round()` to allow the use of the built-in `round()`."""
-        return self.round(ndigits, mode, pad)
+        return self.round(ndigits, method, pad)
 
     def round(
         self,
         ndigits=None,
-        mode=None,
+        method=None,
         pad=quanfig.ROUND_PAD,
-        mode_if_uncertainty=None,
-        mode_if_exact=None,
+        mode=None,
+        method_if_uncertainty=None,
+        method_if_exact=None,
     ) -> Self:
-        """Return the quantity with the numerical part rounded by the set method.
+        """Return the quantity with the numerical part rounded by the specified method.
 
-        Calls one of `Quantity`'s other rounding methods depending on the value of `mode`:
+        Calls one of `Quantity`'s other rounding methods depending on the value of
+        `method`:
         `"PLACES"` ⇒ `Quantity.round_to_places()`
         `"FIGURES"` ⇒ `Quantity.round_to_figures()`
         `"UNCERTAINTY"` ⇒ `Quantity.round_to_uncertainty()`
 
-        By specifying `mode_if_uncertainty` and `mode_if_exact` separately, quantities can be rounded
-        differently depending on whether they have an uncertainty or not. Specifying these values overrides
-        the value of `mode` for those quantities.
+        By specifying `method_if_uncertainty` and `method_if_exact` separately,
+        quantities can be rounded differently depending on whether they have an
+        uncertainty or not. Specifying these values overrides the value of `method` for
+        those quantities.
 
-        If no rounding modes are provided explicitly, the default rounding modes are specified by
-        `quanstants.quanfig.ROUND_TO_IF_UNCERTAINTY` and `quanstants.quanfig.ROUND_TO_IF_EXACT`.
+        If no rounding methods are provided explicitly, the default rounding methods are
+        specified by `quanstants.quanfig.ROUND_TO_IF_UNCERTAINTY` and
+        `quanstants.quanfig.ROUND_TO_IF_EXACT`.
 
-        Similarly, if no value is provided for `ndigits`, each rounding mode will use the default value
-        specified by `quanstants.quanfig.NDIGITS_<rounding mode>`.
+        Similarly, if no value is provided for `ndigits`, each rounding method will use
+        the default value specified by `quanstants.quanfig.NDIGITS_<rounding method>`.
 
-        The current defaults are such that exact quantities are rounded to 3 s.f. and quantities with
-        uncertainties have their uncertainty rounded to 1 s.f. and the quantity is then rounded to the same
-        precision.
+        The current defaults are such that exact quantities are rounded to 3 s.f., and
+        quantities with uncertainties have their uncertainty rounded to 1 s.f. and the
+        quantity is then rounded to the same precision.
+
+        Note the distinction in `quanstants` between a rounding "method" (to decimal
+        places or significant figures etc.) and rounding "mode" (how to round the final
+        digit i.e. up or down).
+
+        The mode used for rounding is set by the `quanstants.quanfig.ROUNDING_MODE`
+        variable, which takes any of the `decimal` module's rounding modes. The default
+        is `"ROUND_HALF_UP"`, i.e. to nearest with ties going away from zero.
+
+        Like `siunitx`, and like `Decimal`, by default extra zeroes will be added to a
+        short number to reach the desired precision. This behaviour can be forced on or
+        off by passing `pad=True` or `pad=False`, or set globally by changing
+        `quanstants.quanfig.ROUND_PAD`.
+
+        Note that the rounding is done within a `decimal.localcontext()`, which means
+        that the mode specified by `quanstants.quanfig.ROUNDING_MODE` does not override
+        the current `decimal.Context()` and other `Decimal` instances will continue to
+        round based on `decimal.getcontext().rounding`, which by default uses
+        `"ROUND_HALF_EVEN"`.
         """
         if self._uncertainty:
-            selected_mode = (
-                mode_if_uncertainty
-                if mode_if_uncertainty
-                else mode
-                if mode
+            selected_method = (
+                method_if_uncertainty if method_if_uncertainty
+                else method if method
                 else quanfig.ROUND_TO_IF_UNCERTAINTY
             )
         else:
-            selected_mode = (
-                mode_if_exact
-                if mode_if_exact
-                else mode
-                if mode
+            selected_method = (
+                method_if_exact if method_if_exact
+                else method if method
                 else quanfig.ROUND_TO_IF_EXACT
             )
 
-        if selected_mode == "PLACES":
-            return self.round_to_places(ndigits, pad)
-        elif selected_mode == "FIGURES":
-            return self.round_to_figures(ndigits, pad)
-        elif selected_mode == "UNCERTAINTY":
-            return self.round_to_uncertainty(ndigits, pad)
+        if selected_method == "PLACES":
+            return self.round_to_places(ndigits, pad, mode)
+        elif selected_method == "FIGURES":
+            return self.round_to_figures(ndigits, pad, mode)
+        elif selected_method == "UNCERTAINTY":
+            return self.round_to_uncertainty(ndigits, pad, mode)
 
-    def round_to_places(self, ndigits=None, pad=quanfig.ROUND_PAD) -> Self:
-        """Return the quantity with the numerical part rounded to the specified number of decimal places.
+    def round_to_places(self, ndigits=None, pad=None, mode=None) -> Self:
+        """Return the quantity with the numerical part rounded to the specified number
+        of decimal places.
 
-        If `ndigits` is not provided, the default set by `quanstants.quanfig.NDIGITS_PLACES` will be used.
-
-        The method used for rounding is that specified by the `quanstants.quanfig.ROUNDING_MODE` variable,
-        which takes any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`, i.e.
-        to nearest with ties going away from zero.
-
-        Like `siunitx`, and like `Decimal`, by default extra zeroes will be added to a short number to reach
-        the desired number of decimal places. This behaviour can be forced on or off by passing `pad=True`
-        or `pad=False`, or set globally by changing `quanstants.quanfig.ROUND_PAD`.
-
-        Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
-        specified by `quanstants.quanfig.ROUNDING_MODE` does not override the current `decimal.Context()`
-        and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
-        which by default uses `"ROUND_HALF_EVEN"`.
+        Defaults to `quanstants.quanfig.NDIGITS_PLACES` if `ndigits` is not provided.
         """
-        if ndigits is None:
-            ndigits = quanfig.NDIGITS_PLACES
-        current_places = self.number.as_tuple().exponent * -1
-        # Don't round if padding is turned off and the number doesn't have enough places
-        if (current_places < ndigits) and (not pad):
-            return self
-        # Set decimal rounding to the specified method, which by default is the traditionally
-        # expected behaviour
-        # Use in a local context so that user's context isn't overwritten
-        with localcontext() as ctx:
-            ctx.rounding = quanfig.ROUNDING_MODE
-            rounded = type(self)(
-                round(self.number, ndigits),
+        # Default to choices in config variables if not passed
+        ndigits = quanfig.NDIGITS_PLACES if ndigits is None else ndigits
+        pad = quanfig.ROUND_PAD if pad is None else pad
+        mode = quanfig.ROUNDING_MODE if mode is None else mode
+        
+        rounded = type(self)(
+                rounding.to_places(self.number, ndigits, pad, mode),
                 self._unit,
                 self._uncertainty,
                 pending_cancel=self._pending_cancel,
             )
         return rounded
 
-    def round_to_figures(self, ndigits=None, pad=quanfig.ROUND_PAD) -> Self:
-        """Return the quantity with the numerical part rounded to the specified number of significant figures.
+    def round_to_figures(self, ndigits=None, pad=None, mode=None) -> Self:
+        """Return the quantity with the numerical part rounded to the specified number
+        of significant figures.
 
-        If `ndigits` is not provided, the default set by `quanstants.quanfig.NDIGITS_FIGURES` will be used.
-
-        The method used for rounding is that specified by `quanstants.quanfig.ROUNDING_MODE`, which takes
-        any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`, i.e. to
-        nearest with ties going away from zero.
-
-        Like `siunitx`, and like `Decimal`, by default extra zeroes will be added to a short number to reach
-        the desired number of significant figures. This behaviour can be forced on or off by passing
-        `pad=True` or `pad=False`, or set globally by changing `quanstants.quanfig.ROUND_PAD`.
-
-        Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
-        specified by `quanstants.quanfig.ROUNDING_MODE` does not override the current `decimal.Context()`
-        and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
-        which by default uses `"ROUND_HALF_EVEN"`.
+        Defaults to `quanstants.quanfig.NDIGITS_FIGURES` if `ndigits` is not provided.
         """
-        if ndigits is None:
-            ndigits = quanfig.NDIGITS_FIGURES
-        # Sanity check for requested number of sigfigs
-        if ndigits < 1:
-            return self
-        digits = self.number.as_tuple().digits
-        current_sigfigs = len(digits)
-        # First deal with request for fewer sigfigs than currently (usual case)
-        if ndigits <= current_sigfigs:
-            exponent = math.floor(self.number.log10())
-            significand = self.number / dec(f"1E{exponent}")
-            # Set decimal rounding to the specified method, which by default is the traditionally
-            # expected behaviour
-            # Use in a local context so that user's context isn't overwritten
-            with localcontext() as ctx:
-                ctx.rounding = quanfig.ROUNDING_MODE
-                rounded_significand = round(significand, ndigits - 1)
-            return type(self)(
-                rounded_significand * dec(f"1E{exponent}"),
-                self._unit,
-                self._uncertainty,
-                pending_cancel=self._pending_cancel,
-            )
-        # If request is for more sigfigs than currently, only pad if asked/permitted to do so
-        elif (ndigits > current_sigfigs) and (not pad):
-            return self
-        elif (ndigits > current_sigfigs) and pad:
-            # Add significant zeroes
-            n_digits_to_add = ndigits - current_sigfigs
-            new_digits = list(digits)
-            for i in n_digits_to_add:
-                new_digits.append(0)
-            new_exponent = self.number.as_tuple().exponent - n_digits_to_add
-            return type(self)(
-                dec((self.number.as_tuple().sign, new_digits, new_exponent)),
-                self._unit,
-                self._uncertainty,
-                pending_cancel=self._pending_cancel,
-            )
+        # Default to choices in config variables if not passed
+        ndigits = quanfig.NDIGITS_FIGURES if ndigits is None else ndigits
+        pad = quanfig.ROUND_PAD if pad is None else pad
+        mode = quanfig.ROUNDING_MODE if mode is None else mode
+        
+        return type(self)(
+            rounding.to_figures(self.number, ndigits, pad, mode),
+            self._unit,
+            self._uncertainty,
+            pending_cancel=self._pending_cancel,
+        )
 
-    def round_to_sigfigs(self, ndigits=None, pad=quanfig.ROUND_PAD) -> Self:
+    def round_to_sigfigs(self, *args, **kwargs) -> Self:
         """Alias for `round_to_figures()`."""
-        return self.round_to_figures(ndigits, pad)
+        return self.round_to_figures(*args, **kwargs)
 
-    def round_to_uncertainty(self, ndigits=None, pad=quanfig.ROUND_PAD) -> Self:
-        """Round the uncertainty to the specified number of significant figures, then return the quantity with the numerical part rounded to the same precision.
+    def round_to_uncertainty(self, ndigits=None, pad=None, mode=None) -> Self:
+        """Round the uncertainty to the specified number of significant figures, then
+        return the quantity with the numerical part rounded to the same precision.
 
-        If `ndigits` is not provided, the default set by `quanstants.quanfig.NDIGITS_UNCERTAINTY` will be
-        used.
+        Defaults to `quanstants.quanfig.NDIGITS_UNCERTAINTY` if `ndigits` is not
+        provided.
 
-        The method used for rounding is that specified by `quanstants.quanfig.ROUNDING_MODE`, which takes
-        any of the `decimal` module's rounding modes. The default is `"ROUND_HALF_UP"`, i.e. to
-        nearest with ties going away from zero.
-
-        Like `siunitx`, and like `Decimal`, by default extra zeroes will be added to a short number to reach
-        the same precision as the uncertainty. This behaviour can be forced on or off by passing `pad=True`
-        or `pad=False`, or set globally by changing `quanstants.quanfig.ROUND_PAD`.
-        However, no padding is applied to the uncertainty itself, so the rounded quantity will never have a
-        precision greater than the original uncertainty.
-
-        Note that the rounding is done within a `decimal.localcontext()`, which means that the mode
-        specified by `quanstants.quanfig.ROUNDING_MODE` does not override the current `decimal.Context()`
-        and other `Decimal` instances will continue to round based on `decimal.getcontext().rounding`,
-        which by default uses `"ROUND_HALF_EVEN"`.
+        If `pad` is set to `True`, the number of the quantity will be padded if
+        necessary to match the precision of the uncertainty. However, no padding is ever
+        applied to the uncertainty itself, to ensure that the rounded quantity will
+        never have a precision greater than the original uncertainty.
         """
-        if ndigits is None:
-            ndigits = quanfig.NDIGITS_UNCERTAINTY
+        # Default to choices in config variables if not passed
+        ndigits = quanfig.NDIGITS_UNCERTAINTY if ndigits is None else ndigits
+        pad = quanfig.ROUND_PAD if pad is None else pad
+        mode = quanfig.ROUNDING_MODE if mode is None else mode
+
         # Check that the quantity even has an uncertainty
         if not self._uncertainty:
             return self
@@ -375,32 +330,38 @@ class AbstractQuantity(metaclass=ABCMeta):
         if ndigits < 1:
             return self
         # First round the uncertainty
-        # Get the uncertainty as a Quantity, because then we can just use its own rounding method
+        # Get the uncertainty as a Quantity, because then it can round itself
         # Never pad the uncertainty as that would be increasing its precision
-        rounded_uncertainty = self.uncertainty.round_to_figures(ndigits, pad=False)
+        rounded_uncertainty = (
+            self.uncertainty.round_to_figures(ndigits, pad=False, mode=mode)
+        )
         # Now round the number to the same precision
-        return self.round_to_resolution_of(rounded_uncertainty, pad=pad).with_uncertainty(
-            rounded_uncertainty
+        return (
+            self.round_to_resolution_of(rounded_uncertainty, pad, mode)
+            .with_uncertainty(rounded_uncertainty)
         )
 
-    def round_to_resolution_of(self, other, pad=quanfig.ROUND_PAD) -> Self:
+    def round_to_resolution_of(self, other, pad=None, mode=None) -> Self:
         if self._unit != other._unit:
             raise MismatchedUnitsError
         places = other.number.as_tuple().exponent * -1
-        return self.round_to_places(places, pad=pad)
+        return self.round_to_places(places, pad, mode)
 
-    def round_uncertainty(self, ndigits=None, mode=None) -> Self:
+    def round_uncertainty(self, ndigits=None, method=None, mode=None) -> Self:
         """Round the uncertainty without changing the number.
 
-        Calls `.round()` on the uncertainty with the passed options, so will otherwise default to the
-        behaviour of `round()` i.e. the rounding mode will be `quanstants.quanfig.ROUND_TO_IF_EXACT` and
-        the number of digits will be `quanstants.quanfig.NDIGITS_<rounding mode>`.
+        Calls `.round()` on the uncertainty with the passed options, so will otherwise
+        default to the behaviour of `round()` i.e. the rounding method will be
+        `quanstants.quanfig.ROUND_TO_IF_EXACT` and the number of digits will be
+        `quanstants.quanfig.NDIGITS_<rounding method>`.
 
-        Unlike when rounding the number of a quantity, `quanstants.quanfig.ROUND_PAD` has no effect.
-        The uncertainty is never padded when rounding as that would imply an increase in the precision of
-        the uncertainty itself.
+        Unlike when rounding the number of a quantity, `quanstants.quanfig.ROUND_PAD`
+        has no effect. The uncertainty is never padded when rounding as that would imply
+        an increase in the precision of the uncertainty itself.
         """
-        return self.with_uncertainty(self.uncertainty.round(ndigits, mode, pad=False))
+        return self.with_uncertainty(
+            self.uncertainty.round(ndigits, method, pad=False, mode=mode)
+        )
 
     def with_uncertainty(self, uncertainty) -> Self:
         """Return a new quantity with the provided uncertainty."""

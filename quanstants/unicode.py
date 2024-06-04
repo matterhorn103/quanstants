@@ -7,8 +7,10 @@ from .config import quanfig
 def generate_symbol(
     components: tuple[tuple, ...],
     sort_by="sign",
-    inverse=quanfig.INVERSE_UNIT,
+    inverse=None,
 ) -> str:
+    # Default to preference set in config for slash vs negative exponents
+    inverse = quanfig.INVERSE_UNIT if inverse is None else inverse
     # Create symbol as concatenation of symbols of components, with spaces
     terms = []
     positive_terms = []

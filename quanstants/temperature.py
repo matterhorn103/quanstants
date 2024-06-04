@@ -1,6 +1,5 @@
 from decimal import Decimal as dec
 
-from .config import quanfig
 from .exceptions import NotATemperatureError
 from .uncertainties import get_uncertainty
 from .unit import Unit, BaseUnit

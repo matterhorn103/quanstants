@@ -450,7 +450,7 @@ class LogarithmicQuantity(AbstractQuantity):
             return (self.unit.reference * self.unit.log_base ** (self.number / self.unit.prefactor)).with_uncertainty(self.uncertainty)
 
     # Disallow rounding to uncertainty since units don't match
-    def round_to_uncertainty(self, ndigits=None, pad=quanfig.ROUND_PAD):
+    def round_to_uncertainty(self, ndigits=None, pad=None, mode=None):
         return MismatchedUnitsError(
             "A LogarithmicQuantity has an absolute uncertainty so the precisions are not comparable."
         )

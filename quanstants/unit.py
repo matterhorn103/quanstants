@@ -430,7 +430,7 @@ class CompoundUnit(Unit):
         alt_names: list[str] | None = None,
         add_to_namespace: bool = False,
         symbol_sort: str = "sign",
-        symbol_inverse: str = quanfig.INVERSE_UNIT,
+        symbol_inverse: str = None,
         concatenate_symbols: bool = False,
         is_canon_base: bool = False,
     ):
@@ -462,7 +462,7 @@ class CompoundUnit(Unit):
         
         alt_names = alt_names if alt_names else None
         self._symbol_sort = symbol_sort
-        self._symbol_inverse = symbol_inverse
+        self._symbol_inverse = quanfig.INVERSE_UNIT if symbol_inverse is None else symbol_inverse
 
         # Don't define a name etc., just a symbol and the components
         super().__init__(

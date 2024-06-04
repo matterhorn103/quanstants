@@ -189,7 +189,7 @@ class AbstractQuantity(metaclass=ABCMeta):
         else:
             return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit}"
 
-    def __round__(self, ndigits=None, method=None, pad=quanfig.ROUND_PAD) -> Self:
+    def __round__(self, ndigits=None, method=None, pad=None) -> Self:
         """Alias for `Quantity.round()` to allow the use of the built-in `round()`."""
         return self.round(ndigits, method, pad)
 
@@ -197,7 +197,7 @@ class AbstractQuantity(metaclass=ABCMeta):
         self,
         ndigits=None,
         method=None,
-        pad=quanfig.ROUND_PAD,
+        pad=None,
         mode=None,
         method_if_uncertainty=None,
         method_if_exact=None,

@@ -4,7 +4,7 @@ from typing import Self
 
 from .config import quanfig
 from .exceptions import MismatchedUnitsError
-from .format import group_digits
+from .format import format_number, format_quantity
 from . import units
 from . import rounding
 
@@ -159,35 +159,35 @@ class AbstractQuantity(metaclass=ABCMeta):
         raise NotImplementedError
 
     def __repr__(self) -> str:
+        # Don't truncate or group digits here, only apply printing options to printing
+        num_string = format_number(
+            self.number,
+            truncate=0,
+            group=0,
+        )
         if not self._uncertainty:
-            return f"{type(self).__name__}({group_digits(self.number)}, {self.unit})"
+            return f"{type(self).__name__}({num_string}, {self.unit})"
         else:
-            return f"{type(self).__name__}({group_digits(self.number)}, {self.unit}, uncertainty={group_digits(self._uncertainty)})"
+            uncert_string = format_number(
+                self._uncertainty,
+                truncate=0,
+                group=0,
+            )
+            return f"{type(self).__name__}({num_string}, {self.unit}, uncertainty={uncert_string})"
 
     def __str__(self) -> str:
         if quanfig.ROUND_BEFORE_PRINT:
+            # Note this doesn't actually replace the object, only the value of self in
+            # this function's scope
             self = self.round()
-        if not self._uncertainty:
-            return f"{group_digits(self.number)} {self.unit}"
-        # Check that uncertainty is not more precise than the number via the exponent
-        # More negative (smaller) exponent means more precise
-        elif (
-            self.number.as_tuple().exponent <= self._uncertainty.as_tuple().exponent
-        ) and (quanfig.UNCERTAINTY_STYLE == "PARENTHESES"):
-            number_string = group_digits(self.number)
-            bracketed_uncertainty = (
-                f"({''.join([str(n) for n in self._uncertainty.as_tuple().digits])})"
-            )
-            # Insert before exponential if present
-            if any(x in number_string for x in ["E", "e"]):
-                number_string = number_string.replace(
-                    "E", f"{bracketed_uncertainty}E"
-                ).replace("e", f"{bracketed_uncertainty}e")
-            else:
-                number_string = number_string + bracketed_uncertainty
-            return f"{number_string} {self.unit}"
-        else:
-            return f"{group_digits(self.number)} ± {group_digits(self._uncertainty)} {self.unit}"
+        return format_quantity(
+            self,
+            truncate=quanfig.ELLIPSIS_LONG_DECIMAL,
+            group=quanfig.GROUP_DIGITS,
+            group_which=quanfig.GROUP_DIGITS_STYLE,
+            group_sep=quanfig.GROUP_SEPARATOR,
+            uncertainty_style=quanfig.UNCERTAINTY_STYLE,
+        )
 
     def __round__(self, ndigits=None, method=None, pad=None) -> Self:
         """Alias for `Quantity.round()` to allow the use of the built-in `round()`."""
@@ -277,9 +277,9 @@ class AbstractQuantity(metaclass=ABCMeta):
         mode = quanfig.ROUNDING_MODE if mode is None else mode
         
         rounded = type(self)(
-                rounding.to_places(self.number, ndigits, pad, mode),
-                self._unit,
-                self._uncertainty,
+                number=rounding.to_places(self.number, ndigits, pad, mode),
+                unit=self._unit,
+                uncertainty=self._uncertainty,
                 pending_cancel=self._pending_cancel,
             )
         return rounded
@@ -296,9 +296,9 @@ class AbstractQuantity(metaclass=ABCMeta):
         mode = quanfig.ROUNDING_MODE if mode is None else mode
         
         return type(self)(
-            rounding.to_figures(self.number, ndigits, pad, mode),
-            self._unit,
-            self._uncertainty,
+            number=rounding.to_figures(self.number, ndigits, pad, mode),
+            unit=self._unit,
+            uncertainty=self._uncertainty,
             pending_cancel=self._pending_cancel,
         )
 
@@ -366,9 +366,9 @@ class AbstractQuantity(metaclass=ABCMeta):
     def with_uncertainty(self, uncertainty) -> Self:
         """Return a new quantity with the provided uncertainty."""
         return type(self)(
-            self.number,
-            self._unit,
-            uncertainty,
+            number=self.number,
+            unit=self._unit,
+            uncertainty=uncertainty,
             pending_cancel=self._pending_cancel,
         )
 
@@ -379,4 +379,16 @@ class AbstractQuantity(metaclass=ABCMeta):
     def is_dimensionless(self) -> bool:
         """Check if unit is dimensionless."""
         return self._unit.is_dimensionless()
-
+    
+    def normalize(self, threshold: int = 0) -> Self:
+        """Call `Decimal.normalize()` on the number and uncertainty.
+        
+        If a threshold is provided, only numbers with more trailing zeroes than the
+        threshold will be normalized.
+        """
+        return type(self)(
+            rounding.normalize(self.number, threshold),
+            self._unit,
+            rounding.normalize(self._uncertainty, threshold),
+            pending_cancel=self._pending_cancel,
+        )

@@ -50,6 +50,19 @@ choices = [ true, false ]
 default = true
 doc = "Whether identical units should be cancelled and combined automatically after arithmetic."
 
+[config.arithmetic.AUTO_NORMALIZE]
+default = 10
+doc = """The number of trailing zeroes required before a result is automatically normalized.
+
+NOTE:
+NOT CURRENTLY IMPLEMENTED, EXCEPT FOR Quantity.normalize() AND UNCERTAINTY CALCULATIONS
+
+This setting ensures that exact results are presented exactly; for example, that
+(100 m / 25 m).sqrt() returns Quantity(2, (unitless)), not
+Quantity(2.000000000000000000000000000, (unitless)).
+
+To disable, set to 0."""
+
 [config.conversion.CONVERT_FLOAT_AS_STR]
 choices = [ true, false ]
 default = true
@@ -71,6 +84,19 @@ When enabled, the quantity itself is not changed, but `print()`, `str()`, or any
 calls `__str__` on the quantity will return a rounded representation.
 
 The rounding is that of `Quantity.round()` with the default parameters."""
+
+[config.printing.ELLIPSIS_LONG_DECIMAL]
+default = 8
+doc = """Truncate numbers with long trailing decimal parts after the given number of digits.
+
+To disable, set to 0.
+
+When enabled, the string representation of a long decimal will be cut off at the
+specified length and the dropped digits represented by an ellipsis.
+
+The number will only be truncated if both the number of decimal places and the number
+of significant figures exceeds the provided value i.e. if set to 2, 2.456 becomes 2.45…
+but 245.6 stay 245.6 and 0.00024 stays as 0.00024."""
 
 [config.printing.UNCERTAINTY_STYLE]
 choices = [ "PARENTHESES", "PLUSMINUS" ]
@@ -98,14 +124,13 @@ default = true
 doc = "Whether exponents of units should be formatted with Unicode superscript characters."
 
 [config.printing.GROUP_DIGITS]
-choices = [ true, false ]
-default = false
-doc = "Whether numbers should be printed with separators between groups of digits."
+default = 0
+doc = "Whether numbers should be printed with separators between groups of n digits."
 
 [config.printing.GROUP_DIGITS_STYLE]
-choices = [ "integer", "decimal", "all" ]
-default = "all"
-doc = "Whether to group digits before (`\"integer\"`) the decimal point, after (`\"decimal\"`), or both (`\"all\"`)."
+choices = [ "INTEGER", "FRACTION", "ALL" ]
+default = "ALL"
+doc = "Whether to group digits before (`\"INTEGER\"`) the decimal point, after (`\"FRACTION\"`), or both (`\"ALL\"`)."
 
 [config.printing.GROUP_SEPARATOR]
 default = " "

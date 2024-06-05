@@ -356,37 +356,37 @@ class TestArithmetic:
         a = (3 * qu.m).plus_minus(0.1)
         b = (2 * qu.m).plus_minus(0.2)
         result = repr(a + b)
-        assert result == "Quantity(5, m, uncertainty=0.22360679774997896)"
+        assert result == "Quantity(5, m, uncertainty=0.2236067977499789696409173669)"
 
     def test_22(self):
         a = (3 * qu.m).plus_minus(0.1)
         b = (2 * qu.m).plus_minus(0.2)
         result = repr(a - b)
-        assert result == "Quantity(1, m, uncertainty=0.22360679774997896)"
+        assert result == "Quantity(1, m, uncertainty=0.2236067977499789696409173669)"
 
     def test_23(self):
         a = (3 * qu.m).plus_minus(0.1)
         b = (2 * qu.m).plus_minus(0.2)
         result = repr(a * b)
-        assert result == "Quantity(6, m², uncertainty=0.6324555320336759)"
+        assert result == "Quantity(6, m², uncertainty=0.6324555320336758663997787090)"
 
     def test_24(self):
         a = (3 * qu.m).plus_minus(0.1)
         b = (2 * qu.m).plus_minus(0.2)
         result = repr(a / b)
-        assert result == "Quantity(1.5, (unitless), uncertainty=0.15811388300841897)"
+        assert result == "Quantity(1.5, (unitless), uncertainty=0.1581138830084189665999446772)"
 
     def test_25(self):
         a = (3 * qu.m).plus_minus(0.1)
         b = (2 * qu.m).plus_minus(0.2)
         result = repr(2**(a/b))
-        assert result == "Quantity(2.828427124746190097603377448, (unitless), uncertainty=0.3099848428288717)"
+        assert result == "Quantity(2.828427124746190097603377448, (unitless), uncertainty=0.3099848428288716908396318060)"
 
     def test_26(self):
         a = (3 * qu.m).plus_minus(0.1)
         b = (2 * qu.m).plus_minus(0.2)
         result = repr(a.__add__(b, correlation=0.7))
-        assert result == "Quantity(5, m, uncertainty=0.2792848008753788)"
+        assert result == "Quantity(5, m, uncertainty=0.2792848008753788233976784908)"
 
     def test_27(self):
         a = (3 * qu.m).plus_minus(0.1)
@@ -484,7 +484,7 @@ class TestConstants:
 
     def test_as_quantity(self):
         E = qc.proton_mass * qc.speed_of_light**2
-        assert repr(E) == "Quantity(1.503277615985125705245525892E-10, kg m² s⁻², uncertainty=4.58365141155777E-20)"
+        assert repr(E) == "Quantity(1.503277615985125705245525892E-10, kg m² s⁻², uncertainty=4.583651411557769964000000001E-20)"
     
     def test_as_unit(self):
         result = qc.proton_mass.to((qp.M * qu.eV)/qc.c.as_unit()**2)

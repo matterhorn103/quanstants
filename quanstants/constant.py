@@ -2,6 +2,8 @@ from decimal import Decimal as dec
 
 from .quantity import Quantity
 from .unit import DerivedUnit
+from .format import format_quantity
+from .config import quanfig
 
 from . import constants
 
@@ -34,8 +36,8 @@ class Constant(Quantity):
 
     def __init__(
         self,
-        symbol: str | None,
-        name: str | None,
+        symbol: str | None = None,
+        name: str | None = None,
         number: str | int | float | dec | None = None,
         unit=None,
         uncertainty: str | int | float | dec | None = None,
@@ -43,6 +45,7 @@ class Constant(Quantity):
         alt_names: list = None,
         add_to_namespace: bool = True,
         canon_symbol: str = False,
+        **kwargs,
     ):
         if symbol is not None:
             self._symbol = symbol
@@ -50,8 +53,6 @@ class Constant(Quantity):
             self._symbol = name
             # Symbol can't be canon if it wasn't even provided
             canon_symbol = False
-        else:
-            raise RuntimeError("Either a symbol or a name must be provided!")
         self._name = name
         # Any constant named "<x> constant" automatically gets "<x>"" as an alt name
         if name is not None:
@@ -90,14 +91,26 @@ class Constant(Quantity):
         return self._alt_names
 
     def __repr__(self):
-        return f"Constant({self.__str__()})"
+        as_string = self.__str__()
+        if self._name is not None:
+            return f"Constant({as_string})"
+        else:
+            return f"Constant({as_string})"
 
     def __str__(self):
-        value_as_string = super().__str__()
+        # Don't use method of super() as we don't want to ever truncate a constant
+        normal_str = format_quantity(
+            self,
+            truncate=0,
+            group=quanfig.GROUP_DIGITS,
+            group_which=quanfig.GROUP_DIGITS_STYLE,
+            group_sep=quanfig.GROUP_SEPARATOR,
+            uncertainty_style=quanfig.UNCERTAINTY_STYLE,
+        )
         if self._name is not None:
-            return f"{self.name} = {value_as_string}"
+            return f"{self.name} = " + normal_str
         else:
-            return f"{self.symbol} = {value_as_string}"
+            return f"{self.symbol} = " + normal_str
 
     def add_to_namespace(self, add_symbol=False):
         # Add to namespace to allow lookup under the provided name

@@ -19,14 +19,14 @@ from . import units
 from . import prefixes
 from . import constants
 
-# Import key classes in order of dependency
-from . import quantity
-from . import unit
-from . import prefix
-from . import constant
-
-# Also make Quantity class available directly in this namespace
+# Import key modules in order of dependency
+# While doing this make the most useful classes available directly in this namespace
 from .quantity import Quantity
+from .unit import BaseUnit, DerivedUnit
+from .prefix import Prefix
+from .constant import Constant
+from .temperature import TemperatureUnit, Temperature
+from .log import LogarithmicUnit, LogarithmicQuantity
 
 ### NAMESPACE POPULATION ###
 # Definition modules are "unused" imports but do need to be imported so that

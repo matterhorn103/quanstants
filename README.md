@@ -344,25 +344,38 @@ Uncertainties are kept track of correctly across arithmetic operations using unc
 >>> a = (3 * qu.m).plus_minus(0.1)
 >>> b = (2 * qu.m).plus_minus(0.2)
 >>> a + b
-Quantity(5, m, uncertainty=0.22360679774997896)
+Quantity(5, m, uncertainty=0.2236067977499789696409173669)
 >>> a - b
-Quantity(1, m, uncertainty=0.22360679774997896)
+Quantity(1, m, uncertainty=0.2236067977499789696409173669)
 >>> a * b
-Quantity(6, m², uncertainty=0.6324555320336759)
+Quantity(6, m², uncertainty=0.6324555320336758663997787090)
 >>> a / b
-Quantity(1.5, (unitless), uncertainty=0.15811388300841897)
+Quantity(1.5, (unitless), uncertainty=0.1581138830084189665999446772)
 >>> 2**(a/b)
-Quantity(2.828427124746190097603377448, (unitless), uncertainty=0.3099848428288717)
+Quantity(2.828427124746190097603377448, (unitless), uncertainty=0.3099848428288716908396318060)
 ```
 
 By default, the correlation between two quantities is assumed to be zero.
 Uncertainties in the results of operations on two correlated quantities can also be obtained, however, by accessing the corresponding dunder method of the quantity directly and giving the correlation:
 ```python
 >>> a.__add__(b, correlation=0.7)
-Quantity(5, m, uncertainty=0.2792848008753788)
+Quantity(5, m, uncertainty=0.2792848008753788233976784908)
 >>> a.__sub__(b, correlation=1)
 Quantity(1, m, uncertainty=0.1)
 ```
+
+As a result of the high precision of `Decimal` being kept and maintained across operations, the numbers involved can get unwieldy.
+By default, the printed/string representation of a long fractional decimal is truncated, while the formal representation produced with `repr` retains all precision:
+```python
+>>> energy_density = (200 * qu.megajoule).plus_minus(13) / (70 * qu.kilogram).plus_minus(0.5)
+>>> print(energy_density)
+2.85714285… ± 0.18683224… MJ kg⁻¹
+>>> repr(energy_density)
+'Quantity(2.857142857142857142857142857, MJ kg⁻¹, uncertainty=0.1868322484107889153699226089)'
+```
+As can be seen above, this is not the same as rounding; the trailing digits are simply omitted, and the value of the final digit shown is unchanged.
+The number of digits at which truncation begins can be customized by setting `quanstants.quanfig.ELLIPSIS_LONG_DECIMAL` to an integer, or turned off completely by setting it to `0`.
+Note that the numbers and uncertainties of constants are never truncated.
 
 ### Conversion
 
@@ -516,7 +529,7 @@ Mostly, constants behave like quantities:
 Constant(proton_mass = 1.67262192369(51)E-27 kg)
 >>> E = qc.proton_mass * qc.speed_of_light**2
 >>> E
-Quantity(1.503277615985125705245525892E-10, kg m² s⁻², uncertainty=4.58365141155777E-20)
+Quantity(1.503277615985125705245525892E-10, kg m² s⁻², uncertainty=4.583651411557769964000000001E-20)
 ```
 
 Constants can be used as units by calling the `as_unit()` method, which creates a unit with the same value:

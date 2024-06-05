@@ -264,9 +264,7 @@ class Temperature(AbstractQuantity):
             new_uncertainty = quantity.uncertainty.to(unit)
         # Make sure precision isn't ridiculous for an otherwise exact conversion
         if str(new_number)[-5:] == "00000":
-            new_number = dec(str(float(new_number)))
-            if str(new_number)[-2:] == ".0":
-                new_number = dec(int(new_number))
+            new_number = new_number.normalize()
         return cls(new_number, unit, new_uncertainty)
 
     def to_absolute(self):

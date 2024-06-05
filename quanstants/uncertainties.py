@@ -1,6 +1,7 @@
 from decimal import Decimal as dec
 
 from .config import quanfig
+from .rounding import normalize
 
 
 def get_uncertainty(
@@ -131,6 +132,7 @@ def get_uncertainty(
     elif operation == "exp":
         sigma_c = abs(C) * abs(sigma_a)
 
-    # Need a better way to ensure a sensible precision in the uncertainty, but for now this removes all trailing zeroes
-    sigma_c = dec(str(float(str(sigma_c))))
+    # Ensure no endless trailing zeroes
+    #if quanfig.AUTO_NORMALIZE:
+    #    sigma_c = normalize(sigma_c, threshold=quanfig.AUTO_NORMALIZE)
     return sigma_c

@@ -59,3 +59,10 @@ def to_figures(num: dec, ndigits=1, pad=False, rounding="ROUND_HALF_EVEN"):
         new_exponent = num.as_tuple().exponent - n_digits_to_add
         return dec((num.as_tuple().sign, new_digits, new_exponent))
     
+
+def normalize(num: dec, threshold: int = 0):
+    """Normalize a Decimal if it has more trailing zeroes than `threshold`."""
+    if threshold == 0 or str(num)[-threshold:] == "0" * threshold:
+        return num.normalize()
+    else:
+        return num

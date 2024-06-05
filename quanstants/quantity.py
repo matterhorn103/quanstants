@@ -299,7 +299,7 @@ class Quantity(AbstractQuantity):
                 pending_cancel=self._pending_cancel,
             )
         elif isinstance(other, frac):
-            frac_as_dec = dec(str(float(other)))
+            frac_as_dec = dec(other._numerator) / dec(other.denominator)
             new_number = self.number**frac_as_dec
             new_uncertainty = get_uncertainty(
                 new_number, "pow", self, numberx=frac_as_dec

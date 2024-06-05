@@ -52,7 +52,8 @@ doc = "Whether identical units should be cancelled and combined automatically af
 
 [config.arithmetic.AUTO_NORMALIZE]
 default = 10
-doc = """The number of trailing zeroes required before a result is automatically normalized.
+doc = """The number of trailing zeroes required before a result is automatically
+normalized.
 
 NOTE:
 NOT CURRENTLY IMPLEMENTED, EXCEPT FOR Quantity.normalize() AND UNCERTAINTY CALCULATIONS
@@ -68,6 +69,16 @@ choices = [ true, false ]
 default = true
 doc = "Whether floats should be converted to Decimal via str or directly."
 
+[config.printing.ASCII_ONLY]
+choices = [ true, false ]
+default = false
+doc = """Whether to only use ASCII characters or allow all Unicode characters.
+
+Unlike the other printing settings, this affects not only str() and print() but also
+the strings produced by repr().
+
+Changing this setting also changes various of the other [printing] settings to match."""
+
 [config.printing.PRETTYPRINT]
 choices = [ true, false ]
 default = true
@@ -80,14 +91,15 @@ choices = [ true, false ]
 default = false
 doc = """Whether the string form of quantities should be rounded or kept unrounded.
 
-When enabled, the quantity itself is not changed, but `print()`, `str()`, or anything else that
-calls `__str__` on the quantity will return a rounded representation.
+When enabled, the quantity itself is not changed, but `print()`, `str()`, or anything
+else that calls `__str__` on the quantity will return a rounded representation.
 
 The rounding is that of `Quantity.round()` with the default parameters."""
 
 [config.printing.ELLIPSIS_LONG_DECIMAL]
 default = 8
-doc = """Truncate numbers with long trailing decimal parts after the given number of digits.
+doc = """Truncate numbers with long trailing decimal parts after the given number of
+digits.
 
 To disable, set to 0.
 

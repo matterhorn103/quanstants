@@ -49,6 +49,8 @@ class QuanstantsConfig:
                     raise TypeError(f"Value provided not amongst possible choices: {self.options[name]['choices']}")
             else:
                 # Some options need custom handling
+                if name == "ASCII_ONLY":
+                    self.UNICODE_SUPERSCRIPTS = value
                 if name == "PRETTYPRINT":
                     self.UNICODE_SUPERSCRIPTS = value
                     self.GROUP_DIGITS = value

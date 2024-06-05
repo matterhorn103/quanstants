@@ -327,7 +327,7 @@ class TestArithmetic:
         a = 100 * qu.m
         b = 25 * qu.m
         result = repr((a / b).sqrt())
-        assert result == "Quantity(2.000000000000000000000000000, (unitless))"
+        assert result == "Quantity(2, (unitless))"
 
     def test_16(self):
         a = 100 * qu.m

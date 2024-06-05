@@ -38,13 +38,14 @@ class AbstractQuantity(metaclass=ABCMeta):
     a single string is to call `Quantity.parse(string)`.
     """
 
-    __slots__ = ("_number", "_unit", "_uncertainty", "_value", "_pending_cancel")
+    __slots__ = ("_number", "_unit", "_uncertainty", "_value", "_pending_cancel", "_is_normalized")
 
     def __init__(
         self,
         number: str | int | float | dec | None = None,
         unit=None,
         uncertainty: str | int | float | dec | Self | None = None,
+        _pending_cancel: bool = False,
     ):
 
         # Did extensive timings for this, shown in comments in ns in format:
@@ -100,8 +101,10 @@ class AbstractQuantity(metaclass=ABCMeta):
         else:
             self._uncertainty = dec(uncertainty)
 
-        if not hasattr(self, "_pending_cancel"):
-            self._pending_cancel = False
+        # Variable that indicates unit needs cancelling but is initially uncancelled
+        self._pending_cancel = _pending_cancel
+        # Variable to indicate normalization should be skipped
+        self._is_normalized = False
 
 
     # These properties should be overridden by subclasses, but unfortunately it is no
@@ -109,6 +112,12 @@ class AbstractQuantity(metaclass=ABCMeta):
 
     @property
     def number(self) -> dec:
+        if quanfig.AUTO_NORMALIZE and not self._is_normalized:
+            if str(self._number)[-quanfig.AUTO_NORMALIZE:] == "0" * quanfig.AUTO_NORMALIZE:
+                # We can just normalize in place in this case as it doesn't change the
+                # value or the hash of either the number or the Quantity itself
+                self._number = self._number.normalize()
+            self._is_normalized = True
         return self._number
 
     @property
@@ -116,7 +125,7 @@ class AbstractQuantity(metaclass=ABCMeta):
         return self._unit
 
     @property
-    def uncertainty(self) -> Self:
+    def uncertainty(self):
         return self._uncertainty
 
     @property
@@ -280,7 +289,7 @@ class AbstractQuantity(metaclass=ABCMeta):
                 number=rounding.to_places(self.number, ndigits, pad, mode),
                 unit=self._unit,
                 uncertainty=self._uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         return rounded
 
@@ -299,7 +308,7 @@ class AbstractQuantity(metaclass=ABCMeta):
             number=rounding.to_figures(self.number, ndigits, pad, mode),
             unit=self._unit,
             uncertainty=self._uncertainty,
-            pending_cancel=self._pending_cancel,
+            _pending_cancel=self._pending_cancel,
         )
 
     def round_to_sigfigs(self, *args, **kwargs) -> Self:
@@ -369,7 +378,7 @@ class AbstractQuantity(metaclass=ABCMeta):
             number=self.number,
             unit=self._unit,
             uncertainty=uncertainty,
-            pending_cancel=self._pending_cancel,
+            _pending_cancel=self._pending_cancel,
         )
 
     def plus_minus(self, uncertainty) -> Self:
@@ -386,9 +395,11 @@ class AbstractQuantity(metaclass=ABCMeta):
         If a threshold is provided, only numbers with more trailing zeroes than the
         threshold will be normalized.
         """
-        return type(self)(
+        normalized = type(self)(
             rounding.normalize(self.number, threshold),
             self._unit,
             rounding.normalize(self._uncertainty, threshold),
-            pending_cancel=self._pending_cancel,
+            _pending_cancel=self._pending_cancel,
         )
+        normalized._is_normalized = True
+        return normalized

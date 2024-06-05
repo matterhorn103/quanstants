@@ -212,7 +212,7 @@ def format_quantity(
     elide_any = bool(num_ellipsis) | bool(uncert_ellipsis)
     if not quantity._uncertainty:
         num_string = reassemble(num_integer, num_fraction, num_ellipsis, num_exponent)
-        return f"{num_string} {quantity.unit}"
+        return f"{num_string}{quantity.unit._preceding_space*" "}{quantity.unit}"
     
     # Under certain conditions format uncertainty in style "3.023(6) m" but only if:
     # - the uncertainty has the same resolution as the number (check via the exponent,
@@ -234,7 +234,7 @@ def format_quantity(
         if num_exponent:
             num_exponent = "E" + num_exponent
         # Insert uncertainty before exponent
-        return f"{num_string}{bracketed_uncert}{num_exponent} {quantity.unit}"
+        return f"{num_string}{bracketed_uncert}{num_exponent}{quantity.unit._preceding_space*" "}{quantity.unit}"
     
     else:
         num_string = reassemble(num_integer, num_fraction, num_ellipsis, num_exponent)

@@ -61,7 +61,7 @@ def to_figures(num: dec, ndigits=1, pad=False, rounding="ROUND_HALF_EVEN"):
     
 
 def normalize(num: dec, threshold: int = 0):
-    """Normalize a Decimal if it has more trailing zeroes than `threshold`."""
+    """Normalize a Decimal if the number of trailing zeroes is at least `threshold`."""
     if threshold == 0 or str(num)[-threshold:] == "0" * threshold:
         return num.normalize()
     else:

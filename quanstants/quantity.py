@@ -26,8 +26,8 @@ class Quantity(AbstractQuantity):
         unit=None,
         uncertainty: str | int | float | dec | Self | None = None,
         value: str | Self | None = None,
+        _pending_cancel: bool = False,
         **kwargs,
-    #   pending_cancel: bool,
     ):
         
         # Making a Quantity from a single string should be done with `Quantity.parse()`, but allow for the
@@ -56,18 +56,10 @@ class Quantity(AbstractQuantity):
             number,
             unit,
             uncertainty,
+            _pending_cancel=_pending_cancel,
+            **kwargs,
         )
 
-        # Variable that indicates unit needs cancelling but is initially uncancelled
-        self._pending_cancel = kwargs.get("pending_cancel", False)
-
-
-    # Generally accessing properties via self.x rather than self._x is safer
-    # self._x is faster though, in my tests 9.7 ns vs 48.6 ns
-    # However for most operations this is not a bottleneck
-    @property
-    def number(self):
-        return self._number
 
     # Note: auto_cancel is done lazily after arithmetic so accessing _unit directly
     # should only be done with care as it may give an uncancelled unit
@@ -85,15 +77,15 @@ class Quantity(AbstractQuantity):
     # Note: the uncertainty is returned to the user as a Quantity, so internally
     # usually the decimal value should be accessed directly with _uncertainty
     @property
-    def uncertainty(self):
+    def uncertainty(self) -> Self:
         return Quantity(
             self._uncertainty,
             self._unit,
-            pending_cancel=self._pending_cancel,
+            _pending_cancel=self._pending_cancel,
         )
     
     @property
-    def value(self):
+    def value(self) -> Self:
         """Return the value of the object as a `Quantity`.
         
         For a `Quantity`, just returns itself.
@@ -102,7 +94,7 @@ class Quantity(AbstractQuantity):
         """
         return self
 
-    def __int__(self):
+    def __int__(self) -> int:
         if not self.is_dimensionless():
             raise NotDimensionlessError(
                 "Cannot cast a non-dimensionless quantity to an integer!"
@@ -111,7 +103,7 @@ class Quantity(AbstractQuantity):
             dimensionless_quant = self.base()
             return int(dimensionless_quant.number)
 
-    def __float__(self):
+    def __float__(self) -> float:
         if not self.is_dimensionless():
             raise NotDimensionlessError(
                 "Cannot cast a non-dimensionless quantity to a float!"
@@ -124,7 +116,7 @@ class Quantity(AbstractQuantity):
     # In general, maintain laziness of auto cancel i.e. retain the uncancelled forms
     # but perpetuate the state of pending cancellation so that it is eventually assessed
 
-    def __add__(self, other, correlation=0):
+    def __add__(self, other, correlation=0) -> Self:
         if isinstance(other, Quantity):
             if self._unit == other._unit:
                 new_number = self.number + other.number
@@ -150,12 +142,12 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit,
                 new_uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         else:
             return NotImplemented
 
-    def __sub__(self, other, correlation=0):
+    def __sub__(self, other, correlation=0) -> Self:
         if isinstance(other, Quantity):
             if self._unit == other._unit:
                 new_number = self.number - other.number
@@ -181,12 +173,12 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit,
                 new_uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         else:
             return NotImplemented
 
-    def __mul__(self, other, correlation=0):
+    def __mul__(self, other, correlation=0) -> Self:
         if isinstance(other, (str, int, float, dec)):
             if quanfig.CONVERT_FLOAT_AS_STR:
                 other = dec(str(other))
@@ -200,7 +192,7 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit,
                 new_uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         elif isinstance(other, Quantity):
             new_number = self.number * other.number
@@ -213,12 +205,12 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit * other._unit,
                 new_uncertainty,
-                pending_cancel=quanfig.AUTO_CANCEL,
+                _pending_cancel=quanfig.AUTO_CANCEL,
             )
         else:
             return NotImplemented
 
-    def __rmul__(self, other, correlation=0):
+    def __rmul__(self, other, correlation=0) -> Self:
         if isinstance(other, (str, int, float, dec)):
             if quanfig.CONVERT_FLOAT_AS_STR:
                 other = dec(str(other))
@@ -232,12 +224,12 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit,
                 new_uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         else:
             return NotImplemented
 
-    def __truediv__(self, other, correlation=0):
+    def __truediv__(self, other, correlation=0) -> Self:
         if isinstance(other, (str, int, float, dec)):
             if quanfig.CONVERT_FLOAT_AS_STR:
                 other = dec(str(other))
@@ -251,7 +243,7 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit,
                 new_uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         elif isinstance(other, Quantity):
             new_number = self.number / other.number
@@ -263,12 +255,12 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit / other._unit,
                 new_uncertainty,
-                pending_cancel=quanfig.AUTO_CANCEL,
+                _pending_cancel=quanfig.AUTO_CANCEL,
             )
         else:
             return NotImplemented
 
-    def __rtruediv__(self, other, correlation=0):
+    def __rtruediv__(self, other, correlation=0) -> Self:
         if isinstance(other, (str, int, float, dec)):
             if quanfig.CONVERT_FLOAT_AS_STR:
                 other = dec(str(other))
@@ -282,13 +274,13 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit.inverse(),
                 new_uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         else:
             return NotImplemented
 
     # For now Unit only supports integer or fractional exponents
-    def __pow__(self, other):
+    def __pow__(self, other) -> Self:
         if isinstance(other, int):
             new_number = self.number**other
             new_uncertainty = get_uncertainty(new_number, "pow", self, numberx=other)
@@ -296,7 +288,7 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit**other,
                 new_uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         elif isinstance(other, frac):
             frac_as_dec = dec(other._numerator) / dec(other.denominator)
@@ -308,13 +300,13 @@ class Quantity(AbstractQuantity):
                 new_number,
                 self._unit**other,
                 new_uncertainty,
-                pending_cancel=self._pending_cancel,
+                _pending_cancel=self._pending_cancel,
             )
         else:
             return NotImplemented
 
     # Can only use a Quantity as an exponent if it is dimensionless
-    def __rpow__(self, other, correlation=0):
+    def __rpow__(self, other, correlation=0) -> Self:
         if not self.is_dimensionless():
             raise NotDimensionlessError(
                 "Cannot raise to the power of a non-dimensionless quantity!"
@@ -343,14 +335,20 @@ class Quantity(AbstractQuantity):
             new_uncertainty = get_uncertainty(
                 new_number, "rpow", self, quantityB=other, correlation=correlation 
             )
+            return Quantity(
+                new_number,
+                new_unit,
+                new_uncertainty,
+                _pending_cancel=other._pending_cancel,
+            )
         else:
             return NotImplemented
 
-    def sqrt(self):
+    def sqrt(self) -> Self:
         """Return the square root of the quantity, equivalent to `Quantity**Fraction(1, 2)`."""
         return self ** frac(1, 2)
 
-    def exp(self):
+    def exp(self) -> Self:
         """Return the value of e raised to the power of the quantity, for dimensionless quantities only."""
         if not self.is_dimensionless():
             raise NotDimensionlessError(
@@ -362,7 +360,7 @@ class Quantity(AbstractQuantity):
             new_uncertainty = get_uncertainty(new_number, "exp", self)
             return Quantity(new_number, None, new_uncertainty)
 
-    def ln(self):
+    def ln(self) -> Self:
         """Return the natural logarithm of the quantity, for dimensionless quantities only."""
         if not self.is_dimensionless():
             raise NotDimensionlessError(
@@ -374,7 +372,7 @@ class Quantity(AbstractQuantity):
             new_uncertainty = get_uncertainty(new_number, "ln", self)
             return Quantity(new_number, None, new_uncertainty)
 
-    def log(self, base=None):
+    def log(self, base=None) -> Self:
         if base is None:
             return self.ln()
         elif base == 10:
@@ -389,7 +387,7 @@ class Quantity(AbstractQuantity):
             new_uncertainty = get_uncertainty(new_number, "log", self, log_base=base)
             return Quantity(new_number, None, new_uncertainty)
 
-    def log10(self):
+    def log10(self) -> Self:
         """Return the base-10 logarithm of the quantity, for dimensionless quantities only."""
         if not self.is_dimensionless():
             raise NotDimensionlessError(
@@ -401,7 +399,7 @@ class Quantity(AbstractQuantity):
             new_uncertainty = get_uncertainty(new_number, "log10", self)
             return Quantity(new_number, None, new_uncertainty)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         base = self.base()
         if base.number == 0:
             return 0
@@ -414,7 +412,7 @@ class Quantity(AbstractQuantity):
                 (base.number, *base_ids)
             )
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if self.number == 0:
             return 0 == other
         # Check if unitless
@@ -431,7 +429,7 @@ class Quantity(AbstractQuantity):
         else:
             return NotImplemented
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool:
         # TODO match hash and eq
         if isinstance(other, Quantity):
             # Convert both to canonical base unit representations
@@ -450,7 +448,7 @@ class Quantity(AbstractQuantity):
         else:
             return NotImplemented
 
-    def __ge__(self, other):
+    def __ge__(self, other) -> bool:
         # TODO match hash and eq
         if isinstance(other, Quantity):
             # Convert both to canonical base unit representations
@@ -469,28 +467,28 @@ class Quantity(AbstractQuantity):
         else:
             return NotImplemented
 
-    def __neg__(self):
+    def __neg__(self) -> Self:
         return Quantity(
             -1 * self.number,
             self._unit,
             self._uncertainty,
             )
 
-    def __pos__(self):
+    def __pos__(self) -> Self:
         return self
 
-    def resolution(self):
+    def resolution(self) -> Self:
         return Quantity(
             10 ** self.number.as_tuple().exponent,
             self._unit,
-            pending_cancel=self._pending_cancel,
+            _pending_cancel=self._pending_cancel,
         )
 
     def dimensions(self) -> Dimensions:
         """Return the dimensions of the unit."""
         return self._unit.dimension_string()
 
-    def cancel(self):
+    def cancel(self) -> Self:
         """Combine any like terms in the unit."""
         return Quantity(
             self.number,
@@ -498,7 +496,7 @@ class Quantity(AbstractQuantity):
             self._uncertainty,
         )
     
-    def _inplace_cancel(self):
+    def _inplace_cancel(self) -> None:
         """Cancel without returning new quantity.
         
         We can do cancellation in place as the unit will still have the same value and
@@ -513,7 +511,7 @@ class Quantity(AbstractQuantity):
         self._unit = self._unit._cancel_to_unit()
         return None
 
-    def fully_cancel(self):
+    def fully_cancel(self) -> Self:
         """Combine any terms of the same dimension in the unit."""
         # The unit may not have the same value afterwards
         # e.g. CompoundUnit(m km) cancels to Quantity(1000 m^2)
@@ -527,15 +525,7 @@ class Quantity(AbstractQuantity):
             self._uncertainty * cancelled.number,
         )
 
-    def _auto_cancel(self):
-        """Apply automatic cancelling if specified by `quanstants.quanfig.AUTO_CANCEL`."""
-        # DEPRECATED
-        if quanfig.AUTO_CANCEL:
-            return self.cancel()
-        else:
-            return self
-
-    def canonical(self):
+    def canonical(self) -> Self:
         """Express the quantity with its units in a canonical order."""
         return Quantity(
             self.number,
@@ -543,7 +533,7 @@ class Quantity(AbstractQuantity):
             self._uncertainty,
         )
     
-    def base(self):
+    def base(self) -> Self:
         # Need to be careful here as unit.base() might return a Quantity with a number
         # other than 1
         base = self._unit.base()
@@ -553,7 +543,7 @@ class Quantity(AbstractQuantity):
             self._uncertainty * base.number,
         )
 
-    def to(self, other):
+    def to(self, other) -> Self:
         if isinstance(other, str):
             # Allow parsing of unit string first
             other = units.parse(other)

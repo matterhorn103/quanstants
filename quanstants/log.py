@@ -305,6 +305,7 @@ class LogarithmicQuantity(AbstractQuantity):
             number=number,
             unit=unit,
             uncertainty=None,
+            **kwargs,
         )
         # Assuming no value was provided, overwrite now
         # The value of a logarithmic quantity should always be stored as an absolute
@@ -316,15 +317,7 @@ class LogarithmicQuantity(AbstractQuantity):
         self._uncertainty = dec(0) if uncertainty is None or uncertainty == 0 else uncertainty
 
     @property
-    def number(self):
-        return self._number
-
-    @property
-    def unit(self):
-        return self._unit
-
-    @property
-    def uncertainty(self):
+    def uncertainty(self) -> Quantity:
         return self._uncertainty
 
     @property

@@ -119,21 +119,17 @@ class Temperature(AbstractQuantity):
             number,
             unit,
             uncertainty,
+            **kwargs,
         )
 
         self._value = None
 
     @property
-    def number(self):
-        return self._number
-
-    @property
-    def unit(self):
-        return self._unit
-
-    @property
     def uncertainty(self):
-        return self._uncertainty
+        return Quantity(
+            self._uncertainty,
+            self._unit,
+        )
 
     @property
     def value(self) -> Quantity:

@@ -50,14 +50,14 @@ sievert = DerivedUnit("Sv", "sievert", Quantity(1, m**2 * s**-2), canon_symbol=T
 katal = DerivedUnit("kat", "katal", Quantity(1, s**-1 * mol), canon_symbol=True)
 
 # Non-SI units officially accepted for use with the SI
-arcminute = DerivedUnit("′", "arcminute", Quantity(dec(math.pi)/10800, rad), canon_symbol=True)
-arcsecond = DerivedUnit("″", "arcsecond", Quantity(dec(math.pi)/648000, rad), canon_symbol=True)
+arcminute = DerivedUnit("′", "arcminute", Quantity(dec(math.pi)/10800, rad), canon_symbol=True, preceding_space=False)
+arcsecond = DerivedUnit("″", "arcsecond", Quantity(dec(math.pi)/648000, rad), canon_symbol=True, preceding_space=False)
 astronomical_unit = DerivedUnit("au", "astronomical_unit", Quantity(149597870700, m), canon_symbol=True)
 bel = LogarithmicUnit("B", None, "bel", 10, canon_symbol=False) # let B be used by byte
 dalton = DerivedUnit("Da", "dalton", Quantity("1.66053906660e-27", kg, "0.00000000050e-27"), alt_names=["atomic_mass_unit", "unified_atomic_mass_unit"], canon_symbol=True)
 day = DerivedUnit("d", "day", Quantity(86400, s), canon_symbol=True)
 decibel = PrefixedLogarithmicUnit(deci, bel, add_to_namespace=True, canon_symbol=True)
-degree = DerivedUnit("°", "degree", Quantity(dec(math.pi)/180, rad), canon_symbol=True)
+degree = DerivedUnit("°", "degree", Quantity(dec(math.pi)/180, rad), canon_symbol=True, preceding_space=False)
 electronvolt = DerivedUnit("eV", "electronvolt", Quantity("1.602176634e-19", joule), canon_symbol=True)
 hectare = DerivedUnit("ha", "hectare", Quantity("1e4", m**2), canon_symbol=True)
 hour = DerivedUnit("h", "hour", Quantity(3600, s), canon_symbol=True)

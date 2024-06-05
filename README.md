@@ -36,7 +36,7 @@ For example, the implicit sanity checking that comes with tracking units helps t
 * Use of the `Decimal` type under the hood to avoid the [quirks of binary floating point](https://docs.python.org/3/tutorial/floatingpoint.html#tut-fp-issues), which as well as enabling the above, avoids imprecision arising from rounding errors
   * Most mathematical operations and functions are delegated to [Python's `Decimal`](https://docs.python.org/3/library/decimal.html), which in turn follows the General Decimal Arithmetic Specification and thus indirectly IEEE 754. `quanstants` simply tracks units and uncertainties on top, and aims to support all operations on `Quantity` that are supported by `Decimal`
 * Customization of various options including the rounding behaviour, automatic cancellation of units, and many elements of printing formatting
-  * Configuration via a `.toml` file -- autodetected in the current directory, but can also be manually loaded
+  * Configuration via a `.toml` file – autodetected in the current directory, but can also be manually loaded
 
 ## Usage
 
@@ -449,7 +449,7 @@ Quantity(60, m kg s⁻²)
 
 ### Equalities
 
-Both units and quantities are (to a large extent) immutable -- once created, their properties are fixed.
+Both units and quantities are (to a large extent) immutable – once created, their properties are fixed.
 A quantity cannot be changed in-place, and operations on one will return a new `Quantity` object.
 This means units, quantities, and their subclasses are hashable and can be used e.g. as keys in a `dict`.
 
@@ -610,7 +610,7 @@ Quantity(543.88, J mol⁻¹, uncertainty=0.03)
 ```
 `ndigits`, `pad`, and `mode` can also be passed to `round()`, in which case they are passed on to the respective rounding function.
 
-The defaults are set such that calling `round()` without any arguments is a quick and convenient way to get a sensibly rounded number -- exact quantities are rounded to 3 s.f. and quantities with uncertainties have their uncertainty rounded to 1 s.f. and the quantity is then rounded to the same precision.
+The defaults are set such that calling `round()` without any arguments is a quick and convenient way to get a sensibly rounded number – exact quantities are rounded to 3 s.f. and quantities with uncertainties have their uncertainty rounded to 1 s.f. and the quantity is then rounded to the same precision.
 ```python
 >>> a.round()
 Quantity(544, J mol⁻¹)
@@ -626,7 +626,7 @@ Quantity(543.88, J mol⁻¹)
 ```
 
 Most of us are taught to round off numbers to the nearest round number, with 5s rounded away from zero ("round half away from zero"), so when rounding to two significant figures 1.23 becomes 1.2, 1.28 becomes 1.3, 1.25 also becomes 1.3, and -1.25 becomes -1.3.
-Python's default behaviour does not match this however -- "tie-breaks", or where the deciding digit is a 5, are rounded such that the final digit of the rounded number is _even_ ("round half to even").
+Python's default behaviour does not match this however – "tie-breaks", or where the deciding digit is a 5, are rounded such that the final digit of the rounded number is _even_ ("round half to even").
 This means that even when using `Decimal`, rounding results can be unexpected.
 `quanstants` overrides Python and does by default what most users would do themselves, by rounding **half away from zero**:
 ```python
@@ -957,7 +957,7 @@ Most crucially, neither package makes the same opinionated decisions about numbe
 
 Specifically in comparison to `astropy`, the unit and constant selection is far broader than simply those useful for astronomers, and there is no reliance on `numpy`.
 
-Specifically in comparison to `pint`, quantities are immutable by design -- any function or operation that would change a `Quantity` returns a new `Quantity`, and both units and quantities are hashable.
+Specifically in comparison to `pint`, quantities are immutable by design – any function or operation that would change a `Quantity` returns a new `Quantity`, and both units and quantities are hashable.
 `quanstants` also contains significantly more constant values.
 
 ## What is not (yet) supported?
@@ -990,14 +990,14 @@ Even if rounding is configured so that half rounds up, `round(0.35, 1)` will sti
 Meanwhile, the usual arguments *against* the use of `Decimal` are that the precision of `float` is high enough for most applications, and that using binary floats has a performance advantage.
 
 Using `Quantity` objects in complex or extensive calculations, as opposed to binary floats or even decimal floats, will of course have a not-unsubstantial associated overhead.
-`quanstants` is not intended for this usage; but after all, neither is Python -- in many cases other advantages win out over pure speed and computational efficiency.
+`quanstants` is not intended for this usage; but after all, neither is Python – in many cases other advantages win out over pure speed and computational efficiency.
 
 And while from a purely numerical perspective, the error in binary floats is of course technically very small and suffices for calculations, the simple fact that most decimals _cannot_ be represented exactly by a binary float makes life difficult for many applications; for example, the preparation of documents, or for checking more trivial calculations.
 
 By way of example, the original author was motivated originally by their experiences using Python to prepare data for publication in a scientific manuscript.
 In one situation, quantities in two columns were all measured to a precision of 3 significant figures, but this precision would not be carried through.
 Measured values such as `1.260` would be inserted as "1.26".
-Moreover, a third column containing the difference between the first two columns needed to be rounded to two decimal places to reflect the lower precision -- a trivial sum to do by hand, but time-consuming for thousands of data points, hence the use of Python in the first place.
+Moreover, a third column containing the difference between the first two columns needed to be rounded to two decimal places to reflect the lower precision – a trivial sum to do by hand, but time-consuming for thousands of data points, hence the use of Python in the first place.
 
 Experienced programmers are likely aware of the pitfalls of working with binary mathematics and can identify when binary floating point suffices and when a switch to decimal is necessary for precision.
 For inexperienced programmers, the behaviour of binary floating point is often perplexing.

@@ -21,6 +21,7 @@ class AbstractUnit(metaclass=ABCMeta):
         "_symbol",
         "_name",
         "_alt_names",
+        "_preceding_space",
     )
 
     def __init__(
@@ -30,6 +31,7 @@ class AbstractUnit(metaclass=ABCMeta):
         alt_names: list[str] | None = None,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
+        preceding_space: bool = True,
     ):
         self._symbol = symbol
         if symbol is None:
@@ -39,6 +41,8 @@ class AbstractUnit(metaclass=ABCMeta):
         self._alt_names = tuple(alt_names) if alt_names is not None else None
         if add_to_namespace:
             self.add_to_namespace(add_symbol=canon_symbol)
+        # Quantities need to know if the unit should be preceded by a space or not
+        self._preceding_space = preceding_space
     
     # If None was passed for the symbol, it is usually done by a subclass so that it can
     # be evaluated lazily

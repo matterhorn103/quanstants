@@ -50,10 +50,18 @@ class QuanstantsConfig:
             else:
                 # Some options need custom handling
                 if name == "ASCII_ONLY":
-                    self.UNICODE_SUPERSCRIPTS = value
+                    if value is True:
+                        self.UNICODE_SUPERSCRIPTS = False
                 if name == "PRETTYPRINT":
-                    self.UNICODE_SUPERSCRIPTS = value
-                    self.GROUP_DIGITS = value
+                    if value is True:
+                        self.UNICODE_SUPERSCRIPTS = value
+                    if value is False:
+                        self.GROUP_DIGITS = 0
+                if name == "STRICT_SI":
+                    if value is True:
+                        if self.LOGARITHMIC_UNIT_STYLE == "SUFFIX":
+                            self.LOGARITHMIC_UNIT_STYLE = "REFERENCE"
+                        self.PERCENTAGE_SPACE = True
                 if name == "LITRE_SYMBOL":
                     # Don't recreate litre/derivatives, just empty their symbol cache
                     from . import units

@@ -55,9 +55,6 @@ default = 10
 doc = """The number of trailing zeroes required before a result is automatically
 normalized.
 
-NOTE:
-NOT CURRENTLY IMPLEMENTED, EXCEPT FOR Quantity.normalize() AND UNCERTAINTY CALCULATIONS
-
 This setting ensures that exact results are presented exactly; for example, that
 (100 m / 25 m).sqrt() returns Quantity(2, (unitless)), not
 Quantity(2.000000000000000000000000000, (unitless)).
@@ -77,14 +74,14 @@ doc = """Whether to only use ASCII characters or allow all Unicode characters.
 Unlike the other printing settings, this affects not only str() and print() but also
 the strings produced by repr().
 
-Changing this setting also changes various of the other [printing] settings to match."""
+Changing this setting also changes various other [printing] settings."""
 
 [config.printing.PRETTYPRINT]
 choices = [ true, false ]
 default = true
 doc = """Whether to format printed strings in a nice way.
 
-Changing this setting also changes various of the other [printing] settings to match."""
+Changing this setting also changes various other [printing] settings."""
 
 [config.printing.ROUND_BEFORE_PRINT]
 choices = [ true, false ]
@@ -154,6 +151,18 @@ Naturally this will just appear as a normal-width space in a monospaced font.
 A normal space \" \" would be the alternative if only ASCII characters are desired.
 A comma \",\" or a full stop \".\" are commonly used, but are discouraged by the SI.
 Python itself often allows or makes use of an underscore \"_\"."""
+
+[config.misc.STRICT_SI]
+choices = [ true, false ]
+default = false
+doc = """Whether to strictly follow SI style or not.
+
+Changing this setting also changes various other settings."""
+
+[config.misc.PERCENTAGE_SPACE]
+choices = [ true, false ]
+default = false
+doc = "Whether to put a space between a number and a following % (or promille etc.) sign."
 
 [config.misc.LITRE_SYMBOL]
 choices = [ "l", "L" ]

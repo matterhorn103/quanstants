@@ -24,7 +24,7 @@ from .si import joule, gram, day, rad, minute
 
 # Percent and other ratios
 # Unfortunately will have preceding space, matching SI style but contrary to popular use
-percent = DerivedUnit("%", "percent", Quantity("0.01", unitless), alt_names=["per_cent"], canon_symbol=True)
+percent = DerivedUnit("%", "percent", Quantity("0.01", unitless), alt_names=["per_cent"], canon_symbol=True, _space_rule="PERCENTAGE_SPACE")
 
 # Energy
 watthour = DerivedUnit("Wh", "watthour", Quantity("3.6E6", joule), canon_symbol=True)

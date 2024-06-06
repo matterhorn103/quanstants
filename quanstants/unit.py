@@ -56,6 +56,7 @@ class Unit(AbstractUnit):
         alt_names: list[str] | None = None,
         add_to_namespace: bool = False,
         canon_symbol: bool = False,
+        **kwargs,
     ):
         super().__init__(
             symbol=symbol,
@@ -63,6 +64,7 @@ class Unit(AbstractUnit):
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
+            **kwargs,
         )
 
         self._value = value if value is not None else Quantity(1, self)
@@ -282,6 +284,7 @@ class BaseUnit(Unit):
         alt_names: list[str] = None,
         add_to_namespace: bool = True,
         canon_symbol: bool = True,
+        **kwargs,
     ):
         super().__init__(
             symbol,
@@ -291,6 +294,7 @@ class BaseUnit(Unit):
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
+            **kwargs,
         )
         self._value_base = self.value
 
@@ -670,7 +674,7 @@ class DerivedUnit(Unit):
     The `dimensions` are set to that of the provided value's unit(s).
     """
 
-    __slots__ = ()
+    __slots__ = ("_space_rule")
 
     def __init__(
         self,
@@ -680,8 +684,12 @@ class DerivedUnit(Unit):
         alt_names: list[str] | None = None,
         add_to_namespace: bool = True,
         canon_symbol: bool = False,
-        
+        preceding_space: bool = True,
+        _space_rule: str | None = None,
     ):
+        # Passing a quanfig variable (str) allows preceding_space to be determined by it
+        if _space_rule is not None:
+            preceding_space = getattr(quanfig, _space_rule)
         super().__init__(
             symbol,
             name,
@@ -691,6 +699,7 @@ class DerivedUnit(Unit):
             alt_names=alt_names,
             add_to_namespace=add_to_namespace,
             canon_symbol=canon_symbol,
+            preceding_space=preceding_space,
         )
         self._value_base = self.value.base()
     

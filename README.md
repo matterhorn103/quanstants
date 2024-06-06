@@ -948,26 +948,50 @@ As far as possible, however, units are also made available under alternative nam
 
 For consistency, names of constants are written first and foremost in British/Irish/European English, but should also be available under the American English equivalents.
 
-## Comparison to astropy and pint
+## Comparison to other packages
 
 Both `astropy` (via its modules `constants` and `units`) and `pint` are excellent packages, but both had limitations that inspired the creation of `quanstants`.
-Moreover, while they and various other packages each do some things very well and have some advanced functionality, all met only a subset of my (fairly basic) needs, so `quanstants` aims to take the best of each.
+While they and various other packages each do some things very well and have some advanced functionality, all met only a subset of my (fairly basic) needs, so `quanstants` aims to take the best of each.
+Moreover, I felt it was possible to have an API more user-friendly than the others available.
 
-Most crucially, neither package makes the same opinionated decisions about number handling and rounding as `quanstants`: they do not store numbers as `Decimal` by default, or implement the more traditional rounding behaviour, or allow rounding to significant figures.
+### astropy and pint
 
-Specifically in comparison to `astropy`, the unit and constant selection is far broader than simply those useful for astronomers, and there is no reliance on `numpy`.
+* Crucially, neither package makes the same opinionated decisions about number handling and rounding as `quanstants`:
+  * they do not store numbers as `Decimal` by default
+  * they do not implement the more traditional rounding behaviour
+  * they do not allow easy rounding to significant figures or to match the uncertainty
+* Both treat radians and steradians as base units rather than as dimensionless units, making working with angles more complicated
 
-Specifically in comparison to `pint`, quantities are immutable by design – any function or operation that would change a `Quantity` returns a new `Quantity`, and both units and quantities are hashable.
-`quanstants` also contains significantly more constant values.
+### astropy
+
+* The `quanstants` API is fairly similar to that of `astropy`
+* The unit and constant selection is much broader than simply those useful for astronomers/astrophysicists
+* `astropy` does not support conversion to and from relative temperatures on scales other than kelvin, whereas `quanstants` has full support for both relative and absolute temperatures
+* `astropy` quantities do not have an associated uncertainty, whereas `quanstants` has full uncertainty support
+* `astropy` places a lot more restrictions on which units can be prefixed
+* `astropy` is 37 MB at the time of writing, and it depends on `numpy`, adding another 28 MB; `quanstants` has no hard dependency on `numpy` or any other large package
+* As a result of the above, import time is significantly faster
+* Also slightly faster in common operations
+
+
+### pint
+
+* The `quanstants` API and codebase was written to be much simpler, more obvious, and more intuitive than that of `pint`
+* The immutability of units and quantities, while not total, is much stronger in `quanstants` -- any function or operation that would change a `Quantity` returns a new `Quantity`
+* Uncertainty support exists in `pint` but only via extension with a package, and it is often buggy; `quanstants` offers out-of-the-box native support for uncertainties that is reliable
+* `pint` contains lots of units, but not many constants; `quanstants` contains significantly more constant values
+* Significantly faster in common operations
+
 
 ## What is not (yet) supported?
 
 The following are aimed for but are not yet implemented:
 
 * Complex numbers
-* Logarithmic units
 * Adjustment of prefixes (either automatically or on request) so that e.g. 2000 kJ becomes 2 MJ
+* Type hints to require quantities with a certain unit or dimension
 * `numpy` `ndarray`s of quantities
+* `Arrow` arrays of quantities
 * Use in `polars` dataframes
 
 ## Why Decimal?

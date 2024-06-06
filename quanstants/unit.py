@@ -319,8 +319,9 @@ class BaseUnit(Unit):
 class UnitlessUnit(BaseUnit):
     """Special dimensionless units that are numerically equal to 1.
     
-    Derives from `BaseUnit` and acts similar in most ways, but in arithmetic and
-    equalities behaves like unity.
+    Acts similarly to a BaseUnit in some ways, but in arithmetic and equalities behaves
+    like unity.
+    
     Note that a unitless unit is not simply dimensionless, and not all dimensionless
     units are instances of `UnitlessUnit`.
     For example, the degree is defined as a dimensionless `DerivedUnit` defined in terms
@@ -399,7 +400,12 @@ class UnitlessUnit(BaseUnit):
             return self
     
     def fully_cancel(self) -> Quantity:
-        return Quantity(1, unitless)
+        return unitless._value
+    
+    def base(self) -> Quantity:
+        #return Quantity(1, unitless)
+        # No need to create a new quantity object for this
+        return unitless._value
 
 
 # Instantiate the main UnitlessUnit instance which is the one typically used internally

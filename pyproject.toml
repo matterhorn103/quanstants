@@ -34,6 +34,11 @@ dev-dependencies = [
     "uncertainties>=3.1.7",
     "sigfig>=1.3.3",
     "twine>=5.0.0",
+    "pint>=0.23",
+    "polars>=0.20.31",
+    "pandas>=2.2.2",
+    "matplotlib>=3.9.0",
+    "astropy>=6.1.0",
 ]
 
 [tool.hatch.metadata]

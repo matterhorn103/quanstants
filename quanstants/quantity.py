@@ -10,8 +10,6 @@ from .format import group_digits
 from .abstract_quantity import AbstractQuantity
 from .uncertainties import get_uncertainty
 
-from . import units
-
 
 class Quantity(AbstractQuantity):
     """A class that represents absolute physical quantities.
@@ -545,6 +543,7 @@ class Quantity(AbstractQuantity):
 
     def to(self, other) -> Self:
         if isinstance(other, str):
+            from . import units
             # Allow parsing of unit string first
             other = units.parse(other)
         if self.number == 0:

@@ -5,7 +5,6 @@ from quanstants import (
     prefixes as qp,
     constants as qc,
     temperature,
-    Quantity,
     quanfig,
 )
 from quanstants.units import temperatures

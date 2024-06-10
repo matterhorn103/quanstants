@@ -5,7 +5,6 @@ from .unit import DerivedUnit
 from .format import format_quantity
 from .config import quanfig
 
-from . import constants
 
 class Constant(Quantity):
     """A class that represents defined, named physical quantities, with a fixed value determined by experiment.
@@ -113,6 +112,9 @@ class Constant(Quantity):
             return f"{self.symbol} = " + normal_str
 
     def add_to_namespace(self, add_symbol=False):
+
+        from . import constants
+        
         # Add to namespace to allow lookup under the provided name
         if self.name is not None:
             constants.add(self.name, self)

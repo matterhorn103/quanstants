@@ -1,8 +1,5 @@
 from abc import ABCMeta, abstractmethod
 
-# Import the units namespace module, in which named units are registered
-from . import units
-
 
 class AbstractUnit(metaclass=ABCMeta):
     """Parent class for all units of all flavours.
@@ -68,6 +65,9 @@ class AbstractUnit(metaclass=ABCMeta):
     
     def add_to_namespace(self, add_symbol=False):
         """Add to units namespace to allow lookup under the provided name(s)."""
+
+        from . import units
+
         if self.name is not None:
             units.add(self.name, self)
         # Also add under any alternative names e.g. meter vs metre

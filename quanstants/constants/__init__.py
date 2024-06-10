@@ -1,9 +1,9 @@
 """Namespace to contain all the constants, making them useable with qc.c notation."""
 
-from ..exceptions import AlreadyDefinedError
+from importlib import import_module
 
-# Note there is no need to import constants from other modules as they are
-# added to this namespace programmatically
+from ..config import quanfig
+from ..exceptions import AlreadyDefinedError
 
 
 def add(name: str, constant):
@@ -43,3 +43,23 @@ def list_constants():
         if globals()[name] not in unique_constants:
             unique_constants.append(globals()[name])
     return unique_constants
+
+
+### NAMESPACE POPULATION ###
+
+# Dynamically import whichever constant submodules should be loaded at import time
+# The defaults are specified in `quanstants/config.toml`
+# User can specify in `quanstants.toml` which submodules should be loaded
+for definition_set in getattr(quanfig, "CONSTANTS"):
+    import_module(f".{definition_set}", f"quanstants.constants")
+
+# Now load any custom units defined by the user in their toml
+quanfig.load_toml(["constants"])
+
+
+### KEY CLASSES ###
+
+# Just make them available where the user might expect them
+
+from ..quantity import Quantity
+from ..constant import Constant

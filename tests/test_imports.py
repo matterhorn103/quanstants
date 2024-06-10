@@ -13,13 +13,12 @@ class TestImports:
             units as qu,
             prefixes as qp,
             constants as qc,
-            Quantity,
             quanfig,
         )
 
     def test_all_units(self):
         # Note that some of these get imported at the top level anyway
-        import quanstants
+        from quanstants import units as qu
         from quanstants.units import (
             atomic,
             chemistry,
@@ -33,7 +32,7 @@ class TestImports:
 
     def test_all_constants(self):
         # Note that some of these get imported at the top level anyway
-        import quanstants
+        from quanstants import constants as qc
         from quanstants.constants import (
             codata2018,
             fundamental,

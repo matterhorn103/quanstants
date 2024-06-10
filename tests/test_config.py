@@ -6,14 +6,13 @@ from quanstants import (
     units as qu,
     prefixes as qp,
     constants as qc,
-    Quantity,
     quanfig,
 )
 
 class TestToml:
     def test_units_toml(self):
         quanfig.load_toml(["units"], "tests/custom_unit.toml")
-        assert qu.thm == Quantity("3.595E+16", qu.kg * qu.m**2 * qu.s**-2)
+        assert qu.thm == qu.Quantity("3.595E+16", qu.kg * qu.m**2 * qu.s**-2)
     
     def test_constants_toml(self):
         quanfig.load_toml(["constants"], "tests/custom_constant.toml")

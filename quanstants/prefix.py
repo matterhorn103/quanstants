@@ -6,8 +6,6 @@ from .quantity import Quantity
 from .unit import BaseUnit, DerivedUnit
 from .units.base import kilogram
 
-from . import prefixes
-
 
 class Prefix:
     """An object representing a (usually metric) prefix.
@@ -31,8 +29,8 @@ class Prefix:
             self._multiplier = dec(str(multiplier))
         else:
             self._multiplier = dec(multiplier)
-        prefixes.add(symbol, self)
-        prefixes.add(name, self)
+        
+        self.add_to_namespace(add_symbol=True)
 
     @property
     def symbol(self):
@@ -63,6 +61,18 @@ class Prefix:
             )
         else:
             return NotImplemented
+    
+    def add_to_namespace(self, add_symbol=False):
+
+        from . import prefixes
+
+        # Add to namespace to allow lookup under the provided name
+        if self.name is not None:
+            prefixes.add(self.name, self)
+        # Also add under the symbol if it has been indicated via canon_symbol
+        # that the symbol should uniquely refer to this constant
+        if (add_symbol) and (self.symbol != self.name):
+            prefixes.add(self.symbol, self)
 
 
 class PrefixedUnit(DerivedUnit):

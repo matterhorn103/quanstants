@@ -123,8 +123,8 @@ Quantity(741.60, g mol⁻¹)
 
 If necessary, quantities can also be created using the `Quantity` class:
 ```python
->>> from quanstants import units as qu, Quantity
->>> density = Quantity(0.997, qu.kg/qu.L)
+>>> from quanstants import units as qu
+>>> density = qu.Quantity(0.997, qu.kg/qu.L)
 >>> print(density)
 0.997 kg L⁻¹
 ```
@@ -225,8 +225,8 @@ The use of ± at all times can be forced by setting `quanstants.quanfig.UNCERTAI
 
 The uncertainty can also be passed to `Quantity()` directly:
 ```python
->>> from quanstants import units as qu, Quantity
->>> density = Quantity(0.99704702, qu.kg/qu.L, uncertainty=0.00000083)
+>>> from quanstants import units as qu
+>>> density = qu.Quantity(0.99704702, qu.kg/qu.L, uncertainty=0.00000083)
 >>> print(density)
 0.99704702(83) kg L⁻¹
 ```
@@ -242,23 +242,23 @@ Quantity(8.3E-7, kg L⁻¹)
 Though not generally the preferred option for quantity creation, quantities can also be created by passing a single string as an argument to the `Quantity` class with the number and unit separated by a space:
 
 ```python
->>> Quantity("4 m")
+>>> qu.Quantity("4 m")
 Quantity(4, m)
->>> Quantity("4 metre")
+>>> qu.Quantity("4 metre")
 Quantity(4, m)
->>> Quantity("741.60 g mol-1")
+>>> qu.Quantity("741.60 g mol-1")
 Quantity(741.60, g mol⁻¹)
->>> Quantity("0.997e3 g/L")
+>>> qu.Quantity("0.997e3 g/L")
 Quantity(997, g L⁻¹)
 ```
 
 Uncertainties can also be specified in the string, in either of two usual forms:
 ```python
->>> Quantity("6.67430(15)E-11 N m² kg⁻²")
+>>> qu.Quantity("6.67430(15)E-11 N m² kg⁻²")
 Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)
->>> Quantity("8.293 ± 0.010 V")
+>>> qu.Quantity("8.293 ± 0.010 V")
 Quantity(8.293, V, uncertainty=0.010)
->>> Quantity("8.293 +/- 0.010 V")  # Also acceptable
+>>> qu.Quantity("8.293 +/- 0.010 V")  # Also acceptable
 Quantity(8.293, V, uncertainty=0.010)
 ```
 

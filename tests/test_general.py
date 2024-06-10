@@ -10,7 +10,6 @@ from quanstants import (
     units as qu,
     prefixes as qp,
     constants as qc,
-    Quantity,
     quanfig,
 )
 
@@ -164,11 +163,11 @@ class TestQuantityCreation:
         assert str(q) == "741.60 g mol⁻¹"
 
     def test_quantity_instantiation(self):
-        q = Quantity(0.997, qu.kg / qu.L)
+        q = qu.Quantity(0.997, qu.kg / qu.L)
         assert str(q) == "0.997 kg L⁻¹"
 
     def test_quantity_creation_method_equivalence(self):
-        q1 = Quantity(0.997, qu.kg / qu.L)
+        q1 = qu.Quantity(0.997, qu.kg / qu.L)
         q2 = 0.997 * (qu.kg / qu.L)
         assert q1 == q2
 
@@ -233,35 +232,35 @@ class TestUncertainties:
         quanfig.UNCERTAINTY_STYLE = "PARENTHESES"
 
     def test_uncertainty_at_quantity_creation(self):
-        density = Quantity(0.99704702, qu.kg/qu.L, uncertainty=0.00000083)
+        density = qu.Quantity(0.99704702, qu.kg/qu.L, uncertainty=0.00000083)
         assert str(density) == "0.99704702(83) kg L⁻¹"
     
     def test_get_uncertainty(self):
-        density = Quantity(0.99704702, qu.kg/qu.L, uncertainty=0.00000083)
+        density = qu.Quantity(0.99704702, qu.kg/qu.L, uncertainty=0.00000083)
         assert repr(density.uncertainty) == "Quantity(8.3E-7, kg L⁻¹)"
     
 
 class TestParsing:
     def test_unit_symbol(self):
-        assert repr(Quantity("4 m")) == "Quantity(4, m)"
+        assert repr(qu.Quantity("4 m")) == "Quantity(4, m)"
     
     def test_unit_name(self):
-        assert repr(Quantity("4 metre")) == "Quantity(4, m)"
+        assert repr(qu.Quantity("4 metre")) == "Quantity(4, m)"
     
     def test_reciprocal(self):
-        assert repr(Quantity("741.60 g mol-1")) == "Quantity(741.60, g mol⁻¹)"
+        assert repr(qu.Quantity("741.60 g mol-1")) == "Quantity(741.60, g mol⁻¹)"
     
     def test_slash(self):
-        assert repr(Quantity("0.997e3 g/L")) == "Quantity(997, g L⁻¹)"
+        assert repr(qu.Quantity("0.997e3 g/L")) == "Quantity(997, g L⁻¹)"
 
     def test_uncertainty_parentheses(self):
-        assert repr(Quantity("6.67430(15)E-11 N m² kg⁻²")) == "Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)"
+        assert repr(qu.Quantity("6.67430(15)E-11 N m² kg⁻²")) == "Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)"
         
     def test_uncertainty_plus_minus(self):
-        assert repr(Quantity("8.293 ± 0.010 V")) == "Quantity(8.293, V, uncertainty=0.010)"
+        assert repr(qu.Quantity("8.293 ± 0.010 V")) == "Quantity(8.293, V, uncertainty=0.010)"
     
     def test_uncertainty_plusslashminus(self):
-        assert repr(Quantity("8.293 +/- 0.010 V")) == "Quantity(8.293, V, uncertainty=0.010)"
+        assert repr(qu.Quantity("8.293 +/- 0.010 V")) == "Quantity(8.293, V, uncertainty=0.010)"
 
 
 class TestArithmetic:

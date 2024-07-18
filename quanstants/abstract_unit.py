@@ -9,8 +9,8 @@ class AbstractUnit(metaclass=ABCMeta):
     
     This class defines variables and methods common to all units.
 
-    One of `symbol` or `name` must be provided. If `symbol` is not provided, it will be
-    set to the value of `name`, so that all units have a symbolic representation.
+    One of `symbol` or `name` should be provided. If `symbol` is not provided, it will
+    be set to the value of `name`, so that all units have a symbolic representation.
     `symbol` may be any Unicode string.
     `name` must contain only ASCII letters and digits, and underscores. It must in
     addition be a valid Python identifier, so it cannot start with a digit. The same

@@ -669,11 +669,10 @@ class CompoundUnit(Unit):
     
 
 class DerivedUnit(Unit):
-    """Units derived from and defined with SI units.
+    """Units derived from and defined with base units.
 
     `value` is a `Quantity` with both a number and a `Unit`, and optionally, an
     uncertainty.
-    A `symbol` must be provided, but a `name` is optional.
     If a name is given and `add_to_namespace` is `True` (default), the unit will be
     added to `quanstants.units` under that name (note that trying to replace an existing
     unit with that name will raise an error).

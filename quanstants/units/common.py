@@ -46,7 +46,7 @@ degreeFahrenheit = TemperatureUnit("°F", "degreeFahrenheit", "0.555555555555555
 # standard pressure
 
 carat = DerivedUnit("ct", "carat", Quantity("0.2", gram), canon_symbol=True)
-point = DerivedUnit(None, "point", Quantity("0.002", gram), canon_symbol=False)
+#point = DerivedUnit(None, "point", Quantity("0.002", gram), canon_symbol=False) # Needs a reference
 
 # Computing
 bit = DerivedUnit("bit", "bit", Quantity(1, unitless), canon_symbol=False)

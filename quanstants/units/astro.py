@@ -2,7 +2,9 @@ from ..unit import DerivedUnit
 from ..quantity import Quantity
 from ..log import LogarithmicUnit
 from .base import *
-from .si import watt, hertz
+from .si import watt, hertz, arcsecond
+from ..prefix import PrefixedUnit
+from ..prefixes.metric import milli, micro
 
 
 # fmt: off
@@ -10,7 +12,10 @@ from .si import watt, hertz
 angstrom_star = DerivedUnit("Å*", "angstrom_star", Quantity("1.00001495e-10", m, "0.00000090e-10"), alt_names=["ångström_star"], canon_symbol=False)
 from .common import julian_year
 light_year = DerivedUnit("ly", "light_year", Quantity("9460730472580800", m), canon_symbol=True)
-jansky = DerivedUnit("Jy", "jansky", Quantity("1e-26", watt * metre**-2 * hertz*-1), canon_symbol=False)
+jansky = DerivedUnit("Jy", "jansky", Quantity("1e-26", watt * metre**-2 * hertz**-1), canon_symbol=False)
+milliarcsecond = PrefixedUnit(milli, arcsecond, add_to_namespace=True)
+microarcsecond = PrefixedUnit(micro, arcsecond, add_to_namespace=True)
+from .time import sidereal_day
 
 # Apparent magnitudes based on https://en.wikipedia.org/wiki/Apparent_magnitude for now
 # Article cites Britannica as saying that apparent magnitude without qualification

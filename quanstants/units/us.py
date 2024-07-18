@@ -1,3 +1,5 @@
+"""United States customary units."""
+
 from ..unit import DerivedUnit
 from ..quantity import Quantity
 from .base import *
@@ -10,8 +12,9 @@ from .si import litre
 # Length
 from .imperial import twip
 mil = DerivedUnit(None, "mil", Quantity("0.0000254", m)) # Identical to imperial.thou but different name
+from .typography import point
+from .typography import pica
 from .imperial import inch
-
 from .imperial import foot, yard
 rod = DerivedUnit("rd", "rod", Quantity("5.0292", m), alt_names=["pole", "perch"])
 from .imperial import chain, furlong, mile, league
@@ -34,7 +37,10 @@ us_survey_acre = DerivedUnit("ac", "us_survey_acre", Quantity("4046.872609874", 
 us_survey_section = DerivedUnit(None, "us_survey_section", Quantity("2589998.47", m**2))
 
 # Capacity
-us_fluid_ounce = DerivedUnit("fl oz", "us_fluid_ounce", Quantity("0.0295735295625", litre), canon_symbol=True)
+cubic_inch = DerivedUnit("cu in", "cubic_inch", Quantity("1", inch**3))
+cubic_foot = DerivedUnit("cu ft", "cubic_foot", Quantity("1", foot**3))
+cubic_yard = DerivedUnit("cu yd", "cubic_yard", Quantity("1", yard**3))
+us_fluid_ounce = DerivedUnit("fl oz", "us_fluid_ounce", Quantity("0.0295735295625", litre))
 
 # Nautical units
 us_fathom = DerivedUnit("ftm", "us_fathom", Quantity("1.8288", m))

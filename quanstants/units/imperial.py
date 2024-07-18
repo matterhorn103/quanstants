@@ -1,3 +1,5 @@
+"""The British imperial system."""
+
 from ..unit import DerivedUnit
 from ..quantity import Quantity
 from .base import *
@@ -23,7 +25,7 @@ yard = DerivedUnit("yd", "yard", Quantity("0.9144", m))
 chain = DerivedUnit("ch", "chain", Quantity("20.1168", m))
 furlong = DerivedUnit("fur", "furlong", Quantity("201.168", m))
 mile = DerivedUnit("mi", "mile", Quantity("1609.344", m))
-league = DerivedUnit("lea", "league", Quantity("4828.032", m))
+league = DerivedUnit("lea", "league", Quantity("4828.032", m)) # Or should symbol be le?
 #link?
 #rod?
 

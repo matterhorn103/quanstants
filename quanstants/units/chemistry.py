@@ -1,3 +1,5 @@
+"""Units used in the field of chemistry."""
+
 from ..unit import CompoundUnit, DerivedUnit
 from ..quantity import Quantity
 from .base import *

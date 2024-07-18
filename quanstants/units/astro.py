@@ -15,7 +15,7 @@ light_year = DerivedUnit("ly", "light_year", Quantity("9460730472580800", m), ca
 jansky = DerivedUnit("Jy", "jansky", Quantity("1e-26", watt * metre**-2 * hertz**-1), canon_symbol=False)
 milliarcsecond = PrefixedUnit(milli, arcsecond, add_to_namespace=True)
 microarcsecond = PrefixedUnit(micro, arcsecond, add_to_namespace=True)
-sidereal_day = DerivedUnit("sday", "sidereal_day", Quantity("86164.091", s), canon_symbol=False)
+from .time import sidereal_day
 
 # Apparent magnitudes based on https://en.wikipedia.org/wiki/Apparent_magnitude for now
 # Article cites Britannica as saying that apparent magnitude without qualification

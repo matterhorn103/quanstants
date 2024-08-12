@@ -313,7 +313,7 @@ True
 True
 ```
 
-Quantities can be used as exponents themselves, and have the same `sqrt()`, `exp()`, `ln()`, and `log10()` functions implemented as `Decimal` does:
+Quantities can be used as exponents themselves, and have the same `sqrt()`, `exp()`, `ln()`, and `log10()` methods implemented as `Decimal` does:
 ```python
 >>> a = 100 * qu.m
 >>> b = 25 * qu.m
@@ -392,13 +392,13 @@ Quantity(21600, s)
 Quantity(2.59200E+8, J)
 ```
 
-Use the `base()` function to express a quantity in terms of SI base units:
+Use the `base()` method to express a quantity in terms of SI base units:
 ```python
 >>> (50 * qu.joule).base()
 Quantity(50, m² kg s⁻²)
 ```
 
-Use the `cancel()` function to combine like terms in the unit after a calculation:
+Use the `cancel()` method to combine like terms in the unit after a calculation:
 ```python
 >>> speed = 3 * qu.m * qu.s**-1
 >>> time = 15 * qu.s

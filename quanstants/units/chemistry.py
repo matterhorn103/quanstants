@@ -3,11 +3,12 @@
 from ..unit import CompoundUnit, DerivedUnit
 from ..quantity import Quantity
 from .base import *
-from ..units.prefixed import centimetre
+from ..loader import load_units_file
+import sys
+from pathlib import Path
 
 # fmt: off
 
-angstrom = DerivedUnit("Å", "angstrom", Quantity(1e-10, m), alt_names=["ångström"], canon_symbol=True)
-reciprocal_centimetre = CompoundUnit(((centimetre, -1),), name="reciprocal_centimetre", alt_names=["reciprocal_centimeter", "inverse_centimetre", "inverse_centimeter", "wavenumber"], add_to_namespace=True)
+load_units_file(Path(__file__).with_suffix(".toml"), module=sys.modules[__name__])
 
 # fmt: on

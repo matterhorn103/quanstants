@@ -1,0 +1,299 @@
+# The British imperial system
+# From the international yard and pound agreement and the Weights and Measures Act 1985
+
+# Imperial units get the right to use the simple name, whereas US customary units are prefixed
+# with "us" e.g. "us_foot"
+# However, since US customary units are probably more likely to be used these days, US customary
+# units are given canon symbols and imperial units aren't (unless there is no US cus. equivalent)
+# Units identical in both systems are defined here and imported by `us.py`.
+
+# Length
+[units.derived.twip]
+name = "twip"
+value.number = "0.0000176389"
+value.unit = "m"
+
+[units.derived.thou]
+symbol = "th"
+name = "thou"
+value.number = "0.0000254"
+value.unit = "m"
+
+[units.derived.barleycorn]
+name = "barleycorn"
+value.number = "0.0084667"
+value.unit = "m"
+
+[units.derived.inch]
+# Can't add `in` to namespace as it is Python keyword
+symbol = "in"
+name = "inch"
+value.number = "0.0254"
+value.unit = "m"
+
+[units.derived.hand]
+symbol = "hh"
+name = "hand"
+value.number = "0.1016"
+value.unit = "m"
+
+[units.derived.foot]
+symbol = "ft"
+name = "foot"
+value.number = "0.3048"
+value.unit = "m"
+
+[units.derived.yard]
+symbol = "yd"
+name = "yard"
+value.number = "0.9144"
+value.unit = "m"
+
+[units.derived.chain]
+symbol = "ch"
+name = "chain"
+value.number = "20.1168"
+value.unit = "m"
+
+[units.derived.furlong]
+symbol = "fur"
+name = "furlong"
+value.number = "201.168"
+value.unit = "m"
+
+[units.derived.mile]
+symbol = "mi"
+name = "mile"
+value.number = "1609.344"
+value.unit = "m"
+
+[units.derived.league]
+symbol = "lea"  # Or should symbol be le?
+name = "league"
+value.number = "4828.032"
+value.unit = "m"
+
+#link?
+#rod?
+
+# Area
+#perch?
+[units.derived.rood]
+name = "rood"
+value.number = "1011.714106"
+value.unit = "m^2"
+
+[units.derived.acre]
+symbol = "ac"
+name = "acre"
+value.number = "4046.8564224"
+value.unit = "m^2"
+
+# Capacity
+[units.derived.minim]
+symbol = "min"
+name = "minim"
+value.number = "0.000059193880208333333333"  # to 20 sf
+value.unit = "litre"
+
+[units.derived.fluid_scruple]
+symbol = "fl s"
+name = "fluid_scruple"
+value.number = "0.0011838776041666666667"  # to 20 sf
+value.unit = "litre"
+
+[units.derived.fluid_drachm]
+symbol = "fl dr"
+name = "fluid_drachm"
+value.number = "0.0035516328125"
+value.unit = "litre"
+alt_names = ["fluid_dram"]
+
+[units.derived.fluid_ounce]
+symbol = "fl oz"
+name = "fluid_ounce"
+value.number = "0.0284130625"
+value.unit = "litre"
+
+[units.derived.gill]
+symbol = "gi"
+name = "gill"
+value.number = "0.1420653125"
+value.unit = "litre"
+
+[units.derived.pint]
+symbol = "pt"
+name = "pint"
+value.number = "0.56826125"
+value.unit = "litre"
+
+[units.derived.quart]
+symbol = "qt"
+name = "quart"
+value.number = "1.1365225"
+value.unit = "litre"
+
+[units.derived.gallon]
+symbol = "gal"
+name = "gallon"
+value.number = "4.54609"
+value.unit = "litre"
+
+[units.derived.peck]
+name = "peck"
+value.number = "9.09218"
+value.unit = "litre"
+
+[units.derived.bushel]
+name = "bushel"
+value.number = "36.36872"
+value.unit = "litre"
+
+# Mass (all three systems, only grain is common to all)
+[units.derived.grain]
+symbol = "gr"
+name = "grain"
+value.number = "64.79891E-6"
+value.unit = "kg"
+
+## Avoirdupois system
+[units.derived.dram]
+symbol = "dr"
+name = "dram"
+value.number = "0.0017718451953125"
+value.unit = "kg"
+
+[units.derived.ounce]
+symbol = "oz"
+name = "ounce"
+value.number = "0.028349523125"
+value.unit = "kg"
+
+[units.derived.pound]
+symbol = "lb"
+name = "pound"
+value.number = "0.45359237"
+value.unit = "kg"
+
+[units.derived.stone]
+symbol = "st"
+name = "stone"
+value.number = "6.35029318"
+value.unit = "kg"
+
+[units.derived.quarter]
+symbol = "qr"
+name = "quarter"
+value.number = "12.70058636"
+value.unit = "kg"
+
+[units.derived.cental]
+name = "cental"
+value.number = "45.359237"
+value.unit = "kg"
+
+[units.derived.hundredweight]
+symbol = "cwt"
+name = "hundredweight"
+value.number = "50.80234544"
+value.unit = "kg"
+
+[units.derived.ton]
+name = "ton"
+value.number = "1016.0469088"
+value.unit = "kg"
+alt_names = ["tun"]
+
+## Troy system
+[units.derived.pennyweight]
+symbol = "dwt"
+name = "pennyweight"
+value.number = "0.00155517384"
+value.unit = "kg"
+
+[units.derived.troy_ounce]
+symbol = "oz t"
+name = "troy_ounce"
+value.number = "0.03110347680"
+value.unit = "kg"
+
+[units.derived.troy_pound]
+symbol = "lb t"
+name = "troy_pound"
+value.number = "0.37324172"
+value.unit = "kg"
+
+## Apothecaries system
+[units.derived.scruple]
+symbol = "℈"
+name = "scruple"
+value.number = "0.001295962"
+value.unit = "kg"
+
+[units.derived.drachm]
+symbol = "ʒ"
+name = "drachm"
+value.number = "0.003887886"
+value.unit = "kg"
+
+[units.derived.ounce_apothecaries]
+symbol = "℥"
+name = "ounce_apothecaries"
+value.number = "0.031103088"
+value.unit = "kg"
+
+# Nautical units
+[units.derived.fathom_practical]
+# According to Wiki, the Admiralty used 1 ftm = 6 ft in practice
+name = "fathom_practical"
+value.number = "1.8288"
+value.unit = "m"
+
+[units.derived.british_fathom]
+# 1/1000 nmi
+symbol = "br ftm"
+name = "british_fathom"
+value.number = "1.853184"
+value.unit = "m"
+
+[units.derived.fathom]
+symbol = "ftm"
+name = "fathom"
+value.number = "1.852"
+value.unit = "m"
+
+[units.derived.british_cable]
+name = "british_cable"
+value.number = "185.3184"
+value.unit = "m"
+
+[units.derived.cable]
+name = "cable"
+value.number = "185.2"
+value.unit = "m"
+
+[units.derived.british_nautical_mile]
+# Tradtional value of 6080 ft
+symbol = "br nmi"
+name = "british_nautical_mile"
+value.number = "1853.184"
+value.unit = "m"
+
+[units.derived.nautical_mile]
+# International definition
+symbol = "nmi"
+name = "nautical_mile"
+value.number = "1852"
+value.unit = "m"
+
+[units.derived.british_knot]
+symbol = "br kn"
+name = "british_knot"
+value.number = "1853.184"
+value.unit = "m/hour"
+
+[units.derived.knot]
+symbol = "kn"
+name = "knot"
+value.number = "1852"
+value.unit = "m/hour"

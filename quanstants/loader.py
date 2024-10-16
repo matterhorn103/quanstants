@@ -40,7 +40,7 @@ def load_units_file(units_file: Path, module = None):
     """
     with open(units_file, "rb") as f:
         contents = tomllib.load(f)
-    print(contents)
+
     if "units" in contents:
         create_units(contents["units"], module=module)
 
@@ -146,7 +146,7 @@ def load_constants_file(constants_file: Path, module = None):
     """
     with open(constants_file, "rb") as f:
         contents = tomllib.load(f)
-    print(contents)
+
     create_constants(contents, module=module)
 
 

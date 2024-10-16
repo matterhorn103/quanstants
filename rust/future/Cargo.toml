@@ -1,0 +1,15 @@
+[package]
+name = "quanstants"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "quanstants"
+# "cdylib" is necessary to produce a shared library for Python to import from.
+crate-type = ["cdylib"]
+
+[dependencies]
+
+[dependencies.pyo3]
+version = "0.21.1"
+features = ["abi3-py311"]

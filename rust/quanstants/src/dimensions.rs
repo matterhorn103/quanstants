@@ -35,14 +35,22 @@ pub struct Dimensions {
     pub T: i8,
     pub I: i8,
     pub Θ: i8,
-    pub N: i8, 
+    pub N: i8,
     pub J: i8,
 }
 
 impl Dimensions {
     #[allow(non_snake_case)]
     pub fn new(L: i8, M: i8, T: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
-        Self {L, M, T, I, Θ, N, J}
+        Self {
+            L,
+            M,
+            T,
+            I,
+            Θ,
+            N,
+            J,
+        }
     }
 }
 
@@ -99,21 +107,20 @@ impl fmt::Display for Dimensions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let exponents = [self.L, self.M, self.T, self.I, self.Θ, self.N, self.J];
         let symbols = ["L", "M", "T", "I", "Θ", "N", "J"];
-        let output = 
-            if exponents.iter().all(|&x| x == 0) {
-                String::from("(dimensionless)")
-            } else {
-                let mut string = String::new();
-                for i in 0..7 {
-                    if exponents[i] != 0 {
-                        string.push_str(symbols[i]);
-                        if exponents[i] != 1 {
-                            string.push_str(&generate_superscript(exponents[i]));
-                        }
+        let output = if exponents.iter().all(|&x| x == 0) {
+            String::from("(dimensionless)")
+        } else {
+            let mut string = String::new();
+            for i in 0..7 {
+                if exponents[i] != 0 {
+                    string.push_str(symbols[i]);
+                    if exponents[i] != 1 {
+                        string.push_str(&generate_superscript(exponents[i]));
                     }
                 }
-                string
-            };
+            }
+            string
+        };
         write!(f, "{}", output)
     }
 }
@@ -125,26 +132,26 @@ mod tests {
     #[test]
     fn default_dimensions() {
         let dim1 = Dimensions::default();
-        assert_eq!(dim1, Dimensions::new(0,0,0,0,0,0,0));
+        assert_eq!(dim1, Dimensions::new(0, 0, 0, 0, 0, 0, 0));
     }
 
     #[test]
     fn add() {
-        let dim1 = Dimensions::new(0,1,0,2,0,0,0);
-        let dim2 = Dimensions::new(2,0,0,2,0,0,0);
-        assert_eq!(dim1 + dim2, Dimensions::new(2,1,0,4,0,0,0))
+        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
+        assert_eq!(dim1 + dim2, Dimensions::new(2, 1, 0, 4, 0, 0, 0))
     }
 
     #[test]
     fn sub() {
-        let dim1 = Dimensions::new(0,1,0,2,0,0,0);
-        let dim2 = Dimensions::new(2,0,0,2,0,0,0);
-        assert_eq!(dim1 - dim2, Dimensions::new(-2,1,0,0,0,0,0))
+        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
+        assert_eq!(dim1 - dim2, Dimensions::new(-2, 1, 0, 0, 0, 0, 0))
     }
 
     #[test]
     fn mul() {
-        let dim1 = Dimensions::new(0,1,0,2,0,0,0);
-        assert_eq!(dim1 * 2, Dimensions::new(0,2,0,4,0,0,0))
+        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        assert_eq!(dim1 * 2, Dimensions::new(0, 2, 0, 4, 0, 0, 0))
     }
 }

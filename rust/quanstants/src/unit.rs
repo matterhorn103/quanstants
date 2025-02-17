@@ -1,11 +1,10 @@
 use std::fmt::Debug;
 use std::ops::{Div, Mul};
-use std::collections::HashMap;
 
 use crate::dimensions::Dimensions;
-use crate::quantity::{Linear, Quantity};
+use crate::quantity::Quantity;
 
-pub trait Unit: Clone + Debug {
+pub trait Unit: Clone + Debug + PartialEq {
     fn symbol(&self) -> &str;
 
     fn name(&self) -> &str;
@@ -15,7 +14,7 @@ pub trait Unit: Clone + Debug {
     fn dimensions(&self) -> Dimensions;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BaseUnit {
     symbol: String,
     name: String,
@@ -23,7 +22,7 @@ pub struct BaseUnit {
 }
 
 impl BaseUnit {
-    fn new(
+    pub fn new(
         symbol: String,
         name: String,
         dimensions: Dimensions,
@@ -54,7 +53,7 @@ impl Unit for BaseUnit {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct UnitlessUnit;
 
 impl Unit for UnitlessUnit {
@@ -76,13 +75,50 @@ impl Unit for UnitlessUnit {
 }
 
 #[derive(Clone, Debug)]
-pub struct DerivedUnit {
+pub struct DerivedUnit<U: Unit> {
     symbol: String,
     name: String,
-    value: Quantity,
+    value: Quantity<U>,
 }
 
-#[derive(Clone, Debug)]
-pub struct CompoundUnit {
+impl<U: Unit> DerivedUnit<U> {
+    fn new(
+        symbol: String,
+        name: String,
+        value: Quantity<U>,
+    ) -> Self {
+        Self {
+            symbol,
+            name,
+            value,
+        }
+    }
+}
 
+pub struct Factor<U: Unit> {
+    unit: U,
+    exponent:
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CompoundUnit {
+    factors: Vec<>
+}
+
+impl Unit for CompoundUnit {
+    fn symbol(&self) -> &str {
+        todo!()
+    }
+
+    fn name(&self) -> &str {
+        todo!()
+    }
+
+    fn preceding_space(&self) -> bool {
+        todo!()
+    }
+
+    fn dimensions(&self) -> Dimensions {
+        todo!()
+    }
 }

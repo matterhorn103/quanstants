@@ -3,7 +3,6 @@
 pub mod dimensions;
 pub mod quantity;
 pub mod unit;
-pub mod sets;
 
 pub use dimensions::Dimensions;
 pub use unit::Unit;

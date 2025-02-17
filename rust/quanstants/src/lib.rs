@@ -8,4 +8,3 @@ pub mod sets;
 pub use dimensions::Dimensions;
 pub use unit::Unit;
 pub use quantity::Quantity;
-pub use unit::UnitRegistry;

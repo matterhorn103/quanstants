@@ -69,6 +69,18 @@ impl Mul for LinearQuantity {
     }
 }
 
+impl Div for LinearQuantity {
+    type Output = Self;
+
+    fn div(self, rhs: LinearQuantity) -> LinearQuantity {
+        LinearQuantity::new(
+            self.number / rhs.number,
+            self.unit / rhs.unit,
+            0.0,
+        )
+    }
+}
+
 impl LinearQuantity {
     //pub fn pow(&self, exp: i32) -> Self {
     //    Self::new(self.number.powi(exp), self.unit.pow(exp), 0.0)

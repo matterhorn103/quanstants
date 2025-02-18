@@ -1,6 +1,8 @@
 use std::fmt;
 use std::ops;
 
+use pyo3::prelude::*;
+
 fn generate_superscript(integer: i8) -> String {
     let int_string = integer.to_string();
     let mut output = String::new();
@@ -27,6 +29,7 @@ fn char_to_superscript(character: char) -> char {
     }
 }
 
+#[pyclass]
 #[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
@@ -39,7 +42,9 @@ pub struct Dimensions {
     pub J: i8,
 }
 
+#[pymethods]
 impl Dimensions {
+    #[new]
     #[allow(non_snake_case)]
     pub fn new(L: i8, M: i8, T: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
         Self {

@@ -5,10 +5,6 @@ description = "Intuitive and unastonishing physical quantities, units, constants
 authors = [
     { name = "Matthew J. Milner", email = "matterhorn103@proton.me" }
 ]
-dependencies = [
-    "platformdirs>=4.2.1",
-    "tomli-w>=1.0.0",
-]
 readme = "README.md"
 requires-python = ">= 3.11"
 classifiers = [
@@ -17,17 +13,17 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
 ]
+dependencies = [
+    "platformdirs>=4.2.1",
+    "tomli-w>=1.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/matterhorn103/quanstants"
 Issues = "https://github.com/matterhorn103/quanstants/issues"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.1.1",
     "coverage>=7.4.4",
     "uncertainties>=3.1.7",
@@ -38,7 +34,17 @@ dev-dependencies = [
     "pandas>=2.2.2",
     "matplotlib>=3.9.0",
     "astropy>=6.1.0",
+    "maturin-import-hook>=0.2.0",
 ]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "python"
+module-name = "quanstants._quanstants"
 
 [tool.hatch.metadata]
 allow-direct-references = true

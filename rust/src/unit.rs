@@ -1,5 +1,7 @@
 use std::fmt::Debug;
-use std::ops::Mul;
+use std::ops::{Div, Mul};
+
+use pyo3::prelude::*;
 
 use crate::dimensions::Dimensions;
 use crate::prefix::Prefix;
@@ -41,6 +43,7 @@ impl LinearFactor {
 }
 
 
+#[pyclass]
 #[derive(Clone, Debug, PartialEq)]
 pub struct BaseUnit {
     symbol: String,
@@ -48,7 +51,9 @@ pub struct BaseUnit {
     dimensions: Dimensions,
 }
 
+#[pymethods]
 impl BaseUnit {
+    #[new]
     pub fn new(
         symbol: String,
         name: String,
@@ -80,6 +85,16 @@ impl Unit for BaseUnit {
     }
 }
 
+impl Mul for BaseUnit {
+    type Output = CompoundUnit;
+
+    fn mul(self, rhs: Self) -> CompoundUnit {
+        CompoundUnit::new(
+            &[LinearFactor::Base(self, 1), LinearFactor::Base(rhs, 1)]
+        )
+    }
+}
+
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UnitlessUnit;
@@ -107,7 +122,7 @@ impl Unit for UnitlessUnit {
 pub struct DerivedUnit {
     symbol: String,
     name: String,
-    prefix: Option<Prefix>,
+    //prefix: Option<Prefix>,
     def_number: f64,
     def_factors: Vec<LinearFactor>,
     def_uncertainty: f64,
@@ -117,7 +132,7 @@ impl DerivedUnit {
     pub fn new(
         symbol: String,
         name: String,
-        prefix: Option<Prefix>,
+        //prefix: Option<Prefix>,
         def_number: f64,
         def_factors: &[LinearFactor],
         def_uncertainty: f64,
@@ -125,7 +140,7 @@ impl DerivedUnit {
         Self {
             symbol,
             name,
-            prefix,
+            //prefix,
             def_number,
             def_uncertainty,
             def_factors: def_factors.to_vec(),
@@ -186,6 +201,23 @@ impl Mul for CompoundUnit {
 
     fn mul(self, rhs: Self) -> CompoundUnit {
         let new_factors = [self.factors, rhs.factors].concat();
+        CompoundUnit::new(&new_factors)
+    }
+}
+
+impl Div for CompoundUnit {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> CompoundUnit {
+        let mut new_factors = self.factors;
+        for factor in rhs.factors {
+            let new_factor = match factor {
+                LinearFactor::Base(unit, exp) => LinearFactor::Base(unit, -exp),
+                LinearFactor::Unitless(unit, exp) => LinearFactor::Unitless(unit, -exp),
+                LinearFactor::Derived(unit, exp) => LinearFactor::Derived(unit, -exp),
+            };
+            new_factors.push(new_factor);
+        }
         CompoundUnit::new(&new_factors)
     }
 }

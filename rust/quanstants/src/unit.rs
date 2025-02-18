@@ -95,14 +95,14 @@ impl<U: Unit> DerivedUnit<U> {
     }
 }
 
-pub struct Factor<U: Unit> {
-    unit: U,
-    exponent:
+pub struct Factor {
+    unit: dyn Unit,
+    exponent: i8,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompoundUnit {
-    factors: Vec<>
+    factors: Vec<Factor<dyn Unit>>
 }
 
 impl Unit for CompoundUnit {

@@ -1,18 +1,45 @@
 use std::fmt::Debug;
-use std::ops::{Div, Mul};
+use std::ops::Mul;
 
 use crate::dimensions::Dimensions;
-use crate::quantity::Quantity;
+use crate::prefix::Prefix;
 
 pub trait Unit: Clone + Debug + PartialEq {
-    fn symbol(&self) -> &str;
+    fn symbol(&self) -> String;
 
-    fn name(&self) -> &str;
+    fn name(&self) -> String;
 
     fn preceding_space(&self) -> bool;
 
     fn dimensions(&self) -> Dimensions;
 }
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum LinearFactor {
+    Base(BaseUnit, i8),
+    Unitless(UnitlessUnit, i8),
+    Derived(DerivedUnit, i8),
+}
+
+impl LinearFactor {
+    pub fn symbol(&self) -> String {
+        match self {
+            LinearFactor::Base(unit, exp) => unit.symbol() + "^" + &exp.to_string(),
+            LinearFactor::Unitless(unit, exp) => unit.symbol() + "^" + &exp.to_string(),
+            LinearFactor::Derived(unit, exp) => unit.symbol() + "^" + &exp.to_string(),
+        }
+    }
+
+    pub fn dimensions(&self) -> Dimensions {
+        match self {
+            LinearFactor::Base(unit, exp) => unit.dimensions().pow(*exp),
+            LinearFactor::Unitless(unit, exp) => unit.dimensions().pow(*exp),
+            LinearFactor::Derived(unit, exp) => unit.dimensions().pow(*exp),
+        }
+    }
+}
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BaseUnit {
@@ -36,12 +63,12 @@ impl BaseUnit {
 }
 
 impl Unit for BaseUnit {
-    fn symbol(&self) -> &str {
-        &self.symbol
+    fn symbol(&self) -> String {
+        self.symbol.clone()
     }
 
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
     fn preceding_space(&self) -> bool {
@@ -53,16 +80,17 @@ impl Unit for BaseUnit {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UnitlessUnit;
 
 impl Unit for UnitlessUnit {
-    fn symbol(&self) -> &str {
-        "(unitless)"
+    fn symbol(&self) -> String {
+        String::from("(unitless)")
     }
 
-    fn name(&self) -> &str {
-        "unitless"
+    fn name(&self) -> String {
+        String::from("unitless")
     }
 
     fn preceding_space(&self) -> bool {
@@ -74,51 +102,90 @@ impl Unit for UnitlessUnit {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct DerivedUnit<U: Unit> {
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DerivedUnit {
     symbol: String,
     name: String,
-    value: Quantity<U>,
+    prefix: Option<Prefix>,
+    def_number: f64,
+    def_factors: Vec<LinearFactor>,
+    def_uncertainty: f64,
 }
 
-impl<U: Unit> DerivedUnit<U> {
-    fn new(
+impl DerivedUnit {
+    pub fn new(
         symbol: String,
         name: String,
-        value: Quantity<U>,
+        prefix: Option<Prefix>,
+        def_number: f64,
+        def_factors: &[LinearFactor],
+        def_uncertainty: f64,
     ) -> Self {
         Self {
             symbol,
             name,
-            value,
+            prefix,
+            def_number,
+            def_uncertainty,
+            def_factors: def_factors.to_vec(),
         }
     }
 }
 
-pub struct Factor {
-    unit: dyn Unit,
-    exponent: i8,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct CompoundUnit {
-    factors: Vec<Factor<dyn Unit>>
-}
-
-impl Unit for CompoundUnit {
-    fn symbol(&self) -> &str {
-        todo!()
+impl Unit for DerivedUnit {
+    fn symbol(&self) -> String {
+        self.symbol.clone()
     }
 
-    fn name(&self) -> &str {
-        todo!()
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
     fn preceding_space(&self) -> bool {
-        todo!()
+        true
     }
 
     fn dimensions(&self) -> Dimensions {
-        todo!()
+        self.def_factors.iter().map(|x| x.dimensions()).reduce(|acc, d| acc * d).unwrap()
+    }
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CompoundUnit {
+    pub factors: Vec<LinearFactor>,
+}
+
+impl CompoundUnit {
+    pub fn new(factors: &[LinearFactor]) -> Self {
+        Self {factors: factors.to_vec()}
+    }
+}
+
+impl Unit for CompoundUnit {
+    fn symbol(&self) -> String {
+        self.factors.iter().map(|x| x.symbol()).reduce(|acc, s| acc + " " + &s).unwrap()
+    }
+
+    fn name(&self) -> String {
+        self.symbol()
+    }
+
+    fn preceding_space(&self) -> bool {
+        true
+    }
+
+    fn dimensions(&self) -> Dimensions {
+        self.factors.iter().map(|x| x.dimensions()).reduce(|acc, d| acc * d).unwrap()
+    }
+}
+
+impl Mul for CompoundUnit {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> CompoundUnit {
+        let new_factors = [self.factors, rhs.factors].concat();
+        CompoundUnit::new(&new_factors)
     }
 }

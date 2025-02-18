@@ -1,9 +1,10 @@
 #![allow(mixed_script_confusables)]
 
 pub mod dimensions;
-pub mod quantity;
+pub mod prefix;
 pub mod unit;
+pub mod quantity;
 
 pub use dimensions::Dimensions;
 pub use unit::Unit;
-pub use quantity::Quantity;
+pub use quantity::LinearQuantity;

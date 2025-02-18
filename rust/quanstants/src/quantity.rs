@@ -1,22 +1,16 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::{fmt, ops::{Add, Div, Mul, Sub}};
 
-use crate::{dimensions::Dimensions, unit::{CompoundUnit, Unit}};
-
-//pub trait Linear {
-//    fn value(&self) -> Quantity<Unit>;
-//
-//    fn dimensions(&self) -> Dimensions;
-//}
+use crate::{dimensions::Dimensions, unit::CompoundUnit, Unit};
 
 #[derive(Clone, Debug)]
-pub struct Quantity<U: Unit> {
+pub struct LinearQuantity {
     pub number: f64,
-    pub unit: U,
+    pub unit: CompoundUnit,
     pub uncertainty: f64,
 }
 
-impl<U: Unit> Quantity<U> {
-    pub fn new(number: f64, unit: U, uncertainty: f64) -> Self {
+impl LinearQuantity {
+    pub fn new(number: f64, unit: CompoundUnit, uncertainty: f64) -> Self {
         Self {
             number,
             unit,
@@ -25,21 +19,13 @@ impl<U: Unit> Quantity<U> {
     }
 }
 
-    //pub fn pow(&self, exp: i32) -> Self {
-    //    Self::new(self.number.powi(exp), self.unit.pow(exp), 0.0)
-    //}
+impl fmt::Display for LinearQuantity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.number, self.unit.symbol())
+    }
+}
 
-//impl Linear for Quantity {
-//    fn value(&self) -> Quantity {
-//        self.clone()
-//    }
-//
-//    fn dimensions(&self) -> Dimensions {
-//        *self.unit.dimensions()
-//    }
-//}
-
-impl<U: Unit> Add for Quantity<U> {
+impl Add for LinearQuantity {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -55,15 +41,50 @@ impl<U: Unit> Add for Quantity<U> {
     }
 }
 
-impl<T, U: Unit> Mul<Quantity<T>> for Quantity<U> {
-    type Output = Quantity<CompoundUnit>;
+impl Sub for LinearQuantity {
+    type Output = Self;
 
-    fn mul(self, rhs: Quantity<T>) -> Self::Output {
-        // Would this be faster if Linear required number() and unit() implementations?
-        Self::new(
-            self.number * rhs.value().number,
-            self.unit,
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self.unit == rhs.unit {
+            Self::new(
+                self.number - rhs.number,
+                self.unit,
+                0.0,
+            )
+        } else {
+            panic!()
+        }
+    }
+}
+
+impl Mul for LinearQuantity {
+    type Output = Self;
+
+    fn mul(self, rhs: LinearQuantity) -> LinearQuantity {
+        LinearQuantity::new(
+            self.number * rhs.number,
+            self.unit * rhs.unit,
             0.0,
         )
     }
 }
+
+impl LinearQuantity {
+    //pub fn pow(&self, exp: i32) -> Self {
+    //    Self::new(self.number.powi(exp), self.unit.pow(exp), 0.0)
+    //}
+
+    pub fn dimensions(&self) -> Dimensions {
+        self.unit.dimensions()
+    }
+}
+
+//#[macro_export]
+//macro_rules! qu {
+//    ($number:expr, $unit:expr) => {
+//        Quantity::new($number, Unit::from_str($unit), 0.0)
+//    };
+//    ($number:expr, $unit:expr, $uncertainty:expr) => {
+//        Quantity::new($number, Unit::from_str($unit), $uncertainty)
+//    };
+//}

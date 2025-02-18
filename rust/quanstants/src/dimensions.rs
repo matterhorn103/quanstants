@@ -54,10 +54,10 @@ impl Dimensions {
     }
 }
 
-impl ops::Add for Dimensions {
+impl ops::Mul for Dimensions {
     type Output = Self;
 
-    fn add(self, other: Dimensions) -> Dimensions {
+    fn mul(self, other: Dimensions) -> Dimensions {
         Self {
             L: self.L + other.L,
             M: self.M + other.M,
@@ -70,10 +70,10 @@ impl ops::Add for Dimensions {
     }
 }
 
-impl ops::Sub for Dimensions {
+impl ops::Div for Dimensions {
     type Output = Self;
 
-    fn sub(self, other: Dimensions) -> Dimensions {
+    fn div(self, other: Dimensions) -> Dimensions {
         Self {
             L: self.L - other.L,
             M: self.M - other.M,
@@ -86,19 +86,16 @@ impl ops::Sub for Dimensions {
     }
 }
 
-impl<T: Into<i8>> ops::Mul<T> for Dimensions {
-    type Output = Self;
-
-    fn mul(self, other: T) -> Dimensions {
-        let other: i8 = other.into();
-        Self {
-            L: self.L * other,
-            M: self.M * other,
-            T: self.T * other,
-            I: self.I * other,
-            Θ: self.Θ * other,
-            N: self.N * other,
-            J: self.J * other,
+impl Dimensions {
+    pub fn pow(&self, exp: i8) -> Dimensions {
+        Dimensions {
+            L: self.L * exp,
+            M: self.M * exp,
+            T: self.T * exp,
+            I: self.I * exp,
+            Θ: self.Θ * exp,
+            N: self.N * exp,
+            J: self.J * exp,
         }
     }
 }
@@ -136,22 +133,22 @@ mod tests {
     }
 
     #[test]
-    fn add() {
-        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
-        assert_eq!(dim1 + dim2, Dimensions::new(2, 1, 0, 4, 0, 0, 0))
-    }
-
-    #[test]
-    fn sub() {
-        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
-        assert_eq!(dim1 - dim2, Dimensions::new(-2, 1, 0, 0, 0, 0, 0))
-    }
-
-    #[test]
     fn mul() {
         let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        assert_eq!(dim1 * 2, Dimensions::new(0, 2, 0, 4, 0, 0, 0))
+        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
+        assert_eq!(dim1 * dim2, Dimensions::new(2, 1, 0, 4, 0, 0, 0))
+    }
+
+    #[test]
+    fn div() {
+        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
+        assert_eq!(dim1 / dim2, Dimensions::new(-2, 1, 0, 0, 0, 0, 0))
+    }
+
+    #[test]
+    fn pow() {
+        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        assert_eq!(dim1.pow(2), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
     }
 }

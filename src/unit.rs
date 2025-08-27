@@ -6,6 +6,7 @@ use pyo3::prelude::*;
 use crate::dimensions::Dimensions;
 use crate::prefix::Prefix;
 
+// Not entirely sure there's actually any use for this
 pub trait Unit: Clone + Debug + PartialEq {
     fn symbol(&self) -> String;
 
@@ -49,6 +50,7 @@ pub struct BaseUnit {
     symbol: String,
     name: String,
     dimensions: Dimensions,
+    prefixed: bool,
 }
 
 #[pymethods]
@@ -58,11 +60,13 @@ impl BaseUnit {
         symbol: String,
         name: String,
         dimensions: Dimensions,
+        prefixed: bool,
     ) -> Self {
         Self {
             symbol,
             name,
             dimensions,
+            prefixed,
         }
     }
 }
@@ -94,7 +98,6 @@ impl Mul for BaseUnit {
         )
     }
 }
-
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UnitlessUnit;

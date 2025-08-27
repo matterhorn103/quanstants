@@ -9,11 +9,13 @@ pub mod quantity;
 
 pub use dimensions::Dimensions;
 pub use unit::Unit;
-pub use quantity::LinearQuantity;
+pub use prefix::Prefix;
+//pub use quantity::LinearQuantity;
 
 #[pymodule]
 fn _quanstants(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<Dimensions>()?;
+    m.add_class::<dimensions::Dimensions>()?;
     m.add_class::<unit::BaseUnit>()?;
+    m.add_class::<prefix::Prefix>()?;
     Ok(())
 }

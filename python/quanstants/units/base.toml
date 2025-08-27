@@ -1,0 +1,14 @@
+# The SI base units
+
+[units.base.metre]
+symbol = "m"
+name = "metre"
+dimensions = "L"
+alt_names= [ "meter" ]
+
+[units.base.kilogram]
+symbol = "k"
+name = "kilogram"
+dimensions = "M"
+alt_names = [ "kilo" ]
+prefixed = true

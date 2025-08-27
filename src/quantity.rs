@@ -1,6 +1,6 @@
 use std::{fmt, ops::{Add, Div, Mul, Sub}};
 
-use crate::{dimensions::Dimensions, unit::CompoundUnit, Unit};
+use crate::{dimensions::Dimensions, unit::CompoundUnit, unit::Unit};
 
 #[derive(Clone, Debug)]
 pub struct LinearQuantity {

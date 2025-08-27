@@ -12,6 +12,7 @@ fn generate_superscript(integer: i8) -> String {
     output
 }
 
+// We should only use super/subscripts like these in the terminal, it's Unicode abuse
 fn char_to_superscript(character: char) -> char {
     match character {
         '1' => '¹',

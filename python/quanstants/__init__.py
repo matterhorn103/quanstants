@@ -2,12 +2,17 @@ from quanstants._quanstants import (
     BaseUnit,
     Dimensions,
     Prefix,
+    Context,
 )
 
 __all__ = [
     BaseUnit,
     Dimensions,
     Prefix,
+    Context,
 ]
 
-metre = BaseUnit("m", "metre", Dimensions(1, 0, 0, 0, 0, 0, 0))
+# Default context
+qu = Context()
+
+metre = qu.meter

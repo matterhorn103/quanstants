@@ -34,9 +34,9 @@ fn char_to_superscript(character: char) -> char {
 #[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
+    pub T: i8,
     pub L: i8,
     pub M: i8,
-    pub T: i8,
     pub I: i8,
     pub Θ: i8,
     pub N: i8,
@@ -47,11 +47,11 @@ pub struct Dimensions {
 impl Dimensions {
     #[new]
     #[allow(non_snake_case)]
-    pub fn new(L: i8, M: i8, T: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
+    pub fn new(T: i8, L: i8, M: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
         Self {
+            T,
             L,
             M,
-            T,
             I,
             Θ,
             N,
@@ -65,9 +65,9 @@ impl ops::Mul for Dimensions {
 
     fn mul(self, other: Dimensions) -> Dimensions {
         Self {
+            T: self.T + other.T,
             L: self.L + other.L,
             M: self.M + other.M,
-            T: self.T + other.T,
             I: self.I + other.I,
             Θ: self.Θ + other.Θ,
             N: self.N + other.N,
@@ -81,9 +81,9 @@ impl ops::Div for Dimensions {
 
     fn div(self, other: Dimensions) -> Dimensions {
         Self {
+            T: self.T - other.T,
             L: self.L - other.L,
             M: self.M - other.M,
-            T: self.T - other.T,
             I: self.I - other.I,
             Θ: self.Θ - other.Θ,
             N: self.N - other.N,
@@ -95,9 +95,9 @@ impl ops::Div for Dimensions {
 impl Dimensions {
     pub fn pow(&self, exp: i8) -> Dimensions {
         Dimensions {
+            T: self.T * exp,
             L: self.L * exp,
             M: self.M * exp,
-            T: self.T * exp,
             I: self.I * exp,
             Θ: self.Θ * exp,
             N: self.N * exp,
@@ -108,8 +108,8 @@ impl Dimensions {
 
 impl fmt::Display for Dimensions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let exponents = [self.L, self.M, self.T, self.I, self.Θ, self.N, self.J];
-        let symbols = ["L", "M", "T", "I", "Θ", "N", "J"];
+        let exponents = [self.T, self.L, self.M, self.I, self.Θ, self.N, self.J];
+        let symbols = ["T", "L", "M", "I", "Θ", "N", "J"];
         let output = if exponents.iter().all(|&x| x == 0) {
             String::from("(dimensionless)")
         } else {

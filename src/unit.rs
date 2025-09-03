@@ -6,15 +6,20 @@ use pyo3::prelude::*;
 use crate::dimensions::Dimensions;
 use crate::prefix::Prefix;
 
-// Not entirely sure there's actually any use for this
-pub trait Unit: Clone + Debug + PartialEq {
-    fn symbol(&self) -> String;
+// Think this might need to be an enum
+//pub trait Unit: Clone + Debug + PartialEq {
+//    fn symbol(&self) -> String;
+//
+//    fn name(&self) -> String;
+//
+//    fn preceding_space(&self) -> bool;
+//
+//    fn dimensions(&self) -> Dimensions;
+//}
 
-    fn name(&self) -> String;
-
-    fn preceding_space(&self) -> bool;
-
-    fn dimensions(&self) -> Dimensions;
+#[pyclass]
+pub enum Unit {
+    
 }
 
 
@@ -47,7 +52,9 @@ impl LinearFactor {
 #[pyclass]
 #[derive(Clone, Debug, PartialEq)]
 pub struct BaseUnit {
+    #[pyo3(get)]
     symbol: String,
+    #[pyo3(get)]
     name: String,
     dimensions: Dimensions,
     prefixed: bool,
@@ -60,14 +67,21 @@ impl BaseUnit {
         symbol: String,
         name: String,
         dimensions: Dimensions,
-        prefixed: bool,
     ) -> Self {
         Self {
             symbol,
             name,
             dimensions,
-            prefixed,
+            prefixed: false,
         }
+    }
+
+    pub fn __repr__(&self) -> String {
+        format!("BaseUnit({})", self.name())
+    }
+
+    pub fn __str__(&self) -> String {
+        self.symbol()
     }
 }
 
@@ -99,8 +113,21 @@ impl Mul for BaseUnit {
     }
 }
 
+
+#[pyclass]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UnitlessUnit;
+
+#[pymethods]
+impl UnitlessUnit {
+    pub fn __repr__(&self) -> String {
+        format!("BaseUnit({})", self.name())
+    }
+
+    pub fn __str__(&self) -> String {
+        self.symbol()
+    }
+}
 
 impl Unit for UnitlessUnit {
     fn symbol(&self) -> String {
@@ -125,7 +152,7 @@ impl Unit for UnitlessUnit {
 pub struct DerivedUnit {
     symbol: String,
     name: String,
-    //prefix: Option<Prefix>,
+    prefix: Option<Prefix>,
     def_number: f64,
     def_factors: Vec<LinearFactor>,
     def_uncertainty: f64,
@@ -143,7 +170,7 @@ impl DerivedUnit {
         Self {
             symbol,
             name,
-            //prefix,
+            prefix: None,
             def_number,
             def_uncertainty,
             def_factors: def_factors.to_vec(),

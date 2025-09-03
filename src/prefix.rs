@@ -2,7 +2,7 @@
 
 use pyo3::prelude::*;
 
-#[pyclass]
+#[pyclass(eq, eq_int)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Prefix {
     // Metric

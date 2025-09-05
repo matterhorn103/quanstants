@@ -6,20 +6,15 @@ use pyo3::prelude::*;
 use crate::dimensions::Dimensions;
 use crate::prefix::Prefix;
 
-// Think this might need to be an enum
-//pub trait Unit: Clone + Debug + PartialEq {
-//    fn symbol(&self) -> String;
-//
-//    fn name(&self) -> String;
-//
-//    fn preceding_space(&self) -> bool;
-//
-//    fn dimensions(&self) -> Dimensions;
-//}
+// Think this might end up needing to be an enum
+pub trait Unit: Clone + Debug + PartialEq {
+    fn symbol(&self) -> String;
 
-#[pyclass]
-pub enum Unit {
-    
+    fn name(&self) -> String;
+
+    fn preceding_space(&self) -> bool;
+
+    fn dimensions(&self) -> Dimensions;
 }
 
 

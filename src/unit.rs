@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use crate::dimensions::Dimensions;
 use crate::prefix::Prefix;
 
-// Think this might end up needing to be an enum
+// This might end up needing to be an enum
 pub trait Unit: Clone + Debug + PartialEq {
     fn symbol(&self) -> String;
 

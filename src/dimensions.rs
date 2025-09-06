@@ -124,7 +124,7 @@ impl fmt::Display for Dimensions {
             }
             string
         };
-        write!(f, "{}", output)
+        write!(f, "{output}")
     }
 }
 

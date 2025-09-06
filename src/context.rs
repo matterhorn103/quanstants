@@ -1,15 +1,19 @@
 use pyo3::prelude::*;
 
-use crate::{dimensions::Dimensions, unit::BaseUnit};
+use crate::{dimensions::Dimensions, unit::BaseUnit, reg::UnitRegistry};
 
 #[pyclass]
-pub struct Context;
+pub struct Context {
+    unit_reg: UnitRegistry,
+}
 
 #[pymethods]
 impl Context {
     #[new]
     fn new() -> Self {
-        Self
+        Self {
+            unit_reg: UnitRegistry::new(),
+        }
     }
 
     #[getter]

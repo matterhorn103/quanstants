@@ -12,8 +12,8 @@ impl UnitRegistry {
     pub fn new() -> Self {
         Self {
             base_units: HashMap::new(),
-            string_map: todo!(),
-            id_map: todo!(),
+            string_map: HashMap::new(),
+            id_map: HashMap::new(),
         }
     }
 

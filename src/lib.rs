@@ -9,6 +9,7 @@ pub mod quantity;
 pub mod reg;
 pub mod context;
 pub mod id;
+pub mod exponent;
 
 pub use dimensions::Dimensions;
 pub use unit::Unit;

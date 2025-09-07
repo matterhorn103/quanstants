@@ -3,6 +3,7 @@ from quanstants._quanstants import (
     Dimensions,
     Prefix,
     Context,
+    Frac16,
 )
 
 __all__ = [
@@ -10,6 +11,7 @@ __all__ = [
     Dimensions,
     Prefix,
     Context,
+    Frac16,
 ]
 
 # Default context

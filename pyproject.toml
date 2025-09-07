@@ -54,3 +54,6 @@ packages = ["quanstants"]
 
 [tool.ruff]
 extend-exclude = ["data"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

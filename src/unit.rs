@@ -4,6 +4,7 @@ use std::ops::{Div, Mul};
 use pyo3::prelude::*;
 
 use crate::dimensions::Dimensions;
+use crate::exponent::Exponent;
 use crate::prefix::Prefix;
 
 // This might end up needing to be an enum
@@ -20,9 +21,9 @@ pub trait Unit: Clone + Debug + PartialEq {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LinearFactor {
-    Base(BaseUnit, i8),
-    Unitless(UnitlessUnit, i8),
-    Derived(DerivedUnit, i8),
+    Base(BaseUnit, Exponent),
+    Unitless(UnitlessUnit, Exponent),
+    Derived(DerivedUnit, Exponent),
 }
 
 impl LinearFactor {
@@ -103,7 +104,7 @@ impl Mul for BaseUnit {
 
     fn mul(self, rhs: Self) -> CompoundUnit {
         CompoundUnit::new(
-            &[LinearFactor::Base(self, 1), LinearFactor::Base(rhs, 1)]
+            &[LinearFactor::Base(self, 1.into()), LinearFactor::Base(rhs, 1.into())]
         )
     }
 }

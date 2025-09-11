@@ -9,7 +9,7 @@ pub mod quantity;
 pub mod reg;
 pub mod context;
 pub mod id;
-pub mod fraction;
+pub mod exponent;
 
 pub use dimensions::Dimensions;
 pub use unit::Unit;
@@ -21,7 +21,7 @@ fn _quanstants(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<dimensions::Dimensions>()?;
     m.add_class::<unit::BaseUnit>()?;
     m.add_class::<prefix::Prefix>()?;
-    m.add_class::<fraction::Frac16>()?;
+    m.add_class::<exponent::Exponent>()?;
     m.add_class::<context::Context>()?;
     Ok(())
 }

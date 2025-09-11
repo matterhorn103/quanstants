@@ -1,12 +1,14 @@
 use std::fmt;
-use std::ops;
+use std::ops::{Mul, Div};
 
 use pyo3::prelude::*;
 
-fn generate_superscript(integer: i8) -> String {
-    let int_string = integer.to_string();
+use crate::exponent::Exponent;
+
+fn generate_superscript(exp: Exponent) -> String {
+    let s = exp.to_string();
     let mut output = String::new();
-    for ch in int_string.chars() {
+    for ch in s.chars() {
         output.push(char_to_superscript(ch));
     }
     output
@@ -34,33 +36,31 @@ fn char_to_superscript(character: char) -> char {
 #[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
-    pub T: i8,
-    pub L: i8,
-    pub M: i8,
-    pub I: i8,
-    pub Θ: i8,
-    pub N: i8,
-    pub J: i8,
+    pub T: Exponent,
+    pub L: Exponent,
+    pub M: Exponent,
+    pub I: Exponent,
+    pub Θ: Exponent,
+    pub N: Exponent,
+    pub J: Exponent,
 }
 
-#[pymethods]
 impl Dimensions {
-    #[new]
     #[allow(non_snake_case)]
-    pub fn new(T: i8, L: i8, M: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
+    pub fn new<T: Into<Exponent>>(T: T, L: T, M: T, I: T, Θ: T, N: T, J: T) -> Self {
         Self {
-            T,
-            L,
-            M,
-            I,
-            Θ,
-            N,
-            J,
+            T: T.into(),
+            L: L.into(),
+            M: M.into(),
+            I: I.into(),
+            Θ: Θ.into(),
+            N: N.into(),
+            J: J.into(),
         }
     }
 }
 
-impl ops::Mul for Dimensions {
+impl Mul for Dimensions {
     type Output = Self;
 
     fn mul(self, other: Dimensions) -> Dimensions {
@@ -76,7 +76,7 @@ impl ops::Mul for Dimensions {
     }
 }
 
-impl ops::Div for Dimensions {
+impl Div for Dimensions {
     type Output = Self;
 
     fn div(self, other: Dimensions) -> Dimensions {
@@ -93,7 +93,7 @@ impl ops::Div for Dimensions {
 }
 
 impl Dimensions {
-    pub fn pow(&self, exp: i8) -> Dimensions {
+    pub fn pow(&self, exp: Exponent) -> Dimensions {
         Dimensions {
             T: self.T * exp,
             L: self.L * exp,
@@ -110,12 +110,12 @@ impl fmt::Display for Dimensions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let exponents = [self.T, self.L, self.M, self.I, self.Θ, self.N, self.J];
         let symbols = ["T", "L", "M", "I", "Θ", "N", "J"];
-        let output = if exponents.iter().all(|&x| x == 0) {
+        let output = if exponents.iter().all(|&x| x.is_zero()) {
             String::from("(dimensionless)")
         } else {
             let mut string = String::new();
             for i in 0..7 {
-                if exponents[i] != 0 {
+                if !exponents[i].is_zero() {
                     string.push_str(symbols[i]);
                     if exponents[i] != 1 {
                         string.push_str(&generate_superscript(exponents[i]));
@@ -125,6 +125,48 @@ impl fmt::Display for Dimensions {
             string
         };
         write!(f, "{output}")
+    }
+}
+
+#[pymethods]
+impl Dimensions {
+    #[new]
+    #[allow(non_snake_case)]
+    fn py_new(T: i8, L: i8, M: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
+        Self::new(
+            T,
+            L,
+            M,
+            I,
+            Θ,
+            N,
+            J,
+        )
+    }
+
+    fn __repr__(&self) -> String {
+        self.to_string()
+    }
+
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+
+    fn __eq__(&self, other: Self) -> bool {
+        *self == other
+    }
+
+    fn __mul__(&self, other: Self) -> Self {
+        self.mul(other)
+    }
+
+    fn __truediv__(&self, other: Self) -> Self {
+        self.div(other)
+    }
+
+    #[pyo3(name = "pow")]
+    fn py_pow(&self, other: i8) -> Self {
+        self.pow(other.into())
     }
 }
 
@@ -155,6 +197,6 @@ mod tests {
     #[test]
     fn pow() {
         let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        assert_eq!(dim1.pow(2), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
+        assert_eq!(dim1.pow(2.into()), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
     }
 }

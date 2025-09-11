@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-use crate::{dimensions::Dimensions, unit::BaseUnit, reg::UnitRegistry};
+use crate::{dimensions::Dimensions, reg::UnitRegistry, unit::BaseUnit, Unit};
 
 #[pyclass]
 pub struct Context {
@@ -14,6 +14,15 @@ impl Context {
         Self {
             unit_reg: UnitRegistry::new(),
         }
+    }
+
+    fn get_unit(&self, name: &str) -> BaseUnit {
+        self.unit_reg.get_unit(name)
+    }
+
+    // Square bracket notation lookup for units
+    fn __getitem__(&self, name: &str) -> BaseUnit {
+        self.get_unit(name)
     }
 
     #[getter]
@@ -62,7 +71,4 @@ impl Context {
     //pub fn __get_attr__(&self, name: String) {
     //    
     //}
-
-    // For square bracket syntax lookup
-    //fn __getitem__(&self) -> 
 }

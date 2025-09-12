@@ -23,6 +23,33 @@ impl Frac {
     pub fn is_negative(&self) -> bool {
         self.0 < Ratio::ZERO
     }
+
+    pub fn to_superscript(&self) -> String {
+    let s = self.to_string();
+    let mut output = String::new();
+    for ch in s.chars() {
+        output.push(char_to_superscript(ch));
+    }
+    output
+}
+}
+
+// We should only use super/subscripts like these in the terminal, it's Unicode abuse
+fn char_to_superscript(character: char) -> char {
+    match character {
+        '1' => '¹',
+        '2' => '²',
+        '3' => '³',
+        '4' => '⁴',
+        '5' => '⁵',
+        '6' => '⁶',
+        '7' => '⁷',
+        '8' => '⁸',
+        '9' => '⁹',
+        '0' => '⁰',
+        '-' => '⁻',
+        _ => panic!(),
+    }
 }
 
 impl From<i8> for Frac {

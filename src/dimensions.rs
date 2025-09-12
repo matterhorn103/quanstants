@@ -5,32 +5,6 @@ use pyo3::prelude::*;
 
 use crate::fraction::Frac;
 
-fn generate_superscript(exp: Frac) -> String {
-    let s = exp.to_string();
-    let mut output = String::new();
-    for ch in s.chars() {
-        output.push(char_to_superscript(ch));
-    }
-    output
-}
-
-// We should only use super/subscripts like these in the terminal, it's Unicode abuse
-fn char_to_superscript(character: char) -> char {
-    match character {
-        '1' => '¹',
-        '2' => '²',
-        '3' => '³',
-        '4' => '⁴',
-        '5' => '⁵',
-        '6' => '⁶',
-        '7' => '⁷',
-        '8' => '⁸',
-        '9' => '⁹',
-        '0' => '⁰',
-        '-' => '⁻',
-        _ => panic!(),
-    }
-}
 
 #[pyclass]
 #[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
@@ -118,7 +92,7 @@ impl fmt::Display for Dimensions {
                 if !exponents[i].is_zero() {
                     string.push_str(symbols[i]);
                     if exponents[i] != 1 {
-                        string.push_str(&generate_superscript(exponents[i]));
+                        string.push_str(&exponents[i].to_superscript());
                     }
                 }
             }

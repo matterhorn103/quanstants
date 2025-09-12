@@ -4,7 +4,7 @@ use std::ops::{Div, Mul};
 use pyo3::prelude::*;
 
 use crate::dimensions::Dimensions;
-use crate::exponent::Exponent;
+use crate::exponent::Frac;
 use crate::prefix::Prefix;
 
 // This might end up needing to be an enum
@@ -21,9 +21,9 @@ pub trait Unit: Clone + Debug + PartialEq {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LinearFactor {
-    Base(BaseUnit, Exponent),
-    Unitless(UnitlessUnit, Exponent),
-    Derived(DerivedUnit, Exponent),
+    Base(BaseUnit, Frac),
+    Unitless(UnitlessUnit, Frac),
+    Derived(DerivedUnit, Frac),
 }
 
 impl LinearFactor {

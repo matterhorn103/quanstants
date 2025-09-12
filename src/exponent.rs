@@ -6,16 +6,16 @@ use pyo3::{pyclass, pymethods};
 
 #[pyclass]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct Exponent(Ratio<i8>);
+pub struct Frac(Ratio<i8>);
 
-impl Deref for Exponent {
+impl Deref for Frac {
     type Target = Ratio<i8>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl Exponent {
+impl Frac {
     pub fn is_zero(&self) -> bool {
         self.0 == Ratio::ZERO
     }
@@ -25,19 +25,19 @@ impl Exponent {
     }
 }
 
-impl From<i8> for Exponent {
+impl From<i8> for Frac {
     fn from(n: i8) -> Self {
         Self(Ratio::from_integer(n))
     }
 }
 
-impl PartialEq<i8> for Exponent {
+impl PartialEq<i8> for Frac {
     fn eq(&self, other: &i8) -> bool {
-        self.is_integer() && *self == Exponent::from(*other)
+        self.is_integer() && *self == Frac::from(*other)
     }
 }
 
-impl Neg for Exponent {
+impl Neg for Frac {
     type Output = Self;
     
     fn neg(self) -> Self::Output {
@@ -45,56 +45,56 @@ impl Neg for Exponent {
     }
 }
 
-impl Add for Exponent {
+impl Add for Frac {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         Self(self.0 + other.0)
     }
 }
 
-impl Add<i8> for Exponent {
+impl Add<i8> for Frac {
     type Output = Self;
     fn add(self, other: i8) -> Self {
         Self(self.0 + other)
     }
 }
 
-impl Sub for Exponent {
+impl Sub for Frac {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
         Self(self.0 - other.0)
     }
 }
 
-impl Sub<i8> for Exponent {
+impl Sub<i8> for Frac {
     type Output = Self;
     fn sub(self, other: i8) -> Self {
         Self(self.0 - other)
     }
 }
 
-impl Mul for Exponent {
+impl Mul for Frac {
     type Output = Self;
     fn mul(self, other: Self) -> Self {
         Self(self.0 * other.0)
     }
 }
 
-impl Mul<i8> for Exponent {
+impl Mul<i8> for Frac {
     type Output = Self;
     fn mul(self, other: i8) -> Self {
         Self(self.0 * other)
     }
 }
 
-impl Div for Exponent {
+impl Div for Frac {
     type Output = Self;
     fn div(self, other: Self) -> Self {
         Self(self.0 / other.0)
     }
 }
 
-impl Div<i8> for Exponent {
+impl Div<i8> for Frac {
     type Output = Self;
     fn div(self, other: i8) -> Self {
         Self(self.0 / other)
@@ -102,13 +102,13 @@ impl Div<i8> for Exponent {
 }
 
 #[pymethods]
-impl Exponent {
+impl Frac {
     /// Panics if the denominator is zero
     #[new]
     pub fn new(numerator: i8, denominator: i8) -> Self {
         if denominator == 0 { panic!() };
         // Move sign of numerator to denominator
-        Exponent(Ratio::new(numerator, denominator))
+        Frac(Ratio::new(numerator, denominator))
     }
 
     fn __repr__(&self) -> String {

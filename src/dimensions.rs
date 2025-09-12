@@ -3,9 +3,9 @@ use std::ops::{Mul, Div};
 
 use pyo3::prelude::*;
 
-use crate::exponent::Exponent;
+use crate::exponent::Frac;
 
-fn generate_superscript(exp: Exponent) -> String {
+fn generate_superscript(exp: Frac) -> String {
     let s = exp.to_string();
     let mut output = String::new();
     for ch in s.chars() {
@@ -36,18 +36,18 @@ fn char_to_superscript(character: char) -> char {
 #[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
-    pub T: Exponent,
-    pub L: Exponent,
-    pub M: Exponent,
-    pub I: Exponent,
-    pub Θ: Exponent,
-    pub N: Exponent,
-    pub J: Exponent,
+    pub T: Frac,
+    pub L: Frac,
+    pub M: Frac,
+    pub I: Frac,
+    pub Θ: Frac,
+    pub N: Frac,
+    pub J: Frac,
 }
 
 impl Dimensions {
     #[allow(non_snake_case)]
-    pub fn new<T: Into<Exponent>>(T: T, L: T, M: T, I: T, Θ: T, N: T, J: T) -> Self {
+    pub fn new<T: Into<Frac>>(T: T, L: T, M: T, I: T, Θ: T, N: T, J: T) -> Self {
         Self {
             T: T.into(),
             L: L.into(),
@@ -93,7 +93,7 @@ impl Div for Dimensions {
 }
 
 impl Dimensions {
-    pub fn pow(&self, exp: Exponent) -> Dimensions {
+    pub fn pow(&self, exp: Frac) -> Dimensions {
         Dimensions {
             T: self.T * exp,
             L: self.L * exp,

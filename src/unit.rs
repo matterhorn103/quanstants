@@ -4,7 +4,7 @@ use std::ops::{Div, Mul};
 use pyo3::prelude::*;
 
 use crate::dimensions::Dimensions;
-use crate::exponent::Frac;
+use crate::fraction::Frac;
 use crate::prefix::Prefix;
 
 // This might end up needing to be an enum

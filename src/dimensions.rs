@@ -3,7 +3,7 @@ use std::ops::{Mul, Div};
 
 use pyo3::prelude::*;
 
-use crate::exponent::Frac;
+use crate::fraction::Frac;
 
 fn generate_superscript(exp: Frac) -> String {
     let s = exp.to_string();

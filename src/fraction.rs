@@ -1,8 +1,8 @@
-use std::ops::{Add, Deref, Div, Mul, Neg, Sub};
+use std::{num::ParseIntError, ops::{Add, Deref, Div, Mul, Neg, Sub}};
 //use derive_more::{Add, Sub, Mul, Div};
 use num_rational::Ratio;
 
-use pyo3::{pyclass, pymethods};
+use pyo3::{pyclass, pymethods, types::PyType, Bound, PyResult};
 
 #[pyclass]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -25,13 +25,33 @@ impl Frac {
     }
 
     pub fn to_superscript(&self) -> String {
-    let s = self.to_string();
-    let mut output = String::new();
-    for ch in s.chars() {
-        output.push(char_to_superscript(ch));
+        let s = self.to_string();
+        let mut output = String::new();
+        for ch in s.chars() {
+            output.push(char_to_superscript(ch));
+        }
+        output
     }
-    output
-}
+
+    pub fn from_byte(b: u8) -> Self {
+        if b < 32 {
+            Self::from((b & 0x0F) as i8)
+        } else {
+            let num = (b & 0x0F) as i8;
+            let den = if b < 128 {
+                (b >> 4) as i8
+            } else {
+                // Sign extend denominator so that we regain the 8-bit rep from the 4-bit one
+                ((b >> 4) | 0xF0) as i8
+            };
+            Self::new(num, den)
+        }
+    }
+
+    pub fn from_hex(x: &str) -> Result<Self, ParseIntError> {
+        let byte = u8::from_str_radix(x, 16)?;
+        Ok(Self::from_byte(byte))
+    }
 }
 
 // We should only use super/subscripts like these in the terminal, it's Unicode abuse
@@ -133,13 +153,14 @@ impl Frac {
     /// Panics if the denominator is zero
     #[new]
     pub fn new(numerator: i8, denominator: i8) -> Self {
-        if denominator == 0 { panic!() };
-        // Move sign of numerator to denominator
+        if denominator == 0 {
+            panic!()
+        };
         Frac(Ratio::new(numerator, denominator))
     }
 
     fn __repr__(&self) -> String {
-        format!("Frac16({}, {})", self.0.numer(), self.0.denom())
+        format!("Frac({}, {})", self.0.numer(), self.0.denom())
     }
 
     fn __str__(&self) -> String {
@@ -156,5 +177,36 @@ impl Frac {
 
     fn denom(&self) -> i8 {
         *self.0.denom()
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_byte")]
+    pub fn py_from_byte(_cls: &Bound<'_, PyType>, b: u8) -> Self {
+        Self::from_byte(b)
+    }
+
+    pub fn to_byte(&self) -> u8 {
+        if self.is_zero() {
+            0
+        } else {
+            let num = self.numer().unsigned_abs();
+            let den = if self.is_negative() {
+                self.denom().abs().neg()
+            } else {
+                self.denom().abs()
+            };
+            (den as u8) << 4 | num
+        }
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_hex")]
+    pub fn py_from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
+        Ok(Self::from_hex(x)?)
+    }
+
+    pub fn to_hex(&self) -> String {
+        let byte = self.to_byte();
+        format!("{:02X}", byte)
     }
 }

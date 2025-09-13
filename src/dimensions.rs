@@ -1,12 +1,12 @@
 use std::fmt;
-use std::ops::{Mul, Div};
+use std::ops::{Div, Mul};
 
 use pyo3::prelude::*;
 
 use crate::fraction::Frac;
 
 
-#[pyclass]
+#[pyclass(str)]
 #[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
@@ -107,26 +107,18 @@ impl Dimensions {
     #[new]
     #[allow(non_snake_case)]
     fn py_new(T: i8, L: i8, M: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
-        Self::new(
-            T,
-            L,
-            M,
-            I,
-            Θ,
-            N,
-            J,
-        )
+        Self::new(T, L, M, I, Θ, N, J)
     }
 
     fn __repr__(&self) -> String {
         self.to_string()
     }
 
-    fn __str__(&self) -> String {
-        self.to_string()
+    fn __eq__(&self, other: Self) -> bool {
+        *self == other
     }
 
-    fn __eq__(&self, other: Self) -> bool {
+    fn __ne__(&self, other: Self) -> bool {
         *self == other
     }
 

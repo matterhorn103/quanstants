@@ -7,7 +7,7 @@ use crate::fraction::Frac;
 
 
 #[pyclass(str)]
-#[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
     pub T: Frac,

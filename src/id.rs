@@ -5,13 +5,13 @@
 
 // TODO proper hashing
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct UnitId {
     factor: u64,
     unit: u64,
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum TypedUnitId {
     Base(UnitId),
     Unitless(UnitId),

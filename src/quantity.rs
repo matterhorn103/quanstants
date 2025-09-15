@@ -2,7 +2,7 @@ use std::{fmt, ops::{Add, Div, Mul, Sub}};
 
 use crate::{dimensions::Dimensions, unit::CompoundUnit, unit::Unit};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct LinearQuantity {
     pub number: f64,
     pub unit: CompoundUnit,

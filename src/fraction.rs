@@ -5,7 +5,7 @@ use num_rational::Ratio;
 use pyo3::{pyclass, pymethods, types::PyType, Bound, PyResult};
 
 #[pyclass]
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct Frac(Ratio<i8>);
 
 impl Deref for Frac {

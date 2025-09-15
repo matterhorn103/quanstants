@@ -5,6 +5,7 @@ use pyo3::pyclass;
 use crate::{id::{TypedUnitId, UnitId}, unit::BaseUnit};
 
 #[pyclass]
+#[derive(Clone, Debug)]
 pub struct UnitRegistry {
     string_map: HashMap<String, TypedUnitId>,
     id_map: HashMap<UnitId, TypedUnitId>,

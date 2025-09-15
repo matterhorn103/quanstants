@@ -19,7 +19,7 @@ pub trait Unit: Clone + Debug + PartialEq {
 }
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub enum LinearFactor {
     Base(BaseUnit, Frac),
     Unitless(UnitlessUnit, Frac),
@@ -46,7 +46,7 @@ impl LinearFactor {
 
 
 #[pyclass]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct BaseUnit {
     #[pyo3(get)]
     symbol: String,
@@ -111,7 +111,7 @@ impl Mul for BaseUnit {
 
 
 #[pyclass]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct UnitlessUnit;
 
 #[pymethods]
@@ -144,7 +144,7 @@ impl Unit for UnitlessUnit {
 }
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct DerivedUnit {
     symbol: String,
     name: String,
@@ -193,7 +193,7 @@ impl Unit for DerivedUnit {
 }
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct CompoundUnit {
     pub factors: Vec<LinearFactor>,
 }

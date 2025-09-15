@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 use crate::{dimensions::Dimensions, reg::UnitRegistry, unit::BaseUnit, Unit};
 
 #[pyclass]
+#[derive(Clone, Debug, Default)]
 pub struct Context {
     unit_reg: UnitRegistry,
 }

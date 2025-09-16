@@ -1,4 +1,4 @@
-from quanstants import qu, Frac
+from quanstants import Frac
 
 
 class TestFrac:

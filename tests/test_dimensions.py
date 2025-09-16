@@ -1,4 +1,4 @@
-from quanstants import qu, Dimensions
+from quanstants import Dimensions
 
 class TestDim:
     def test_equality(self):

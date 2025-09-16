@@ -1,3 +1,7 @@
+use std::num::ParseIntError;
+
+use pyo3::{pyclass, pymethods, types::PyType, Bound, PyResult};
+
 use crate::dimensions::DimensionalWord;
 
 // A UnitId consists of two 64-bit parts:
@@ -41,10 +45,51 @@ impl NumericWord {
     }
 }
 
+#[pyclass(frozen, eq, hash)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Unit128 {
     pub num: NumericWord,
     pub dim: DimensionalWord,
+}
+
+impl Unit128 {
+    pub fn from_hex(x: &str) -> Result<Self, ParseIntError> {
+        let value = u128::from_str_radix(x, 16)?;
+        let num = (value >> 64) as u64;
+        let dim = (value & 0x0000000000000000FFFFFFFFFFFFFFFF) as u64;
+        Ok(Self{ num: NumericWord(num), dim: DimensionalWord(dim) })
+    }
+
+    pub fn to_hex(&self) -> String {
+        if self.num.0 == 0 {
+            format!("{:X}", self.dim.0)
+        } else {
+            format!("{:X}{:X}", self.num.0, self.dim.0)
+        }
+    }
+}
+
+#[pymethods]
+impl Unit128 {
+    #[new]
+    fn py_new(num: u64, dim: u64) -> Self {
+        Unit128 { num: NumericWord(num), dim: DimensionalWord(dim) }
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_hex")]
+    fn py_from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
+        Ok(Self::from_hex(x)?)
+    }
+
+    #[pyo3(name = "to_hex")]
+    fn py_to_hex(&self) -> String {
+        self.to_hex()
+    }
+
+    fn __str__(&self) -> String {
+        self.to_hex()
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]

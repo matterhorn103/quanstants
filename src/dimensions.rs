@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use crate::fraction::Frac;
 
 
-#[pyclass(str)]
+#[pyclass(str, frozen, eq, hash)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
@@ -127,14 +127,6 @@ impl Dimensions {
         self.to_string()
     }
 
-    fn __eq__(&self, other: Self) -> bool {
-        *self == other
-    }
-
-    fn __ne__(&self, other: Self) -> bool {
-        *self == other
-    }
-
     fn __mul__(&self, other: Self) -> Self {
         self.mul(other)
     }
@@ -150,7 +142,7 @@ impl Dimensions {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct DimensionalWord(u64);
+pub struct DimensionalWord(pub u64);
 
 impl DimensionalWord {
     pub fn new(dimensions: Dimensions, least_significant_byte: u8) -> Self {

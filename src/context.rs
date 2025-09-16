@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-use crate::{dimensions::Dimensions, reg::UnitRegistry, unit::BaseUnit, Unit};
+use crate::{dimensions::Dimensions, reg::UnitRegistry, unit::BaseUnit};
 
 #[pyclass]
 #[derive(Clone, Debug, Default)]

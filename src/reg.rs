@@ -34,8 +34,8 @@ impl UnitRegistry {
         let typed_id = self.string_map.get(name).unwrap();
         match typed_id {
             TypedUnitId::Base(unit_id) => self.base_units.get(unit_id).unwrap().clone(),
-            TypedUnitId::Unitless(unit_id) => todo!(),
-            TypedUnitId::Derived(unit_id) => todo!(),
+            TypedUnitId::Unitless(_unit_id) => todo!(),
+            TypedUnitId::Derived(_unit_id) => todo!(),
         }
     }
 }

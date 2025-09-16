@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use pyo3::pyclass;
 
-use crate::{id::{TypedUnitId, UnitId}, unit::BaseUnit};
+use crate::{id::{TypedUnitId, Unit128}, unit::BaseUnit};
 
 #[pyclass]
 #[derive(Clone, Debug)]
 pub struct UnitRegistry {
     string_map: HashMap<String, TypedUnitId>,
-    id_map: HashMap<UnitId, TypedUnitId>,
-    base_units: HashMap<UnitId, BaseUnit>,
+    id_map: HashMap<Unit128, TypedUnitId>,
+    base_units: HashMap<Unit128, BaseUnit>,
 }
 
 impl UnitRegistry {
@@ -21,7 +21,7 @@ impl UnitRegistry {
         }
     }
 
-    pub fn add_unit(&mut self, id: UnitId, unit: BaseUnit, aliases: Vec<String>) {
+    pub fn add_unit(&mut self, id: Unit128, unit: BaseUnit, aliases: Vec<String>) {
         let typed_id = TypedUnitId::Base(id);
         self.base_units.insert(id, unit);
         self.id_map.insert(id, typed_id);

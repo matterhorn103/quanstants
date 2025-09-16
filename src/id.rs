@@ -13,6 +13,15 @@ use crate::dimensions::DimensionalWord;
 pub struct NumericWord(u64);
 
 impl NumericWord {
+    pub fn new(sign: i8, mantissa: u64, base: u8, exponent: i8) -> Self {
+        Self(
+            exponent as u64 |
+            (if base == 10 { 0 } else { base as u64}) << 8 |
+            (if sign.is_positive() { 0 } else { 1 }) << 15 |
+            (mantissa - 1) << 16
+        )
+    }
+
     pub fn exponent(&self) -> i8 {
         (self.0 & 0xFF) as i8
     }
@@ -22,8 +31,9 @@ impl NumericWord {
         if raw_base == 0 { 10 } else { raw_base }
     }
 
-    pub fn sign(&self) -> u8 {
-        ((self.0 >> 15) & 0x01) as u8
+    pub fn sign(&self) -> i8 {
+        let b = ((self.0 >> 15) & 0x01) as u8;
+        if b == 0 { 1 } else { -1 }
     }
 
     pub fn mantissa(&self) -> u64 {
@@ -32,14 +42,14 @@ impl NumericWord {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct UnitId {
+pub struct Unit128 {
     pub num: NumericWord,
     pub dim: DimensionalWord,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum TypedUnitId {
-    Base(UnitId),
-    Unitless(UnitId),
-    Derived(UnitId),
+    Base(Unit128),
+    Unitless(Unit128),
+    Derived(Unit128),
 }

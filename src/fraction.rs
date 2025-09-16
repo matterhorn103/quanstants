@@ -16,6 +16,13 @@ impl Deref for Frac {
 }
 
 impl Frac {
+    pub fn new(numerator: i8, denominator: i8) -> Self {
+        if denominator == 0 {
+            panic!()
+        };
+        Frac(Ratio::new(numerator, denominator))
+    }
+
     pub fn is_zero(&self) -> bool {
         self.0 == Ratio::ZERO
     }
@@ -48,9 +55,28 @@ impl Frac {
         }
     }
 
+    pub fn to_byte(&self) -> u8 {
+        if self.is_zero() {
+            0
+        } else {
+            let num = self.numer().unsigned_abs();
+            let den = if self.is_negative() {
+                self.denom().abs().neg()
+            } else {
+                self.denom().abs()
+            };
+            (den as u8) << 4 | num
+        }
+    }
+
     pub fn from_hex(x: &str) -> Result<Self, ParseIntError> {
         let byte = u8::from_str_radix(x, 16)?;
         Ok(Self::from_byte(byte))
+    }
+
+    pub fn to_hex(&self) -> String {
+        let byte = self.to_byte();
+        format!("{:02X}", byte)
     }
 }
 
@@ -152,7 +178,7 @@ impl Div<i8> for Frac {
 impl Frac {
     /// Panics if the denominator is zero
     #[new]
-    pub fn new(numerator: i8, denominator: i8) -> Self {
+    fn py_new(numerator: i8, denominator: i8) -> Self {
         if denominator == 0 {
             panic!()
         };
@@ -181,32 +207,23 @@ impl Frac {
 
     #[classmethod]
     #[pyo3(name = "from_byte")]
-    pub fn py_from_byte(_cls: &Bound<'_, PyType>, b: u8) -> Self {
+    fn py_from_byte(_cls: &Bound<'_, PyType>, b: u8) -> Self {
         Self::from_byte(b)
     }
 
-    pub fn to_byte(&self) -> u8 {
-        if self.is_zero() {
-            0
-        } else {
-            let num = self.numer().unsigned_abs();
-            let den = if self.is_negative() {
-                self.denom().abs().neg()
-            } else {
-                self.denom().abs()
-            };
-            (den as u8) << 4 | num
-        }
+    #[pyo3(name = "to_byte")]
+    fn py_to_byte(&self) -> u8 {
+        self.to_byte()
     }
 
     #[classmethod]
     #[pyo3(name = "from_hex")]
-    pub fn py_from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
+    fn py_from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
         Ok(Self::from_hex(x)?)
     }
 
-    pub fn to_hex(&self) -> String {
-        let byte = self.to_byte();
-        format!("{:02X}", byte)
+    #[pyo3(name = "to_hex")]
+    fn py_to_hex(&self) -> String {
+        self.to_hex()
     }
 }

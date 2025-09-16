@@ -1,14 +1,18 @@
+use crate::dimensions::DimensionalWord;
+
 // A UnitId consists of two 64-bit parts:
-//   1. A 64-bit decimal in the format |mm|mm|mm|mm|mm|mm|s+b|ee|
-//   2. A 64-bit unit representation
-// All zeroes for the first half of the ID does not indicate a factor of 0 but of 1 
+//   1. A 64-bit number in a custom format corresponding roughly to scientific notation
+//   2. A 64-bit representation of the dimensions of the unit
+// The numeric component is defined such that all zeroes for the first half of the ID does not
+// indicate a factor of 0 but of 1 and therefore all coherent SI units are contained within the
+// first 64 bits
 
 // TODO proper hashing
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
-pub struct NumericalFactor(u64);
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+pub struct NumericWord(u64);
 
-impl NumericalFactor {
+impl NumericWord {
     pub fn exponent(&self) -> i8 {
         (self.0 & 0xFF) as i8
     }
@@ -27,25 +31,10 @@ impl NumericalFactor {
     }
 }
 
-//impl From<u64> for DecimalFactor {
-//    fn from(value: u64) -> Self {
-//        // 8 least significant bits are the exponent
-//        let exponent = (value & 0xFF) as i8;
-//        // Next 7 bits are the base
-//        let base = ((value >> 8) & 0x7F) as u8;
-//        let base = if base == 0 { 10 } else { base };
-//        // Next bit is the sign
-//        let sign = ((value >> 15) & 0x01) as u8;
-//        // Most significant 48 bits are the mantissa - 1
-//        let mantissa = (value >> 16) + 1;
-//        DecimalFactor { mantissa, sign, base, exponent }
-//    }
-//}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct UnitId {
-    factor: NumericalFactor,
-    unit: u64,
+    pub num: NumericWord,
+    pub dim: DimensionalWord,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]

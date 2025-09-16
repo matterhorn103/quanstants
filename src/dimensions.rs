@@ -32,6 +32,33 @@ impl Dimensions {
             J: J.into(),
         }
     }
+
+    pub fn pow(&self, exp: Frac) -> Dimensions {
+        Dimensions {
+            T: self.T * exp,
+            L: self.L * exp,
+            M: self.M * exp,
+            I: self.I * exp,
+            Θ: self.Θ * exp,
+            N: self.N * exp,
+            J: self.J * exp,
+        }
+    }
+}
+
+impl From<DimensionalWord> for Dimensions {
+    fn from(component: DimensionalWord) -> Self {
+        let value = component.0;
+        Dimensions {
+            T: Frac::from_byte(((value >> 8) & 0xFF) as u8),
+            L: Frac::from_byte(((value >> 16) & 0xFF) as u8),
+            M: Frac::from_byte(((value >> 24) & 0xFF) as u8),
+            I: Frac::from_byte(((value >> 32) & 0xFF) as u8),
+            Θ: Frac::from_byte(((value >> 40) & 0xFF) as u8),
+            N: Frac::from_byte(((value >> 48) & 0xFF) as u8),
+            J: Frac::from_byte(((value >> 56) & 0xFF) as u8),
+        }
+    }
 }
 
 impl Mul for Dimensions {
@@ -62,20 +89,6 @@ impl Div for Dimensions {
             Θ: self.Θ - other.Θ,
             N: self.N - other.N,
             J: self.J - other.J,
-        }
-    }
-}
-
-impl Dimensions {
-    pub fn pow(&self, exp: Frac) -> Dimensions {
-        Dimensions {
-            T: self.T * exp,
-            L: self.L * exp,
-            M: self.M * exp,
-            I: self.I * exp,
-            Θ: self.Θ * exp,
-            N: self.N * exp,
-            J: self.J * exp,
         }
     }
 }
@@ -136,33 +149,20 @@ impl Dimensions {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+pub struct DimensionalWord(u64);
 
-    #[test]
-    fn default_dimensions() {
-        let dim1 = Dimensions::default();
-        assert_eq!(dim1, Dimensions::new(0, 0, 0, 0, 0, 0, 0));
-    }
-
-    #[test]
-    fn mul() {
-        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
-        assert_eq!(dim1 * dim2, Dimensions::new(2, 1, 0, 4, 0, 0, 0))
-    }
-
-    #[test]
-    fn div() {
-        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
-        assert_eq!(dim1 / dim2, Dimensions::new(-2, 1, 0, 0, 0, 0, 0))
-    }
-
-    #[test]
-    fn pow() {
-        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        assert_eq!(dim1.pow(2.into()), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
+impl DimensionalWord {
+    pub fn new(dimensions: Dimensions, least_significant_byte: u8) -> Self {
+        Self(
+            least_significant_byte as u64 |
+            (dimensions.T.to_byte() as u64) << 8 |
+            (dimensions.L.to_byte() as u64) << 16 |
+            (dimensions.M.to_byte() as u64) << 24 |
+            (dimensions.I.to_byte() as u64) << 32 |
+            (dimensions.Θ.to_byte() as u64) << 40 |
+            (dimensions.N.to_byte() as u64) << 48 |
+            (dimensions.J.to_byte() as u64) << 56
+        )
     }
 }

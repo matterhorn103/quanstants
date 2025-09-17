@@ -77,9 +77,7 @@ impl Unit128 {
 
     pub fn from_hex(x: &str) -> Result<Self, ParseIntError> {
         let value = u128::from_str_radix(x, 16)?;
-        let num = (value >> 64) as u64;
-        let dim = (value & 0xFFFFFFFFFFFFFFFF) as u64;
-        Ok(Unit128(num, dim))
+        Ok(Unit128::from(value))
     }
 
     pub fn to_hex(self) -> String {

@@ -46,21 +46,6 @@ impl Dimensions {
     }
 }
 
-impl From<DimensionalWord> for Dimensions {
-    fn from(value: DimensionalWord) -> Self {
-        let value = value.0;
-        Dimensions {
-            T: Frac::from_byte(((value >> 8) & 0xFF) as u8),
-            L: Frac::from_byte(((value >> 16) & 0xFF) as u8),
-            M: Frac::from_byte(((value >> 24) & 0xFF) as u8),
-            I: Frac::from_byte(((value >> 32) & 0xFF) as u8),
-            Θ: Frac::from_byte(((value >> 40) & 0xFF) as u8),
-            N: Frac::from_byte(((value >> 48) & 0xFF) as u8),
-            J: Frac::from_byte(((value >> 56) & 0xFF) as u8),
-        }
-    }
-}
-
 impl Mul for Dimensions {
     type Output = Self;
 
@@ -138,23 +123,5 @@ impl Dimensions {
     #[pyo3(name = "pow")]
     fn py_pow(&self, other: i8) -> Self {
         self.pow(other.into())
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct DimensionalWord(pub u64);
-
-impl DimensionalWord {
-    pub fn new(dimensions: Dimensions, least_significant_byte: u8) -> Self {
-        Self(
-            least_significant_byte as u64 |
-            (dimensions.T.to_byte() as u64) << 8 |
-            (dimensions.L.to_byte() as u64) << 16 |
-            (dimensions.M.to_byte() as u64) << 24 |
-            (dimensions.I.to_byte() as u64) << 32 |
-            (dimensions.Θ.to_byte() as u64) << 40 |
-            (dimensions.N.to_byte() as u64) << 48 |
-            (dimensions.J.to_byte() as u64) << 56
-        )
     }
 }

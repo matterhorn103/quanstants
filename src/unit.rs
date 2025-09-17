@@ -3,9 +3,9 @@ use std::ops::{Div, Mul};
 
 use pyo3::prelude::*;
 
-use crate::dimensions::{DimensionalWord, Dimensions};
+use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
-use crate::id::{NumericWord, Unit128};
+use crate::id::Unit128;
 use crate::prefix::Prefix;
 
 
@@ -23,8 +23,8 @@ pub enum Unit {
 impl Unit {
     pub fn id(&self) -> Unit128 {
         match self {
-            Unit::Base(unit) => Unit128 { num: NumericWord(0), dim: DimensionalWord::new(unit.dimensions(), 0x00) },
-            _ => Unit128::new(0, 0),
+            Unit::Base(unit) => Unit128::new(1, 1, 10, 0, unit.dimensions(), 0x00),
+            _ => Unit128(0xFFFF, 0xFFFF),
         }
     }
 

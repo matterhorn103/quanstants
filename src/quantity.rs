@@ -1,16 +1,16 @@
 use std::{fmt, ops::{Add, Div, Mul, Sub}};
 
-use crate::{dimensions::Dimensions, unit::CompoundUnit, unit::Unit};
+use crate::{dimensions::Dimensions, unit::LinearUnit, unit::Unit};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct LinearQuantity {
     pub number: f64,
-    pub unit: CompoundUnit,
+    pub unit: LinearUnit,
     pub uncertainty: f64,
 }
 
 impl LinearQuantity {
-    pub fn new(number: f64, unit: CompoundUnit, uncertainty: f64) -> Self {
+    pub fn new(number: f64, unit: LinearUnit, uncertainty: f64) -> Self {
         Self {
             number,
             unit,

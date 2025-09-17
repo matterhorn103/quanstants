@@ -100,10 +100,10 @@ impl Unit for BaseUnit {
 }
 
 impl Mul for BaseUnit {
-    type Output = CompoundUnit;
+    type Output = LinearUnit;
 
-    fn mul(self, rhs: Self) -> CompoundUnit {
-        CompoundUnit::new(
+    fn mul(self, rhs: Self) -> LinearUnit {
+        LinearUnit::new(
             &[LinearFactor::Base(self, 1.into()), LinearFactor::Base(rhs, 1.into())]
         )
     }
@@ -196,17 +196,17 @@ impl Unit for DerivedUnit {
 
 #[pyclass(frozen)]
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
-pub struct CompoundUnit {
+pub struct LinearUnit {
     pub factors: Vec<LinearFactor>,
 }
 
-impl CompoundUnit {
+impl LinearUnit {
     pub fn new(factors: &[LinearFactor]) -> Self {
         Self {factors: factors.to_vec()}
     }
 }
 
-impl Unit for CompoundUnit {
+impl Unit for LinearUnit {
     fn symbol(&self) -> String {
         self.factors.iter().map(|x| x.symbol()).reduce(|acc, s| acc + " " + &s).unwrap()
     }
@@ -224,19 +224,19 @@ impl Unit for CompoundUnit {
     }
 }
 
-impl Mul for CompoundUnit {
+impl Mul for LinearUnit {
     type Output = Self;
 
-    fn mul(self, rhs: Self) -> CompoundUnit {
+    fn mul(self, rhs: Self) -> LinearUnit {
         let new_factors = [self.factors, rhs.factors].concat();
-        CompoundUnit::new(&new_factors)
+        LinearUnit::new(&new_factors)
     }
 }
 
-impl Div for CompoundUnit {
+impl Div for LinearUnit {
     type Output = Self;
 
-    fn div(self, rhs: Self) -> CompoundUnit {
+    fn div(self, rhs: Self) -> LinearUnit {
         let mut new_factors = self.factors;
         for factor in rhs.factors {
             let new_factor = match factor {
@@ -246,6 +246,6 @@ impl Div for CompoundUnit {
             };
             new_factors.push(new_factor);
         }
-        CompoundUnit::new(&new_factors)
+        LinearUnit::new(&new_factors)
     }
 }

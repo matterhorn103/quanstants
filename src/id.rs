@@ -95,10 +95,3 @@ impl Unit128 {
         self.to_hex()
     }
 }
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub enum TypedUnitId {
-    Base(Unit128),
-    Unitless(Unit128),
-    Derived(Unit128),
-}

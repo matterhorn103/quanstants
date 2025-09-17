@@ -99,8 +99,8 @@ fn char_to_superscript(character: char) -> char {
 }
 
 impl From<i8> for Frac {
-    fn from(n: i8) -> Self {
-        Self(Ratio::from_integer(n))
+    fn from(value: i8) -> Self {
+        Self(Ratio::from_integer(value))
     }
 }
 

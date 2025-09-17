@@ -47,8 +47,8 @@ impl Dimensions {
 }
 
 impl From<DimensionalWord> for Dimensions {
-    fn from(component: DimensionalWord) -> Self {
-        let value = component.0;
+    fn from(value: DimensionalWord) -> Self {
+        let value = value.0;
         Dimensions {
             T: Frac::from_byte(((value >> 8) & 0xFF) as u8),
             L: Frac::from_byte(((value >> 16) & 0xFF) as u8),

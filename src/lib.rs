@@ -16,7 +16,7 @@ fn _quanstants(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<fraction::Frac>()?;
     m.add_class::<dimensions::Dimensions>()?;
     m.add_class::<id::Unit128>()?;
-    m.add_class::<unit::BaseUnit>()?;
+    m.add_class::<unit::Unit>()?;
     m.add_class::<prefix::Prefix>()?;
     m.add_class::<context::Context>()?;
     Ok(())

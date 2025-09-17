@@ -7,15 +7,39 @@ use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
 use crate::prefix::Prefix;
 
-// This might end up needing to be an enum
-pub trait Unit: Clone + Debug + PartialEq {
-    fn symbol(&self) -> String;
 
-    fn name(&self) -> String;
+#[pyclass(frozen)]
+#[derive(Clone, PartialEq, PartialOrd, Debug)]
+pub enum Unit {
+    Base(BaseUnit),
+    Unitless(UnitlessUnit),
+    Derived(DerivedUnit),
+    Compound(CompoundUnit),
+    Logarithmic(),
+    Temperature(),
+}
 
-    fn preceding_space(&self) -> bool;
+impl Unit {
+    pub fn symbol(&self) -> String {
+        String::from("oops")
+    }
 
-    fn dimensions(&self) -> Dimensions;
+    pub fn name(&self) -> String {
+        match self {
+            Unit::Base(base_unit) => todo!(),
+            Unit::Unitless(unitless_unit) => todo!(),
+            Unit::Derived(derived_unit) => todo!(),
+            Unit::Compound(compound_unit) => todo!(),
+            Unit::Logarithmic() => todo!(),
+            Unit::Temperature() => todo!(),
+        }
+    }
+
+//    pub fn preceding_space(&self) -> bool;
+//
+    pub fn dimensions(&self) -> Dimensions {
+        Dimensions::default()
+    }
 }
 
 
@@ -45,20 +69,41 @@ impl LinearFactor {
 }
 
 
-#[pyclass(frozen, eq, hash)]
+#[pyclass(frozen)]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct BaseUnit {
-    #[pyo3(get)]
     symbol: String,
-    #[pyo3(get)]
     name: String,
     dimensions: Dimensions,
     prefixed: bool,
 }
 
-#[pymethods]
+//#[pymethods]
+//impl BaseUnit {
+//    #[new]
+//    pub fn new(
+//        symbol: String,
+//        name: String,
+//        dimensions: Dimensions,
+//    ) -> Self {
+//        Self {
+//            symbol,
+//            name,
+//            dimensions,
+//            prefixed: false,
+//        }
+//    }
+//
+//    pub fn __repr__(&self) -> String {
+//        format!("BaseUnit({})", self.name())
+//    }
+//
+//    pub fn __str__(&self) -> String {
+//        self.symbol()
+//    }
+//}
+
 impl BaseUnit {
-    #[new]
     pub fn new(
         symbol: String,
         name: String,
@@ -72,16 +117,6 @@ impl BaseUnit {
         }
     }
 
-    pub fn __repr__(&self) -> String {
-        format!("BaseUnit({})", self.name())
-    }
-
-    pub fn __str__(&self) -> String {
-        self.symbol()
-    }
-}
-
-impl Unit for BaseUnit {
     fn symbol(&self) -> String {
         self.symbol.clone()
     }
@@ -100,32 +135,38 @@ impl Unit for BaseUnit {
 }
 
 impl Mul for BaseUnit {
-    type Output = LinearUnit;
+    type Output = CompoundUnit;
 
-    fn mul(self, rhs: Self) -> LinearUnit {
-        LinearUnit::new(
+    fn mul(self, rhs: Self) -> CompoundUnit {
+        CompoundUnit::new(
             &[LinearFactor::Base(self, 1.into()), LinearFactor::Base(rhs, 1.into())]
         )
     }
 }
 
-
-#[pyclass(frozen, eq, hash)]
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
-pub struct UnitlessUnit;
-
-#[pymethods]
-impl UnitlessUnit {
-    pub fn __repr__(&self) -> String {
-        format!("BaseUnit({})", self.name())
-    }
-
-    pub fn __str__(&self) -> String {
-        self.symbol()
+impl From<BaseUnit> for Unit {
+    fn from(value: BaseUnit) -> Self {
+        Unit::Base(value)
     }
 }
 
-impl Unit for UnitlessUnit {
+
+#[pyclass(frozen)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+pub struct UnitlessUnit;
+
+//#[pymethods]
+//impl UnitlessUnit {
+//    pub fn __repr__(&self) -> String {
+//        format!("BaseUnit({})", self.name())
+//    }
+//
+//    pub fn __str__(&self) -> String {
+//        self.symbol()
+//    }
+//}
+
+impl UnitlessUnit {
     fn symbol(&self) -> String {
         String::from("(unitless)")
     }
@@ -175,7 +216,7 @@ impl DerivedUnit {
     }
 }
 
-impl Unit for DerivedUnit {
+impl DerivedUnit {
     fn symbol(&self) -> String {
         self.symbol.clone()
     }
@@ -196,17 +237,17 @@ impl Unit for DerivedUnit {
 
 #[pyclass(frozen)]
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
-pub struct LinearUnit {
+pub struct CompoundUnit {
     pub factors: Vec<LinearFactor>,
 }
 
-impl LinearUnit {
+impl CompoundUnit {
     pub fn new(factors: &[LinearFactor]) -> Self {
         Self {factors: factors.to_vec()}
     }
 }
 
-impl Unit for LinearUnit {
+impl CompoundUnit {
     fn symbol(&self) -> String {
         self.factors.iter().map(|x| x.symbol()).reduce(|acc, s| acc + " " + &s).unwrap()
     }
@@ -224,19 +265,19 @@ impl Unit for LinearUnit {
     }
 }
 
-impl Mul for LinearUnit {
+impl Mul for CompoundUnit {
     type Output = Self;
 
-    fn mul(self, rhs: Self) -> LinearUnit {
+    fn mul(self, rhs: Self) -> CompoundUnit {
         let new_factors = [self.factors, rhs.factors].concat();
-        LinearUnit::new(&new_factors)
+        CompoundUnit::new(&new_factors)
     }
 }
 
-impl Div for LinearUnit {
+impl Div for CompoundUnit {
     type Output = Self;
 
-    fn div(self, rhs: Self) -> LinearUnit {
+    fn div(self, rhs: Self) -> CompoundUnit {
         let mut new_factors = self.factors;
         for factor in rhs.factors {
             let new_factor = match factor {
@@ -246,6 +287,6 @@ impl Div for LinearUnit {
             };
             new_factors.push(new_factor);
         }
-        LinearUnit::new(&new_factors)
+        CompoundUnit::new(&new_factors)
     }
 }

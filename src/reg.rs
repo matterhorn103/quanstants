@@ -1,20 +1,18 @@
 use std::collections::HashMap;
 
-use crate::{dimensions::Dimensions, id::{TypedUnitId, Unit128}, unit::{BaseUnit, Unit}};
+use crate::{dimensions::Dimensions, id::Unit128, unit::{BaseUnit, Unit}};
 
 #[derive(Debug)]
 pub struct UnitRegistry {
-    string_map: HashMap<String, TypedUnitId>,
-    id_map: HashMap<Unit128, TypedUnitId>,
-    base_units: HashMap<Unit128, BaseUnit>,
+    units: HashMap<Unit128, Unit>,
+    string_map: HashMap<String, Unit128>,
 }
 
 impl UnitRegistry {
     pub fn new() -> Self {
         let mut reg = Self {
-            base_units: HashMap::new(),
+            units: HashMap::new(),
             string_map: HashMap::new(),
-            id_map: HashMap::new(),
         };
         reg.add_metre();
         reg
@@ -27,27 +25,21 @@ impl UnitRegistry {
             Dimensions::new(0, 1, 0, 0, 0, 0, 0),
         );
         let id = Unit128::new(0, 0x110000);
-        self.add(id, m, vec![String::from("meter")]);
+        self.add(id, m.into(), vec![String::from("meter")]);
     }
 
-    pub fn add(&mut self, id: Unit128, unit: BaseUnit, aliases: Vec<String>) {
-        let typed_id = TypedUnitId::Base(id);
+    pub fn add(&mut self, id: Unit128, unit: Unit, aliases: Vec<String>) {
         let name = unit.name();
-        self.base_units.insert(id, unit);
-        self.id_map.insert(id, typed_id);
-        self.string_map.insert(name, typed_id);
+        self.units.insert(id, unit);
+        self.string_map.insert(name, id);
         for alias in aliases {
-            self.string_map.insert(alias, typed_id);
+            self.string_map.insert(alias, id);
         }
     }
 
-    pub fn get_by_name(&self, name: &str) -> BaseUnit {
-        let typed_id = self.string_map.get(name).unwrap();
-        match typed_id {
-            TypedUnitId::Base(unit_id) => self.base_units.get(unit_id).unwrap().clone(),
-            TypedUnitId::Unitless(_unit_id) => todo!(),
-            TypedUnitId::Derived(_unit_id) => todo!(),
-        }
+    pub fn get_by_name(&self, name: &str) -> Unit {
+        let id = self.string_map.get(name).unwrap();
+        self.units.get(id).unwrap().clone()
     }
 }
 

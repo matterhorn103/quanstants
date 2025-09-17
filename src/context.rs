@@ -1,29 +1,35 @@
-use pyo3::prelude::*;
+use pyo3::{pyclass, pymethods, Py, Python};
 
 use crate::{dimensions::Dimensions, reg::UnitRegistry, unit::BaseUnit};
 
 #[pyclass]
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Context {
     unit_reg: UnitRegistry,
 }
 
-#[pymethods]
 impl Context {
-    #[new]
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             unit_reg: UnitRegistry::new(),
         }
     }
 
-    fn get_unit(&self, name: &str) -> BaseUnit {
-        self.unit_reg.get_unit(name)
+    pub fn unit_by_name(&self, name: &str) -> BaseUnit {
+        self.unit_reg.get_by_name(name)
+    }
+}
+
+#[pymethods]
+impl Context {
+    #[new]
+    fn py_new() -> Self {
+        Context::new()
     }
 
-    // Square bracket notation lookup for units
-    fn __getitem__(&self, name: &str) -> BaseUnit {
-        self.get_unit(name)
+    #[getter]
+    fn units(slf: Py<Self>) -> PyUnits {
+        PyUnits { context: slf }
     }
 
     #[getter]
@@ -41,17 +47,18 @@ impl Context {
     }
 
     #[getter]
+    fn metre(&self) -> BaseUnit {
+        self.unit_reg.get_by_name("metre")
+    }
+
+    #[getter]
     fn meter(&self) -> BaseUnit {
-        BaseUnit::new(
-            String::from("m"),
-            String::from("meter"),
-            Dimensions::new(0, 1, 0, 0, 0, 0, 0),
-        )
+        self.metre()
     }
 
     #[getter]
     fn m(&self) -> BaseUnit {
-        self.meter()
+        self.metre()
     }
 
     #[getter]
@@ -67,9 +74,17 @@ impl Context {
     fn kg(&self) -> BaseUnit {
         self.kilogram()
     }
+}
 
-    // For catching dot syntax lookup
-    //pub fn __get_attr__(&self, name: String) {
-    //    
-    //}
+#[pyclass]
+pub struct PyUnits {
+    context: Py<Context>,
+}
+
+#[pymethods]
+impl PyUnits {
+    // Square bracket notation lookup for units
+    fn __getitem__(&self, py: Python, name: &str) -> BaseUnit {
+        self.context.borrow(py).unit_by_name(name)
+    }
 }

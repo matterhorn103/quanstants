@@ -53,11 +53,15 @@ pub struct Unit128 {
 }
 
 impl Unit128 {
+    pub fn new(num: u64, dim: u64) -> Self {
+        Unit128 { num: NumericWord(num), dim: DimensionalWord(dim) }
+    }
+
     pub fn from_hex(x: &str) -> Result<Self, ParseIntError> {
         let value = u128::from_str_radix(x, 16)?;
         let num = (value >> 64) as u64;
         let dim = (value & 0x0000000000000000FFFFFFFFFFFFFFFF) as u64;
-        Ok(Self{ num: NumericWord(num), dim: DimensionalWord(dim) })
+        Ok(Unit128::new(num, dim))
     }
 
     pub fn to_hex(&self) -> String {
@@ -73,7 +77,7 @@ impl Unit128 {
 impl Unit128 {
     #[new]
     fn py_new(num: u64, dim: u64) -> Self {
-        Unit128 { num: NumericWord(num), dim: DimensionalWord(dim) }
+        Unit128::new(num, dim)
     }
 
     #[classmethod]

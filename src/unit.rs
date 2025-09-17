@@ -45,7 +45,7 @@ impl LinearFactor {
 }
 
 
-#[pyclass]
+#[pyclass(frozen, eq, hash)]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct BaseUnit {
     #[pyo3(get)]
@@ -110,7 +110,7 @@ impl Mul for BaseUnit {
 }
 
 
-#[pyclass]
+#[pyclass(frozen, eq, hash)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct UnitlessUnit;
 
@@ -144,6 +144,7 @@ impl Unit for UnitlessUnit {
 }
 
 
+#[pyclass(frozen)]
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct DerivedUnit {
     symbol: String,
@@ -193,6 +194,7 @@ impl Unit for DerivedUnit {
 }
 
 
+#[pyclass(frozen)]
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct CompoundUnit {
     pub factors: Vec<LinearFactor>,

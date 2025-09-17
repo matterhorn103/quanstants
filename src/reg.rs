@@ -10,28 +10,22 @@ pub struct UnitRegistry {
 
 impl UnitRegistry {
     pub fn new() -> Self {
-        let mut reg = Self {
+        Self {
             units: HashMap::new(),
             string_map: HashMap::new(),
-        };
-        reg.add_metre();
-        reg
+        }
     }
 
-    fn add_metre(&mut self) {
-        let m = BaseUnit::new(
-            String::from("m"),
-            String::from("metre"),
-            Dimensions::new(0, 1, 0, 0, 0, 0, 0),
-        );
-        let id = Unit128::new(0, 0x110000);
-        self.add(id, m.into(), vec![String::from("meter")]);
-    }
-
-    pub fn add(&mut self, id: Unit128, unit: Unit, aliases: Vec<String>) {
+    pub fn add(&mut self, unit: Unit) {
+        let id = unit.id();
         let name = unit.name();
         self.units.insert(id, unit);
         self.string_map.insert(name, id);
+    }
+
+    pub fn add_with_aliases(&mut self, unit: Unit, aliases: Vec<String>) {
+        let id = unit.id();
+        self.add(unit);
         for alias in aliases {
             self.string_map.insert(alias, id);
         }
@@ -45,6 +39,35 @@ impl UnitRegistry {
 
 impl Default for UnitRegistry {
     fn default() -> Self {
-        Self::new()
+        let mut reg = Self::new();
+        reg.add_si();
+        reg
+    }
+}
+
+impl UnitRegistry {
+    fn add_si(&mut self) {
+        self.add(
+            BaseUnit::new(
+                String::from("s"),
+                String::from("second"),
+                Dimensions::new(1, 0, 0, 0, 0, 0, 0),
+            ).into()
+        );
+        self.add_with_aliases(
+            BaseUnit::new(
+                String::from("m"),
+                String::from("metre"),
+                Dimensions::new(0, 1, 0, 0, 0, 0, 0),
+            ).into(),
+            vec![String::from("meter")],
+        );
+        self.add(
+            BaseUnit::new(
+                String::from("kg"),
+                String::from("kilogram"),
+                Dimensions::new(0, 0, 1, 0, 0, 0, 0),
+            ).into()
+        );
     }
 }

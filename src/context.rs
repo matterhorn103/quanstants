@@ -1,6 +1,6 @@
 use pyo3::{pyclass, pymethods, Py, Python};
 
-use crate::{dimensions::Dimensions, reg::UnitRegistry, unit::{BaseUnit, Unit}};
+use crate::{dimensions::Dimensions, reg::UnitRegistry, unit::Unit};
 
 #[pyclass]
 #[derive(Debug, Default)]
@@ -24,7 +24,7 @@ impl Context {
 impl Context {
     #[new]
     fn py_new() -> Self {
-        Context::new()
+        Context::default()
     }
 
     #[getter]
@@ -34,11 +34,7 @@ impl Context {
 
     #[getter]
     fn second(&self) -> Unit {
-        BaseUnit::new(
-            String::from("s"),
-            String::from("second"),
-            Dimensions::new(1, 0, 0, 0, 0, 0, 0),
-        ).into()
+        self.unit_reg.get_by_name("second")
     }
 
     #[getter]
@@ -63,11 +59,7 @@ impl Context {
 
     #[getter]
     fn kilogram(&self) -> Unit {
-        BaseUnit::new(
-            String::from("kg"),
-            String::from("kilogram"),
-            Dimensions::new(0, 0, 1, 0, 0, 0, 0),
-        ).into()
+        self.unit_reg.get_by_name("kilogram")
     }
 
     #[getter]

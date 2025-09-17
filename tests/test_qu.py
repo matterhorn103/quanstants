@@ -1,4 +1,4 @@
-from quanstants import qu, BaseUnit
+from quanstants import qu, Unit
 
 class TestMainApi:
     def test_units(self):
@@ -6,7 +6,7 @@ class TestMainApi:
 
     def test_metre(self):
         m = qu.metre
-        assert isinstance(m, BaseUnit)
+        assert isinstance(m, Unit)
 
     def test_brackets_lookup(self):
         m1 = qu.units["metre"]

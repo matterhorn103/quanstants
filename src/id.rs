@@ -14,7 +14,7 @@ use crate::dimensions::DimensionalWord;
 // TODO proper hashing
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct NumericWord(u64);
+pub struct NumericWord(pub u64);
 
 impl NumericWord {
     pub fn new(sign: i8, mantissa: u64, base: u8, exponent: i8) -> Self {

@@ -3,7 +3,7 @@ from quanstants._quanstants import (
     Dimensions,
     Unit128,
     Prefix,
-    BaseUnit,
+    Unit,
     Context,
 )
 
@@ -12,7 +12,7 @@ __all__ = [
     Dimensions,
     Unit128,
     Prefix,
-    BaseUnit,
+    Unit,
     Context,
 ]
 

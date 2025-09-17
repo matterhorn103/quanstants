@@ -3,35 +3,39 @@ use std::ops::{Div, Mul};
 
 use pyo3::prelude::*;
 
-use crate::dimensions::Dimensions;
+use crate::dimensions::{DimensionalWord, Dimensions};
 use crate::fraction::Frac;
+use crate::id::{NumericWord, Unit128};
 use crate::prefix::Prefix;
 
 
-#[pyclass(frozen)]
-#[derive(Clone, PartialEq, PartialOrd, Debug)]
+#[pyclass(frozen, eq)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Unit {
     Base(BaseUnit),
     Unitless(UnitlessUnit),
-    Derived(DerivedUnit),
-    Compound(CompoundUnit),
+    Derived(),
+    Compound(),
     Logarithmic(),
     Temperature(),
 }
 
 impl Unit {
+    pub fn id(&self) -> Unit128 {
+        match self {
+            Unit::Base(unit) => Unit128 { num: NumericWord(0), dim: DimensionalWord::new(unit.dimensions(), 0x00) },
+            _ => Unit128::new(0, 0),
+        }
+    }
+
     pub fn symbol(&self) -> String {
         String::from("oops")
     }
 
     pub fn name(&self) -> String {
         match self {
-            Unit::Base(base_unit) => todo!(),
-            Unit::Unitless(unitless_unit) => todo!(),
-            Unit::Derived(derived_unit) => todo!(),
-            Unit::Compound(compound_unit) => todo!(),
-            Unit::Logarithmic() => todo!(),
-            Unit::Temperature() => todo!(),
+            Unit::Base(base_unit) => base_unit.name(),
+            _ => String::from("oops")
         }
     }
 

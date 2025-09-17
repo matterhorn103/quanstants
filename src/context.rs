@@ -1,6 +1,6 @@
 use pyo3::{pyclass, pymethods, Py, Python};
 
-use crate::{dimensions::Dimensions, reg::UnitRegistry, unit::Unit};
+use crate::{id::Unit128, reg::UnitRegistry, unit::Unit};
 
 #[pyclass]
 #[derive(Debug, Default)]
@@ -18,6 +18,10 @@ impl Context {
     pub fn unit_by_name(&self, name: &str) -> Unit {
         self.unit_reg.get_by_name(name)
     }
+
+    pub fn unit_by_id(&self, id: &Unit128) -> Unit {
+        self.unit_reg.get_by_id(id)
+    }
 }
 
 #[pymethods]
@@ -30,6 +34,11 @@ impl Context {
     #[getter]
     fn units(slf: Py<Self>) -> PyUnits {
         PyUnits { context: slf }
+    }
+
+    #[pyo3(name = "unit_by_id")]
+    fn py_unit_by_id(&self, id: u128) -> Unit {
+        self.unit_by_id(&id.into())
     }
 
     #[getter]

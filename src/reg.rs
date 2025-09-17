@@ -33,6 +33,10 @@ impl UnitRegistry {
 
     pub fn get_by_name(&self, name: &str) -> Unit {
         let id = self.string_map.get(name).unwrap();
+        self.get_by_id(id)
+    }
+
+    pub fn get_by_id(&self, id: &Unit128) -> Unit {
         self.units.get(id).unwrap().clone()
     }
 }

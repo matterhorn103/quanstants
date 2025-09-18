@@ -1,6 +1,6 @@
-use pyo3::{pyclass, pymethods, Py, Python};
+use pyo3::{pyclass, pymethods, Py, PyResult, Python};
 
-use crate::{id::Unit128, reg::UnitRegistry, unit::Unit};
+use crate::{id::Unit128, prefix::Prefix, reg::UnitRegistry, unit::Unit};
 
 #[pyclass]
 #[derive(Debug, Default)]
@@ -15,11 +15,11 @@ impl Context {
         }
     }
 
-    pub fn unit_by_name(&self, name: &str) -> Unit {
+    pub fn unit_by_name(&self, name: &str) -> Option<Unit> {
         self.unit_reg.get_by_name(name)
     }
 
-    pub fn unit_by_id(&self, id: &Unit128) -> Unit {
+    pub fn unit_by_id(&self, id: &Unit128) -> Option<Unit> {
         self.unit_reg.get_by_id(id)
     }
 }
@@ -85,7 +85,19 @@ pub struct PyUnits {
 #[pymethods]
 impl PyUnits {
     // Square bracket notation lookup for units
-    fn __getitem__(&self, py: Python, name: &str) -> Unit {
-        self.context.borrow(py).unit_by_name(name)
+    fn __getitem__(&self, py: Python, name: &str) -> PyResult<Unit> {
+        Ok(self.context.borrow(py).unit_by_name(name))
+    }
+}
+
+#[pyclass]
+pub struct PyPrefixes;
+
+#[pymethods]
+impl PyPrefixes {
+    fn __getitem__(&self, name: &str) -> Prefix {
+        match name {
+            case _
+        }
     }
 }

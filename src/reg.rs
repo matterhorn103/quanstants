@@ -5,14 +5,14 @@ use crate::{dimensions::Dimensions, id::Unit128, unit::{BaseUnit, Unit}};
 #[derive(Debug)]
 pub struct UnitRegistry {
     units: HashMap<Unit128, Unit>,
-    string_map: HashMap<String, Unit128>,
+    unit_names: HashMap<String, Unit128>,
 }
 
 impl UnitRegistry {
     pub fn new() -> Self {
         Self {
             units: HashMap::new(),
-            string_map: HashMap::new(),
+            unit_names: HashMap::new(),
         }
     }
 
@@ -20,24 +20,27 @@ impl UnitRegistry {
         let id = unit.id();
         let name = unit.name();
         self.units.insert(id, unit);
-        self.string_map.insert(name, id);
+        self.unit_names.insert(name, id);
     }
 
     pub fn add_with_aliases(&mut self, unit: Unit, aliases: Vec<String>) {
         let id = unit.id();
         self.add(unit);
         for alias in aliases {
-            self.string_map.insert(alias, id);
+            self.unit_names.insert(alias, id);
         }
     }
 
-    pub fn get_by_name(&self, name: &str) -> Unit {
-        let id = self.string_map.get(name).unwrap();
-        self.get_by_id(id)
+    pub fn get_by_name(&self, name: &str) -> Option<Unit> {
+        if let Some(id) = self.unit_names.get(name) {
+            self.get_by_id(id)
+        } else {
+            None
+        }
     }
 
-    pub fn get_by_id(&self, id: &Unit128) -> Unit {
-        self.units.get(id).unwrap().clone()
+    pub fn get_by_id(&self, id: &Unit128) -> Option<Unit> {
+        self.units.get(id).cloned()
     }
 }
 

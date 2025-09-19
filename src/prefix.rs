@@ -211,3 +211,13 @@ exbi = Prefix("Ei", "exbi", 1024**6)
 zebi = Prefix("Zi", "zebi", 1024**7)
 yobi = Prefix("Yi", "yobi", 1024**8)
 */
+
+#[cfg(feature = "python")]
+pub mod py {
+    use super::*;
+    use pyo3::prelude::*;
+
+    #[pyclass(name = "Prefix")]
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+    pub struct PyPrefix(Prefix);
+}

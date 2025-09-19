@@ -170,3 +170,60 @@ impl Div<i8> for Frac {
         Self(self.0 / other)
     }
 }
+
+#[cfg(feature = "python")]
+pub mod py {
+    use super::*;
+    use pyo3::{prelude::*, types::PyType};
+
+    #[pyclass(name = "Frac")]
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+    pub struct PyFrac(Frac);
+
+    #[pymethods]
+    impl PyFrac {
+        /// Panics if the denominator is zero
+        #[new]
+        fn new(numerator: i8, denominator: i8) -> Self {
+            PyFrac(Frac::new(numerator, denominator))
+        }
+
+        fn __repr__(&self) -> String {
+            format!("Frac({}, {})", self.0.0.numer(), self.0.0.denom())
+        }
+
+        fn __str__(&self) -> String {
+            self.0.to_string()
+        }
+
+        fn __eq__(&self, other: &Self) -> bool {
+            self == other
+        }
+
+        fn numer(&self) -> i8 {
+            *self.0.numer()
+        }
+
+        fn denom(&self) -> i8 {
+            *self.0.denom()
+        }
+
+        #[classmethod]
+        fn from_byte(_cls: &Bound<'_, PyType>, b: u8) -> Self {
+            PyFrac(Frac::from_byte(b))
+        }
+
+        fn to_byte(&self) -> u8 {
+            self.0.to_byte()
+        }
+
+        #[classmethod]
+        fn from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
+            Ok(PyFrac(Frac::from_hex(x)?))
+        }
+
+        fn to_hex(&self) -> String {
+            self.0.to_hex()
+        }
+    }
+}

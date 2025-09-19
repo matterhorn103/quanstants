@@ -95,3 +95,38 @@ impl fmt::Display for Dimensions {
         write!(f, "{output}")
     }
 }
+
+#[cfg(feature = "python")]
+pub mod py {
+    use super::*;
+    use pyo3::prelude::*;
+
+    #[pyclass(name = "Dimensions")]
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+    pub struct PyDimensions(Dimensions);
+
+    #[pymethods]
+    impl PyDimensions {
+        #[new]
+        #[allow(non_snake_case)]
+        fn new(T: i8, L: i8, M: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
+            PyDimensions(Dimensions::new(T, L, M, I, Θ, N, J))
+        }
+
+        fn __repr__(&self) -> String {
+            self.0.to_string()
+        }
+
+        fn __mul__(&self, other: Self) -> Self {
+            PyDimensions(self.0.mul(other.0))
+        }
+
+        fn __truediv__(&self, other: Self) -> Self {
+            PyDimensions(self.0.div(other.0))
+        }
+
+        fn pow(&self, other: i8) -> Self {
+            PyDimensions(self.0.pow(other.into()))
+        }
+    }
+}

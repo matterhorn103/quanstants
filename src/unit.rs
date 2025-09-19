@@ -287,3 +287,19 @@ impl Div for CompoundUnit {
         CompoundUnit::new(&new_factors)
     }
 }
+
+#[cfg(feature = "python")]
+pub mod py {
+    use super::*;
+    use pyo3::prelude::*;
+
+    #[pyclass(frozen, eq, name = "Unit")]
+    #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+    pub struct PyUnit(Unit);
+
+    impl From<Unit> for PyUnit {
+        fn from(value: Unit) -> Self {
+            PyUnit(value)
+        }
+    }
+}

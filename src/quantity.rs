@@ -90,3 +90,9 @@ impl Quantity {
         self.unit.dimensions()
     }
 }
+
+#[cfg(feature = "python")]
+pub mod py {
+    use super::*;
+    use pyo3::prelude::*;
+}

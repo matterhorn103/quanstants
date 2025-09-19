@@ -1,7 +1,7 @@
 from quanstants._quanstants import (
     Frac,
     Dimensions,
-    Unit128,
+    UnitId,
     Prefix,
     Unit,
     Context,
@@ -10,7 +10,7 @@ from quanstants._quanstants import (
 __all__ = [
     Frac,
     Dimensions,
-    Unit128,
+    UnitId,
     Prefix,
     Unit,
     Context,

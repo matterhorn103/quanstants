@@ -96,3 +96,36 @@ impl From<Unit128> for u128 {
         (value.0 as u128) << 64 | value.1 as u128
     }
 }
+
+
+#[cfg(feature = "python")]
+pub mod py {
+    use super::*;
+    use pyo3::{prelude::*, types::PyType};
+
+    #[pyclass(name = "UnitId")]
+    pub struct PyUnitId(Unit128);
+
+    #[pymethods]
+    impl PyUnitId {
+        #[new]
+        fn new(num: u64, dim: u64) -> Self {
+            PyUnitId(Unit128(num, dim))
+        }
+
+        #[classmethod]
+        #[pyo3(name = "from_hex")]
+        fn py_from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
+            Ok(PyUnitId(Unit128::from_hex(x)?))
+        }
+
+        #[pyo3(name = "to_hex")]
+        fn py_to_hex(&self) -> String {
+            self.0.to_hex()
+        }
+
+        fn __str__(&self) -> String {
+            self.0.to_hex()
+        }
+    }
+}

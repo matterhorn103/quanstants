@@ -1,12 +1,15 @@
 use std::fmt::Debug;
 use std::ops::{Div, Mul};
 
-use crate::dimensions::Dimensions;
-use crate::fraction::Frac;
-use crate::id::Unit128;
-use crate::prefix::Prefix;
+use pyo3::prelude::*;
+
+use crate::py::dimensions::Dimensions;
+use crate::py::fraction::Frac;
+use crate::py::id::Unit128;
+use crate::py::prefix::Prefix;
 
 
+#[pyclass(frozen, eq)]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Unit {
     Base(BaseUnit),
@@ -70,6 +73,7 @@ impl LinearFactor {
 }
 
 
+#[pyclass(frozen)]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct BaseUnit {
     symbol: String,
@@ -151,6 +155,7 @@ impl From<BaseUnit> for Unit {
 }
 
 
+#[pyclass(frozen)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct UnitlessUnit;
 
@@ -184,6 +189,7 @@ impl UnitlessUnit {
 }
 
 
+#[pyclass(frozen)]
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct DerivedUnit {
     symbol: String,
@@ -233,6 +239,7 @@ impl DerivedUnit {
 }
 
 
+#[pyclass(frozen)]
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct CompoundUnit {
     pub factors: Vec<LinearFactor>,

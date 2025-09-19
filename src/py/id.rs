@@ -1,6 +1,8 @@
 use std::num::ParseIntError;
 
-use crate::{dimensions::Dimensions, fraction::Frac};
+use pyo3::{pyclass, pymethods, types::PyType, Bound, PyResult};
+
+use crate::py::{dimensions::Dimensions, fraction::Frac};
 
 // A UnitId consists of two 64-bit parts:
 //   1. A 64-bit number in a custom format corresponding roughly to scientific notation
@@ -11,6 +13,7 @@ use crate::{dimensions::Dimensions, fraction::Frac};
 
 // TODO proper hashing
 
+#[pyclass(frozen, eq, hash)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Unit128(pub u64, pub u64);
 
@@ -94,5 +97,28 @@ impl From<u128> for Unit128 {
 impl From<Unit128> for u128 {
     fn from(value: Unit128) -> Self {
         (value.0 as u128) << 64 | value.1 as u128
+    }
+}
+
+#[pymethods]
+impl Unit128 {
+    #[new]
+    fn py_new(num: u64, dim: u64) -> Self {
+        Unit128(num, dim)
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_hex")]
+    fn py_from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
+        Ok(Self::from_hex(x)?)
+    }
+
+    #[pyo3(name = "to_hex")]
+    fn py_to_hex(&self) -> String {
+        self.to_hex()
+    }
+
+    fn __str__(&self) -> String {
+        self.to_hex()
     }
 }

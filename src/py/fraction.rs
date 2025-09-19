@@ -2,6 +2,9 @@ use std::{num::ParseIntError, ops::{Add, Deref, Div, Mul, Neg, Sub}};
 //use derive_more::{Add, Sub, Mul, Div};
 use num_rational::Ratio;
 
+use pyo3::{pyclass, pymethods, types::PyType, Bound, PyResult};
+
+#[pyclass]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct Frac(Ratio<i8>);
 
@@ -168,5 +171,59 @@ impl Div<i8> for Frac {
     type Output = Self;
     fn div(self, other: i8) -> Self {
         Self(self.0 / other)
+    }
+}
+
+#[pymethods]
+impl Frac {
+    /// Panics if the denominator is zero
+    #[new]
+    fn py_new(numerator: i8, denominator: i8) -> Self {
+        if denominator == 0 {
+            panic!()
+        };
+        Frac(Ratio::new(numerator, denominator))
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Frac({}, {})", self.0.numer(), self.0.denom())
+    }
+
+    fn __str__(&self) -> String {
+        self.0.to_string()
+    }
+
+    fn __eq__(&self, other: &Self) -> bool {
+        self == other
+    }
+
+    fn numer(&self) -> i8 {
+        *self.0.numer()
+    }
+
+    fn denom(&self) -> i8 {
+        *self.0.denom()
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_byte")]
+    fn py_from_byte(_cls: &Bound<'_, PyType>, b: u8) -> Self {
+        Self::from_byte(b)
+    }
+
+    #[pyo3(name = "to_byte")]
+    fn py_to_byte(&self) -> u8 {
+        self.to_byte()
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_hex")]
+    fn py_from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
+        Ok(Self::from_hex(x)?)
+    }
+
+    #[pyo3(name = "to_hex")]
+    fn py_to_hex(&self) -> String {
+        self.to_hex()
     }
 }

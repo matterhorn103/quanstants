@@ -1,8 +1,12 @@
 use std::fmt;
 use std::ops::{Div, Mul};
 
-use crate::fraction::Frac;
+use pyo3::prelude::*;
 
+use crate::py::fraction::Frac;
+
+
+#[pyclass(str, frozen, eq, hash)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
@@ -93,5 +97,31 @@ impl fmt::Display for Dimensions {
             string
         };
         write!(f, "{output}")
+    }
+}
+
+#[pymethods]
+impl Dimensions {
+    #[new]
+    #[allow(non_snake_case)]
+    fn py_new(T: i8, L: i8, M: i8, I: i8, Θ: i8, N: i8, J: i8) -> Self {
+        Self::new(T, L, M, I, Θ, N, J)
+    }
+
+    fn __repr__(&self) -> String {
+        self.to_string()
+    }
+
+    fn __mul__(&self, other: Self) -> Self {
+        self.mul(other)
+    }
+
+    fn __truediv__(&self, other: Self) -> Self {
+        self.div(other)
+    }
+
+    #[pyo3(name = "pow")]
+    fn py_pow(&self, other: i8) -> Self {
+        self.pow(other.into())
     }
 }

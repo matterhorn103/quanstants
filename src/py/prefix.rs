@@ -1,5 +1,8 @@
 #![allow(non_camel_case_types)]
 
+use pyo3::prelude::*;
+
+#[pyclass(eq, eq_int)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Prefix {
     // Metric
@@ -38,6 +41,7 @@ pub enum Prefix {
     yobi,
 }
 
+#[pymethods]
 impl Prefix {
     pub fn symbol(&self) -> String {
         match self {

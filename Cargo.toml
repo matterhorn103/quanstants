@@ -21,4 +21,6 @@ features = ["abi3-py310"]
 #features = ["add", "mul"]
 
 [features]
+default = []
+python = ["extension-module"]
 extension-module = ["pyo3/extension-module"]

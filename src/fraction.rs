@@ -1,5 +1,4 @@
 use std::{num::ParseIntError, ops::{Add, Deref, Div, Mul, Neg, Sub}};
-//use derive_more::{Add, Sub, Mul, Div};
 use num_rational::Ratio;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
@@ -37,7 +36,7 @@ impl Frac {
         output
     }
 
-    pub fn from_byte(b: u8) -> Self {
+    pub fn from_bits(b: u8) -> Self {
         if b < 32 {
             Self::from((b & 0x0F) as i8)
         } else {
@@ -52,7 +51,7 @@ impl Frac {
         }
     }
 
-    pub fn to_byte(&self) -> u8 {
+    pub fn to_bits(&self) -> u8 {
         if self.is_zero() {
             0
         } else {
@@ -64,16 +63,6 @@ impl Frac {
             };
             (den as u8) << 4 | num
         }
-    }
-
-    pub fn from_hex(x: &str) -> Result<Self, ParseIntError> {
-        let byte = u8::from_str_radix(x, 16)?;
-        Ok(Self::from_byte(byte))
-    }
-
-    pub fn to_hex(&self) -> String {
-        let byte = self.to_byte();
-        format!("{:02X}", byte)
     }
 }
 
@@ -209,21 +198,13 @@ pub(crate) mod py {
         }
 
         #[classmethod]
-        fn from_byte(_cls: &Bound<'_, PyType>, b: u8) -> Self {
-            PyFrac(Frac::from_byte(b))
+        fn from_bits(_cls: &Bound<'_, PyType>, b: u8) -> Self {
+            PyFrac(Frac::from_bits(b))
         }
 
-        fn to_byte(&self) -> u8 {
-            self.0.to_byte()
-        }
-
-        #[classmethod]
-        fn from_hex(_cls: &Bound<'_, PyType>, x: &str) -> PyResult<Self> {
-            Ok(PyFrac(Frac::from_hex(x)?))
-        }
-
-        fn to_hex(&self) -> String {
-            self.0.to_hex()
+        #[allow(clippy::wrong_self_convention)]
+        fn to_bits(&self) -> u8 {
+            self.0.to_bits()
         }
     }
 }

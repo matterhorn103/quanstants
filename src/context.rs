@@ -79,7 +79,7 @@ pub(crate) mod py {
         }
 
         fn unit_by_id(&self, id: u128) -> PyUnit {
-            self.0.unit_by_id(&id.into()).into()
+            self.0.unit_by_id(&Unit128::from_bits(id)).into()
         }
 
         #[getter]

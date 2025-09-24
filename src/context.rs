@@ -52,7 +52,7 @@ impl Context {
 }
 
 #[cfg(feature = "python")]
-pub mod py {
+pub(crate) mod py {
     use crate::unit::py::PyUnit;
 
     use super::*;

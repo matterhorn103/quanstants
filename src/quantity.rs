@@ -92,7 +92,7 @@ impl Quantity {
 }
 
 #[cfg(feature = "python")]
-pub mod py {
+pub(crate) mod py {
     use super::*;
     use pyo3::prelude::*;
 }

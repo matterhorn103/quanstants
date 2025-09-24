@@ -213,7 +213,7 @@ yobi = Prefix("Yi", "yobi", 1024**8)
 */
 
 #[cfg(feature = "python")]
-pub mod py {
+pub(crate) mod py {
     use super::*;
     use pyo3::prelude::*;
 

@@ -172,7 +172,7 @@ impl Div<i8> for Frac {
 }
 
 #[cfg(feature = "python")]
-pub mod py {
+pub(crate) mod py {
     use super::*;
     use pyo3::{prelude::*, types::PyType};
 

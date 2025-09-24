@@ -29,7 +29,8 @@ impl Dimensions {
         }
     }
 
-    pub fn pow(&self, exp: Frac) -> Dimensions {
+    pub fn pow<T: Into<Frac>>(&self, exponent: T) -> Dimensions {
+        let exp: Frac = exponent.into();
         Dimensions {
             T: self.T * exp,
             L: self.L * exp,
@@ -126,7 +127,7 @@ pub mod py {
         }
 
         fn pow(&self, other: i8) -> Self {
-            PyDimensions(self.0.pow(other.into()))
+            PyDimensions(self.0.pow(other))
         }
     }
 }
@@ -159,6 +160,6 @@ mod tests {
     #[test]
     fn pow() {
         let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        assert_eq!(dim1.pow(2.into()), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
+        assert_eq!(dim1.pow(2), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
     }
 }

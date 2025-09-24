@@ -130,3 +130,35 @@ pub mod py {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_dimensions() {
+        let dim1 = Dimensions::default();
+        assert_eq!(dim1, Dimensions::new(0, 0, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
+    fn mul() {
+        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
+        assert_eq!(dim1 * dim2, Dimensions::new(2, 1, 0, 4, 0, 0, 0))
+    }
+
+    #[test]
+    fn div() {
+        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        let dim2 = Dimensions::new(2, 0, 0, 2, 0, 0, 0);
+        assert_eq!(dim1 / dim2, Dimensions::new(-2, 1, 0, 0, 0, 0, 0))
+    }
+
+    #[test]
+    fn pow() {
+        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        assert_eq!(dim1.pow(2.into()), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
+    }
+}

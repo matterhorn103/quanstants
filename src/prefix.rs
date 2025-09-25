@@ -1,5 +1,7 @@
 #![allow(non_camel_case_types)]
 
+use std::fmt;
+
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Prefix {
     // Metric
@@ -151,6 +153,12 @@ impl Prefix {
     }
 }
 
+impl fmt::Display for Prefix {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.symbol())
+    }
+}
+
 /*
 quecto = Prefix("q", "quecto", "1E-30")
 ronto  = Prefix("r", "ronto", "1E-27")
@@ -220,4 +228,11 @@ pub(crate) mod py {
     #[pyclass(name = "Prefix")]
     #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
     pub struct PyPrefix(Prefix);
+
+    #[pymethods]
+    impl PyPrefix {
+        fn __str__(&self) -> String {
+            self.0.to_string()
+        }
+    }
 }

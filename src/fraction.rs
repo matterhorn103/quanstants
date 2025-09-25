@@ -176,9 +176,9 @@ pub(crate) mod py {
 
     #[pymethods]
     impl PyFrac {
-        /// Panics if the denominator is zero
         #[new]
         fn new(numerator: i8, denominator: i8) -> Self {
+            // TODO raise an error if denominator is zero
             PyFrac(Frac::new(numerator, denominator))
         }
 

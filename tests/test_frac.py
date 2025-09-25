@@ -28,50 +28,18 @@ class TestFrac:
         f = Frac(3, 2)
         assert repr(f) == "Frac(3, 2)"
 
-    def test_frac_from_bits0(self):
-        f = Frac(0, 1)
-        assert f == Frac.from_bits(0x00)
+    def test_frac_from_bits(self):
+        assert Frac(0, 1) == Frac.from_bits(0x00)
+        assert Frac(2, 1) == Frac.from_bits(0x12)
+        assert Frac(1, 2) == Frac.from_bits(0x21)
+        assert Frac(-1, 1) == Frac.from_bits(0xF1)
+        assert Frac(-2, 1) == Frac.from_bits(0xF2)
+        assert Frac(-1, 2) == Frac.from_bits(0xE1)
 
-    def test_frac_from_bits1(self):
-        f = Frac(2, 1)
-        assert f == Frac.from_bits(0x12)
-
-    def test_frac_from_bits2(self):
-        f = Frac(1, 2)
-        assert f == Frac.from_bits(0x21)
-    
-    def test_frac_from_bits3(self):
-        f = Frac(-1, 1)
-        assert f == Frac.from_bits(0xF1)
-
-    def test_frac_from_bits4(self):
-        f = Frac(-2, 1)
-        assert f == Frac.from_bits(0xF2)
-
-    def test_frac_from_bits5(self):
-        f = Frac(-1, 2)
-        assert f == Frac.from_bits(0xE1)
-
-    def test_frac_to_bits0(self):
-        f = Frac(0, 1)
-        assert f.to_bits() == 0x00
-
-    def test_frac_to_bits1(self):
-        f = Frac(2, 1)
-        assert f.to_bits() == 0x12
-
-    def test_frac_to_bits2(self):
-        f = Frac(1, 2)
-        assert f.to_bits() == 0x21
-    
-    def test_frac_to_bits3(self):
-        f = Frac(-1, 1)
-        assert f.to_bits() == 0xF1
-
-    def test_frac_to_bits4(self):
-        f = Frac(-2, 1)
-        assert f.to_bits() == 0xF2
-
-    def test_frac_to_bits5(self):
-        f = Frac(-1, 2)
-        assert f.to_bits() == 0xE1
+    def test_frac_to_bits(self):
+        assert Frac(0, 1).to_bits() == 0x00
+        assert Frac(2, 1).to_bits() == 0x12
+        assert Frac(1, 2).to_bits() == 0x21
+        assert Frac(-1, 1).to_bits() == 0xF1
+        assert Frac(-2, 1).to_bits() == 0xF2
+        assert Frac(-1, 2).to_bits() == 0xE1

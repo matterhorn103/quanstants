@@ -107,7 +107,7 @@ pub(crate) mod py {
         }
 
         fn __str__(&self) -> String {
-            format!("UnitId({})", self.0.to_string())
+            format!("UnitId({})", self.0)
         }
 
         #[classmethod]

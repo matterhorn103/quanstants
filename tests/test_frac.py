@@ -22,7 +22,7 @@ class TestFrac:
     def test_frac_str(self):
         f = Frac(1, 2)
         print(f)
-        assert str(f) == "1/2"
+        assert str(f) == "1⁄2"
 
     def test_frac_repr(self):
         f = Frac(3, 2)

@@ -118,6 +118,10 @@ pub mod py {
             self.0.to_string()
         }
 
+        fn __eq__(&self, other: &Self) -> bool {
+            self == other
+        }
+
         fn __mul__(&self, other: Self) -> Self {
             PyDimensions(self.0.mul(other.0))
         }

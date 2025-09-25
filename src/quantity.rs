@@ -3,17 +3,28 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
+use num_traits;
+
 use crate::{dimensions::Dimensions, unit::Unit};
 
-#[derive(Clone, PartialEq, PartialOrd, Debug)]
-pub struct Quantity {
-    pub number: f64,
+pub trait Numeric:
+    num_traits::Num + num_traits::NumOps + std::fmt::Display
+{}
+
+impl<T> Numeric for T 
+where 
+    T: num_traits::Num + num_traits::NumOps + std::fmt::Display
+{}
+
+#[derive(Clone, PartialEq, PartialOrd, Hash, Debug)]
+pub struct Quantity<T: Numeric> {
+    pub number: T,
     pub unit: Unit,
-    pub uncertainty: f64,
+    pub uncertainty: T,
 }
 
-impl Quantity {
-    pub fn new(number: f64, unit: Unit, uncertainty: f64) -> Self {
+impl<T: Numeric> Quantity<T> {
+    pub fn new(number: T, unit: Unit, uncertainty: T) -> Self {
         Self {
             number,
             unit,
@@ -22,30 +33,30 @@ impl Quantity {
     }
 }
 
-impl fmt::Display for Quantity {
+impl<T: Numeric> fmt::Display for Quantity<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.number, self.unit.symbol())
     }
 }
 
-impl Add for Quantity {
+impl<T: Numeric> Add for Quantity<T> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         if self.unit == rhs.unit {
-            Self::new(self.number + rhs.number, self.unit, 0.0)
+            Self::new(self.number + rhs.number, self.unit, self.uncertainty)
         } else {
             panic!()
         }
     }
 }
 
-impl Sub for Quantity {
+impl<T: Numeric> Sub for Quantity<T> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         if self.unit == rhs.unit {
-            Self::new(self.number - rhs.number, self.unit, 0.0)
+            Self::new(self.number - rhs.number, self.unit, self.uncertainty)
         } else {
             panic!()
         }
@@ -76,7 +87,7 @@ impl Sub for Quantity {
 //    }
 //}
 
-impl Quantity {
+impl<T: Numeric> Quantity<T> {
     //pub fn pow(&self, exp: i32) -> Self {
     //    Self::new(self.number.powi(exp), self.unit.pow(exp), 0.0)
     //}
@@ -88,6 +99,33 @@ impl Quantity {
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
+    use crate::unit::py::PyUnit;
+
     use super::*;
     use pyo3::prelude::*;
+    use rust_decimal::Decimal;
+
+    #[pyclass(name = "Quantity")]
+    #[derive(Clone, PartialEq, PartialOrd, Hash, Debug)]
+    pub struct PyQuantity(Quantity<Decimal>);
+
+    #[pymethods]
+    impl PyQuantity {
+        #[new]
+        fn new(number: Decimal, unit: PyUnit, uncertainty: Decimal) -> Self {
+            PyQuantity(Quantity::new(number, unit.into_inner(), uncertainty))
+        }
+    }
+
+    #[pyclass(name = "FQuantity")]
+    #[derive(Clone, PartialEq, PartialOrd, Debug)]
+    pub struct PyFQuantity(Quantity<f64>);
+
+    #[pymethods]
+    impl PyFQuantity {
+        #[new]
+        fn new(number: f64, unit: PyUnit, uncertainty: f64) -> Self {
+            PyFQuantity(Quantity::new(number, unit.into_inner(), uncertainty))
+        }
+    }
 }

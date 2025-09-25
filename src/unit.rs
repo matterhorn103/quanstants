@@ -302,6 +302,12 @@ pub(crate) mod py {
     #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
     pub struct PyUnit(Unit);
 
+    impl PyUnit {
+        pub fn into_inner(self) -> Unit {
+            self.0
+        }
+    }
+
     impl From<Unit> for PyUnit {
         fn from(value: Unit) -> Self {
             PyUnit(value)

@@ -26,28 +26,28 @@ impl Context {
         self.unit_reg.get_by_name("second")
     }
 
-    fn s(&self) -> Unit {
-        self.second()
-    }
-
     fn metre(&self) -> Unit {
         self.unit_reg.get_by_name("metre")
-    }
-
-    fn meter(&self) -> Unit {
-        self.metre()
-    }
-
-    fn m(&self) -> Unit {
-        self.metre()
     }
 
     fn kilogram(&self) -> Unit {
         self.unit_reg.get_by_name("kilogram")
     }
 
-    fn kg(&self) -> Unit {
-        self.kilogram()
+    fn ampere(&self) -> Unit {
+        self.unit_reg.get_by_name("ampere")
+    }
+
+    fn kelvin(&self) -> Unit {
+        self.unit_reg.get_by_name("kelvin")
+    }
+
+    fn mole(&self) -> Unit {
+        self.unit_reg.get_by_name("mole")
+    }
+
+    fn candela(&self) -> Unit {
+        self.unit_reg.get_by_name("candela")
     }
 }
 
@@ -62,6 +62,7 @@ pub(crate) mod py {
     #[derive(Debug, Default)]
     pub struct PyContext(Context);
 
+    #[allow(non_snake_case)]
     #[pymethods]
     impl PyContext {
         #[new]
@@ -84,37 +85,82 @@ pub(crate) mod py {
 
         #[getter]
         fn second(&self) -> PyUnit {
-            self.0.unit_by_name("second").into()
+            self.0.second().into()
         }
 
         #[getter]
         fn s(&self) -> PyUnit {
-            self.second()
+            self.0.second().into()
         }
 
         #[getter]
         fn metre(&self) -> PyUnit {
-            self.0.unit_by_name("metre").into()
+            self.0.metre().into()
         }
 
         #[getter]
         fn meter(&self) -> PyUnit {
-            self.metre()
+            self.0.metre().into()
         }
 
         #[getter]
         fn m(&self) -> PyUnit {
-            self.metre()
+            self.0.metre().into()
         }
 
         #[getter]
         fn kilogram(&self) -> PyUnit {
-            self.0.unit_by_name("kilogram").into()
+            self.0.kilogram().into()
         }
 
         #[getter]
         fn kg(&self) -> PyUnit {
-            self.kilogram()
+            self.0.kilogram().into()
+        }
+
+        #[getter]
+        fn ampere(&self) -> PyUnit {
+            self.0.ampere().into()
+        }
+
+        #[getter]
+        fn amp(&self) -> PyUnit {
+            self.0.ampere().into()
+        }
+
+        #[getter]
+        fn A(&self) -> PyUnit {
+            self.0.ampere().into()
+        }
+
+        #[getter]
+        fn kelvin(&self) -> PyUnit {
+            self.0.kelvin().into()
+        }
+
+        #[getter]
+        fn K(&self) -> PyUnit {
+            self.0.kelvin().into()
+        }
+
+        #[getter]
+        fn mole(&self) -> PyUnit {
+            self.0.mole().into()
+        }
+
+        #[getter]
+        fn mol(&self) -> PyUnit {
+            self.0.mole().into()
+        }
+
+        #[getter]
+        fn candela(&self) -> PyUnit {
+            self.0.candela().into()
+        }
+
+        #[getter]
+        fn cd(&self) -> PyUnit {
+            self.0.candela().into()
         }
     }
 

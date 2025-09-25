@@ -136,7 +136,6 @@ pub mod py {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

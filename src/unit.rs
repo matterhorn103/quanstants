@@ -6,7 +6,6 @@ use crate::fraction::Frac;
 use crate::id::Unit128;
 use crate::prefix::Prefix;
 
-
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Unit {
     Base(BaseUnit),
@@ -32,17 +31,16 @@ impl Unit {
     pub fn name(&self) -> String {
         match self {
             Unit::Base(base_unit) => base_unit.name(),
-            _ => String::from("oops")
+            _ => String::from("oops"),
         }
     }
 
-//    pub fn preceding_space(&self) -> bool;
-//
+    //    pub fn preceding_space(&self) -> bool;
+    //
     pub fn dimensions(&self) -> Dimensions {
         Dimensions::default()
     }
 }
-
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub enum LinearFactor {
@@ -68,7 +66,6 @@ impl LinearFactor {
         }
     }
 }
-
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct BaseUnit {
@@ -104,11 +101,7 @@ pub struct BaseUnit {
 //}
 
 impl BaseUnit {
-    pub fn new(
-        symbol: String,
-        name: String,
-        dimensions: Dimensions,
-    ) -> Self {
+    pub fn new(symbol: String, name: String, dimensions: Dimensions) -> Self {
         Self {
             symbol,
             name,
@@ -138,9 +131,10 @@ impl Mul for BaseUnit {
     type Output = CompoundUnit;
 
     fn mul(self, rhs: Self) -> CompoundUnit {
-        CompoundUnit::new(
-            &[LinearFactor::Base(self, 1.into()), LinearFactor::Base(rhs, 1.into())]
-        )
+        CompoundUnit::new(&[
+            LinearFactor::Base(self, 1.into()),
+            LinearFactor::Base(rhs, 1.into()),
+        ])
     }
 }
 
@@ -149,7 +143,6 @@ impl From<BaseUnit> for Unit {
         Unit::Base(value)
     }
 }
-
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct UnitlessUnit;
@@ -179,10 +172,9 @@ impl UnitlessUnit {
     }
 
     fn dimensions(&self) -> Dimensions {
-        Dimensions::new(0,0,0,0,0,0,0)
+        Dimensions::new(0, 0, 0, 0, 0, 0, 0)
     }
 }
-
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct DerivedUnit {
@@ -228,10 +220,13 @@ impl DerivedUnit {
     }
 
     fn dimensions(&self) -> Dimensions {
-        self.def_factors.iter().map(|x| x.dimensions()).reduce(|acc, d| acc * d).unwrap()
+        self.def_factors
+            .iter()
+            .map(|x| x.dimensions())
+            .reduce(|acc, d| acc * d)
+            .unwrap()
     }
 }
-
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct CompoundUnit {
@@ -240,13 +235,19 @@ pub struct CompoundUnit {
 
 impl CompoundUnit {
     pub fn new(factors: &[LinearFactor]) -> Self {
-        Self {factors: factors.to_vec()}
+        Self {
+            factors: factors.to_vec(),
+        }
     }
 }
 
 impl CompoundUnit {
     fn symbol(&self) -> String {
-        self.factors.iter().map(|x| x.symbol()).reduce(|acc, s| acc + " " + &s).unwrap()
+        self.factors
+            .iter()
+            .map(|x| x.symbol())
+            .reduce(|acc, s| acc + " " + &s)
+            .unwrap()
     }
 
     fn name(&self) -> String {
@@ -258,7 +259,11 @@ impl CompoundUnit {
     }
 
     fn dimensions(&self) -> Dimensions {
-        self.factors.iter().map(|x| x.dimensions()).reduce(|acc, d| acc * d).unwrap()
+        self.factors
+            .iter()
+            .map(|x| x.dimensions())
+            .reduce(|acc, d| acc * d)
+            .unwrap()
     }
 }
 

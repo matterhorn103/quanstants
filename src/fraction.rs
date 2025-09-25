@@ -1,5 +1,9 @@
-use std::{fmt, num::ParseIntError, ops::{Add, Deref, Div, Mul, Neg, Sub}};
 use num_rational::Ratio;
+use std::{
+    fmt,
+    num::ParseIntError,
+    ops::{Add, Deref, Div, Mul, Neg, Sub},
+};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct Frac(Ratio<i8>);
@@ -103,7 +107,7 @@ impl PartialEq<i8> for Frac {
 
 impl Neg for Frac {
     type Output = Self;
-    
+
     fn neg(self) -> Self::Output {
         Self(-self.0)
     }
@@ -183,7 +187,7 @@ pub(crate) mod py {
         }
 
         fn __repr__(&self) -> String {
-            format!("Frac({}, {})", self.0.0.numer(), self.0.0.denom())
+            format!("Frac({}, {})", self.0 .0.numer(), self.0 .0.denom())
         }
 
         fn __str__(&self) -> String {

@@ -1,14 +1,13 @@
 #![allow(mixed_script_confusables)]
 
-pub mod fraction;
+pub mod context;
 pub mod dimensions;
+pub mod fraction;
 pub mod id;
 pub mod prefix;
-pub mod unit;
 pub mod quantity;
 pub mod reg;
-pub mod context;
-
+pub mod unit;
 
 #[cfg(feature = "python")]
 mod bindings {

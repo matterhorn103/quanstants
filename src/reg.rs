@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{dimensions::Dimensions, id::Unit128, unit::{BaseUnit, Unit}};
+use crate::{
+    dimensions::Dimensions,
+    id::Unit128,
+    unit::{BaseUnit, Unit},
+};
 
 #[derive(Debug)]
 pub struct UnitRegistry {
@@ -56,14 +60,16 @@ impl UnitRegistry {
                 String::from("s"),
                 String::from("second"),
                 Dimensions::new(1, 0, 0, 0, 0, 0, 0),
-            ).into()
+            )
+            .into(),
         );
         self.add_with_aliases(
             BaseUnit::new(
                 String::from("m"),
                 String::from("metre"),
                 Dimensions::new(0, 1, 0, 0, 0, 0, 0),
-            ).into(),
+            )
+            .into(),
             vec![String::from("meter")],
         );
         self.add(
@@ -71,7 +77,8 @@ impl UnitRegistry {
                 String::from("kg"),
                 String::from("kilogram"),
                 Dimensions::new(0, 0, 1, 0, 0, 0, 0),
-            ).into()
+            )
+            .into(),
         );
     }
 }

@@ -23,39 +23,47 @@ impl Unit128 {
         dimensions: Dimensions,
         least_significant_byte: u8,
     ) -> Self {
-        let num = exponent as u64 |
-                (if base == 10 { 0 } else { base as u64}) << 8 |
-                (if sign.is_positive() { 0 } else { 1 }) << 15 |
-                (mantissa - 1) << 16;
-        let dim = least_significant_byte as u64 |
-            (dimensions.T.to_bits() as u64) << 8 |
-            (dimensions.L.to_bits() as u64) << 16 |
-            (dimensions.M.to_bits() as u64) << 24 |
-            (dimensions.I.to_bits() as u64) << 32 |
-            (dimensions.Θ.to_bits() as u64) << 40 |
-            (dimensions.N.to_bits() as u64) << 48 |
-            (dimensions.J.to_bits() as u64) << 56;
+        let num = exponent as u64
+            | (if base == 10 { 0 } else { base as u64 }) << 8
+            | (if sign.is_positive() { 0 } else { 1 }) << 15
+            | (mantissa - 1) << 16;
+        let dim = least_significant_byte as u64
+            | (dimensions.T.to_bits() as u64) << 8
+            | (dimensions.L.to_bits() as u64) << 16
+            | (dimensions.M.to_bits() as u64) << 24
+            | (dimensions.I.to_bits() as u64) << 32
+            | (dimensions.Θ.to_bits() as u64) << 40
+            | (dimensions.N.to_bits() as u64) << 48
+            | (dimensions.J.to_bits() as u64) << 56;
         Self(num, dim)
     }
 
     pub fn sign(&self) -> i8 {
         let b = ((self.0 >> 15) & 0x01) as u8;
-        if b == 0 { 1 } else { -1 }
+        if b == 0 {
+            1
+        } else {
+            -1
+        }
     }
 
     pub fn mantissa(&self) -> u64 {
         (self.0 >> 16) + 1
     }
-    
+
     pub fn base(&self) -> u8 {
         let raw_base = ((self.0 >> 8) & 0x7F) as u8;
-        if raw_base == 0 { 10 } else { raw_base }
+        if raw_base == 0 {
+            10
+        } else {
+            raw_base
+        }
     }
-    
+
     pub fn exponent(&self) -> i8 {
         (self.0 & 0xFF) as i8
     }
-    
+
     pub fn dimensions(&self) -> Dimensions {
         Dimensions {
             T: Frac::from_bits(((self.1 >> 8) & 0xFF) as u8),
@@ -67,7 +75,7 @@ impl Unit128 {
             J: Frac::from_bits(((self.1 >> 56) & 0xFF) as u8),
         }
     }
-    
+
     pub fn least_significant_byte(&self) -> u8 {
         (self.1 & 0xFF) as u8
     }
@@ -89,7 +97,6 @@ impl fmt::Display for Unit128 {
         write!(f, "{:X}", self.to_bits())
     }
 }
-
 
 #[cfg(feature = "python")]
 pub(crate) mod py {

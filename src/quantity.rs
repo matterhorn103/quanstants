@@ -1,4 +1,7 @@
-use std::{fmt, ops::{Add, Div, Mul, Sub}};
+use std::{
+    fmt,
+    ops::{Add, Div, Mul, Sub},
+};
 
 use crate::{dimensions::Dimensions, unit::Unit};
 
@@ -30,11 +33,7 @@ impl Add for Quantity {
 
     fn add(self, rhs: Self) -> Self::Output {
         if self.unit == rhs.unit {
-            Self::new(
-                self.number + rhs.number,
-                self.unit,
-                0.0,
-            )
+            Self::new(self.number + rhs.number, self.unit, 0.0)
         } else {
             panic!()
         }
@@ -46,11 +45,7 @@ impl Sub for Quantity {
 
     fn sub(self, rhs: Self) -> Self::Output {
         if self.unit == rhs.unit {
-            Self::new(
-                self.number - rhs.number,
-                self.unit,
-                0.0,
-            )
+            Self::new(self.number - rhs.number, self.unit, 0.0)
         } else {
             panic!()
         }

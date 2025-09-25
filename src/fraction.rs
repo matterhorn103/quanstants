@@ -1,4 +1,4 @@
-use std::{num::ParseIntError, ops::{Add, Deref, Div, Mul, Neg, Sub}};
+use std::{fmt, num::ParseIntError, ops::{Add, Deref, Div, Mul, Neg, Sub}};
 use num_rational::Ratio;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
@@ -13,9 +13,7 @@ impl Deref for Frac {
 
 impl Frac {
     pub fn new(numerator: i8, denominator: i8) -> Self {
-        if denominator == 0 {
-            panic!()
-        };
+        // Like Ratio::new(), panics if the denominator is zero
         Frac(Ratio::new(numerator, denominator))
     }
 
@@ -80,7 +78,14 @@ fn char_to_superscript(character: char) -> char {
         '9' => '⁹',
         '0' => '⁰',
         '-' => '⁻',
+        '⁄' => '⁄',
         _ => panic!(),
+    }
+}
+
+impl fmt::Display for Frac {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}⁄{}", self.numer(), self.denom())
     }
 }
 
@@ -206,5 +211,290 @@ pub(crate) mod py {
         fn to_bits(&self) -> u8 {
             self.0.to_bits()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let f = Frac::new(3, 4);
+        assert_eq!(*f.numer(), 3);
+        assert_eq!(*f.denom(), 4);
+    }
+
+    #[test]
+    fn test_new_neg() {
+        let f = Frac::new(-3, 4);
+        assert_eq!(*f.numer(), -3);
+        assert_eq!(*f.denom(), 4);
+    }
+
+    #[test]
+    fn test_new_normalized_neg() {
+        let f = Frac::new(3, -4); // Sign should move to numerator (that's how Ratio normalizes)
+        assert_eq!(*f.numer(), -3);
+        assert_eq!(*f.denom(), 4);
+    }
+
+    #[test]
+    fn test_new_reduced() {
+        let f = Frac::new(6, 8); // Should be reduced to 3/4
+        assert_eq!(*f.numer(), 3);
+        assert_eq!(*f.denom(), 4);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_new_zero_denominator() {
+        Frac::new(1, 0);
+    }
+
+    #[test]
+    fn test_is_zero() {
+        assert!(Frac::new(0, 1).is_zero());
+        assert!(Frac::new(0, 5).is_zero());
+        assert!(!Frac::new(1, 2).is_zero());
+        assert!(!Frac::new(-1, 2).is_zero());
+    }
+
+    #[test]
+    fn test_is_negative() {
+        assert!(Frac::new(-1, 2).is_negative());
+        assert!(Frac::new(1, -2).is_negative());
+        assert!(!Frac::new(1, 2).is_negative());
+        assert!(!Frac::new(0, 1).is_negative());
+        assert!(!Frac::new(-2, -3).is_negative());
+    }
+
+    #[test]
+    fn test_from_i8() {
+        let f = Frac::from(5);
+        assert_eq!(*f.numer(), 5);
+        assert_eq!(*f.denom(), 1);
+
+        let f = Frac::from(-3);
+        assert_eq!(*f.numer(), -3);
+        assert_eq!(*f.denom(), 1);
+
+        let f = Frac::from(0);
+        assert!(f.is_zero());
+    }
+
+    #[test]
+    fn test_partial_eq_i8() {
+        assert!(Frac::new(6, 2) == 3);
+        assert!(Frac::new(-4, 2) == -2);
+        assert!(Frac::new(0, 1) == 0);
+        assert!((Frac::new(3, 2) != 1));
+        assert!((Frac::new(5, 2) != 2));
+    }
+
+    #[test]
+    fn test_neg() {
+        let f = Frac::new(3, 4);
+        let neg_f = -f;
+        assert_eq!(*neg_f.numer(), -3);
+        assert_eq!(*neg_f.denom(), 4);
+
+        let f = Frac::new(-5, 2);
+        let neg_f = -f;
+        assert_eq!(*neg_f.numer(), 5);
+        assert_eq!(*neg_f.denom(), 2);
+    }
+
+    #[test]
+    fn test_add() {
+        let a = Frac::new(1, 2);
+        let b = Frac::new(1, 3);
+        let result = a + b;
+        assert_eq!(result, Frac::new(5, 6));
+
+        let a = Frac::new(3, 4);
+        let result = a + 2;
+        assert_eq!(result, Frac::new(11, 4));
+    }
+
+    #[test]
+    fn test_sub() {
+        let a = Frac::new(3, 4);
+        let b = Frac::new(1, 4);
+        let result = a - b;
+        assert_eq!(result, Frac::new(1, 2));
+
+        let a = Frac::new(5, 2);
+        let result = a - 2;
+        assert_eq!(result, Frac::new(1, 2));
+    }
+
+    #[test]
+    fn test_mul() {
+        let a = Frac::new(2, 3);
+        let b = Frac::new(3, 4);
+        let result = a * b;
+        assert_eq!(result, Frac::new(1, 2));
+
+        let a = Frac::new(3, 4);
+        let result = a * 2;
+        assert_eq!(result, Frac::new(3, 2));
+    }
+
+    #[test]
+    fn test_div() {
+        let a = Frac::new(3, 4);
+        let b = Frac::new(2, 3);
+        let result = a / b;
+        assert_eq!(result, Frac::new(9, 8));
+
+        let a = Frac::new(3, 4);
+        let result = a / 2;
+        assert_eq!(result, Frac::new(3, 8));
+    }
+
+    #[test]
+    fn test_to_string() {
+        let f = Frac::new(1, 2);
+        assert!(f.to_string() == "1⁄2")
+    }
+
+    #[test]
+    fn test_char_to_superscript() {
+        assert_eq!(char_to_superscript('0'), '⁰');
+        assert_eq!(char_to_superscript('1'), '¹');
+        assert_eq!(char_to_superscript('9'), '⁹');
+        assert_eq!(char_to_superscript('-'), '⁻');
+        assert_eq!(char_to_superscript('⁄'), '⁄');
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_char_to_superscript_invalid() {
+        char_to_superscript('a'); // Should panic on invalid character
+    }
+
+    #[test]
+    fn test_to_superscript() {
+        let f = Frac::new(1, 2);
+        assert_eq!(f.to_superscript(), "¹⁄²");
+
+        let f = Frac::new(-3, 4);
+        assert_eq!(f.to_superscript(), "⁻³⁄⁴");
+    }
+
+    #[test]
+    fn test_from_bits_zeroes() {
+        // All zeroes is defined as being 0 even though 0 would properly be represented as 0/1
+        let f = Frac::from_bits(0x00);
+        assert!(f.is_zero());
+    }
+
+    #[test]
+    fn test_from_bits_integers() {
+        // Test positive whole numbers
+        let f = Frac::from_bits(0x05);
+        assert_eq!(f, Frac::from(5));
+
+        let f = Frac::from_bits(0x0F);
+        assert_eq!(f, Frac::from(15));
+    }
+
+    #[test]
+    fn test_from_bits() {
+        // Test positive fractions
+        let f = Frac::from_bits(0x21); // num=1, den=2
+        assert_eq!(f, Frac::new(1, 2));
+
+        let f = Frac::from_bits(0x71); // num=1, den=7
+        assert_eq!(f, Frac::new(1, 7));
+
+        let f = Frac::from_bits(0x43); // num=3, den=4
+        assert_eq!(f, Frac::new(3, 4));
+    }
+
+    #[test]
+    fn test_from_bits_neg() {
+        // Test negative integers
+        let f = Frac::from_bits(0xF2); // num=2, den=-1
+        assert_eq!(f, Frac::from(-2));
+
+        // Test negative fractions
+        let f = Frac::from_bits(0xE3); // num=3, den=-2
+        assert_eq!(f, Frac::new(-3, 2));
+    }
+
+    #[test]
+    fn test_to_bits_zero() {
+        let f = Frac::new(0, 1);
+        assert_eq!(f.to_bits(), 0x00);
+    }
+
+    #[test]
+    fn test_to_bits_positive() {
+        let f = Frac::new(1, 2);
+        // Should encode as positive with num=1, den=2
+        assert_eq!(f.to_bits(), 0x21);
+    }
+
+    #[test]
+    fn test_to_bits_negative() {
+        let f = Frac::new(-1, 2);
+        assert_eq!(f.to_bits(), 0xE1);
+    }
+
+    #[test]
+    fn test_bits_roundtrip() {
+        for n in 0i8..=15 {
+            for d in -7i8..=7 {
+                if d == 0 {
+                    continue;
+                }
+                let f = Frac::new(n, d);
+                let bits = f.to_bits();
+                let f2 = Frac::from_bits(bits);
+                assert_eq!(f, f2, "Failed roundtrip for {n}/{d}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_default() {
+        let f = Frac::default();
+        assert!(f.is_zero());
+    }
+
+    #[test]
+    fn test_ordering() {
+        let a = Frac::new(1, 3);
+        let b = Frac::new(1, 2);
+        let c = Frac::new(2, 3);
+
+        assert!(a < b);
+        assert!(b < c);
+        assert!(a < c);
+
+        let neg = Frac::new(-1, 2);
+        assert!(neg < a);
+    }
+
+    #[test]
+    fn test_equality() {
+        let a = Frac::new(2, 4);
+        let b = Frac::new(1, 2);
+        assert_eq!(a, b); // Should be equal after reduction
+
+        let c = Frac::new(3, 6);
+        assert_eq!(b, c);
+
+        let d = Frac::new(4, 2);
+        assert_eq!(d, 2);
+    }
+
+    #[test]
+    fn test_deref() {
+        let f = Frac::new(3, 4);
+        // Test that we can call Ratio methods through Deref
+        assert!(!f.is_integer());
     }
 }

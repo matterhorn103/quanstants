@@ -29,6 +29,10 @@ impl Dimensions {
         }
     }
 
+    pub fn exponents(&self) -> [Frac; 7] {
+        [self.T, self.L, self.M, self.I, self.Θ, self.N, self.J]
+    }
+
     pub fn pow<T: Into<Frac>>(&self, exponent: T) -> Dimensions {
         let exp: Frac = exponent.into();
         Dimensions {
@@ -40,6 +44,10 @@ impl Dimensions {
             N: self.N * exp,
             J: self.J * exp,
         }
+    }
+
+    pub fn is_dimensionless(&self) -> bool {
+        self.exponents().iter().all(|&x| x.is_zero())
     }
 }
 
@@ -77,9 +85,9 @@ impl Div for Dimensions {
 
 impl fmt::Display for Dimensions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let exponents = [self.T, self.L, self.M, self.I, self.Θ, self.N, self.J];
+        let exponents = self.exponents();
         let symbols = ["T", "L", "M", "I", "Θ", "N", "J"];
-        let output = if exponents.iter().all(|&x| x.is_zero()) {
+        let output = if self.is_dimensionless() {
             String::from("(dimensionless)")
         } else {
             let mut string = String::new();

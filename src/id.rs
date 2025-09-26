@@ -76,6 +76,10 @@ impl Unit128 {
         }
     }
 
+    pub fn normalize(self) -> Self {
+        Self(self.0, (self.1 & 0xFFFFFFFFFFFFFFF0) | 0xA)
+    }
+
     pub fn least_significant_byte(&self) -> u8 {
         (self.1 & 0xFF) as u8
     }

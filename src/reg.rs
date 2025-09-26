@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    dimensions::Dimensions,
+    dimensions::{self, Dimensions},
     id::Unit128,
-    unit::{BaseUnit, Unit},
+    unit::{LinearUnit, Unit},
 };
 
 #[derive(Debug)]
@@ -20,16 +20,47 @@ impl UnitRegistry {
         }
     }
 
-    pub fn add(&mut self, unit: Unit) {
-        let id = unit.id;
-        let name = unit.name();
+    pub fn add(
+        &mut self,
+        symbol: String,
+        name: String,
+        //number: Decimal,
+        //factors: Option<Arc<Vec<LinearFactor>>>,
+        //uncertainty: Decimal,
+    ) {
+        todo!()
+        //let id = unit.id;
+        //let name = unit.name();
+        //let unit = LinearUnit {
+        //    is_base: false,
+        //    dimensions: 
+        //    prefix: None,
+        //    ..
+        //};
+        //self.units.insert(id, unit);
+        //self.string_map.insert(name, id);
+    }
+
+    pub fn add_base(&mut self, dimensions: Dimensions, symbol: String, name: String) {
+        let id = Unit128::new(1, 1, 10, 0, dimensions, 0x00);
+        let inner_unit = LinearUnit{
+            is_base: true,
+            dimensions,
+            symbol: Some(symbol),
+            name: Some(name.clone()),
+            prefix: None,
+            number: 1.into(),
+            factors: None,
+            uncertainty: 0.into(),
+        };
+        let unit = Unit{id, inner: Arc::new(inner_unit)};
         self.units.insert(id, unit);
         self.string_map.insert(name, id);
     }
 
-    pub fn add_with_aliases(&mut self, unit: Unit, aliases: Vec<String>) {
-        let id = unit.id;
-        self.add(unit);
+    pub fn add_base_with_aliases(&mut self, dimensions: Dimensions, symbol: String, name: String, aliases: Vec<String>) {
+        let id = Unit128::new(1, 1, 10, 0, dimensions, 0x00);
+        self.add_base(dimensions, symbol, name);
         for alias in aliases {
             self.string_map.insert(alias, id);
         }
@@ -55,30 +86,21 @@ impl Default for UnitRegistry {
 
 impl UnitRegistry {
     fn add_si(&mut self) {
-        self.add(
-            BaseUnit::new(
-                String::from("s"),
-                String::from("second"),
-                Dimensions::new(1, 0, 0, 0, 0, 0, 0),
-            )
-            .into(),
+        self.add_base(
+            Dimensions::new(1, 0, 0, 0, 0, 0, 0),
+            String::from("s"),
+            String::from("second"),
         );
-        self.add_with_aliases(
-            BaseUnit::new(
-                String::from("m"),
-                String::from("metre"),
-                Dimensions::new(0, 1, 0, 0, 0, 0, 0),
-            )
-            .into(),
+        self.add_base_with_aliases(
+            Dimensions::new(0, 1, 0, 0, 0, 0, 0),
+            String::from("m"),
+            String::from("metre"),
             vec![String::from("meter")],
         );
-        self.add(
-            BaseUnit::new(
-                String::from("kg"),
-                String::from("kilogram"),
-                Dimensions::new(0, 0, 1, 0, 0, 0, 0),
-            )
-            .into(),
+        self.add_base(
+            Dimensions::new(0, 0, 1, 0, 0, 0, 0),
+            String::from("kg"),
+            String::from("kilogram"),
         );
     }
 }

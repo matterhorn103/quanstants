@@ -21,14 +21,14 @@ impl UnitRegistry {
     }
 
     pub fn add(&mut self, unit: Unit) {
-        let id = unit.id();
+        let id = unit.id;
         let name = unit.name();
         self.units.insert(id, unit);
         self.string_map.insert(name, id);
     }
 
     pub fn add_with_aliases(&mut self, unit: Unit, aliases: Vec<String>) {
-        let id = unit.id();
+        let id = unit.id;
         self.add(unit);
         for alias in aliases {
             self.string_map.insert(alias, id);

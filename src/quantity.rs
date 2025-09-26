@@ -1,22 +1,10 @@
 use std::{
-    fmt,
-    ops::{Add, Div, Mul, Sub},
+    fmt, hash::Hash, ops::{Add, Div, Mul, Sub}
 };
 
-use num_traits;
+use crate::{dimensions::Dimensions, numeric::Numeric, unit::Unit};
 
-use crate::{dimensions::Dimensions, unit::Unit};
-
-pub trait Numeric:
-    num_traits::Num + num_traits::NumOps + std::fmt::Display
-{}
-
-impl<T> Numeric for T 
-where 
-    T: num_traits::Num + num_traits::NumOps + std::fmt::Display
-{}
-
-#[derive(Clone, PartialEq, PartialOrd, Hash, Debug)]
+#[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct Quantity<T: Numeric> {
     pub number: T,
     pub unit: Unit,
@@ -32,6 +20,14 @@ impl<T: Numeric> Quantity<T> {
         }
     }
 }
+
+//impl<T: Numeric> Hash for Quantity<T> {
+//    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+//        self.number.hash(state);
+//        self.unit.id;
+//        self.uncertainty.hash(state);
+//    }
+//}
 
 impl<T: Numeric> fmt::Display for Quantity<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -106,7 +102,7 @@ pub(crate) mod py {
     use rust_decimal::Decimal;
 
     #[pyclass(name = "Quantity")]
-    #[derive(Clone, PartialEq, PartialOrd, Hash, Debug)]
+    #[derive(Clone, PartialEq, PartialOrd, Debug)]
     pub struct PyQuantity(Quantity<Decimal>);
 
     #[pymethods]

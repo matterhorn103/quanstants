@@ -4,6 +4,7 @@ pub mod context;
 pub mod dimensions;
 pub mod fraction;
 pub mod id;
+pub mod numeric;
 pub mod prefix;
 pub mod quantity;
 pub mod reg;

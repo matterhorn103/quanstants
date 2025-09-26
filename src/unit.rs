@@ -1,52 +1,30 @@
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::ops::{Div, Mul};
+use std::rc::Rc;
+use std::sync::Arc;
+
+use rust_decimal::Decimal;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
 use crate::id::Unit128;
+use crate::numeric::Numeric;
 use crate::prefix::Prefix;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub enum Unit {
-    Base(BaseUnit),
-    Unitless(UnitlessUnit),
-    Derived(),
-    Compound(),
-    Logarithmic(),
-    Temperature(),
-}
-
-impl Unit {
-    pub fn id(&self) -> Unit128 {
-        match self {
-            Unit::Base(unit) => Unit128::new(1, 1, 10, 0, unit.dimensions(), 0x00),
-            _ => Unit128(0xFFFF, 0xFFFF),
-        }
-    }
-
-    pub fn symbol(&self) -> String {
-        String::from("oops")
-    }
-
-    pub fn name(&self) -> String {
-        match self {
-            Unit::Base(base_unit) => base_unit.name(),
-            _ => String::from("oops"),
-        }
-    }
-
-    //    pub fn preceding_space(&self) -> bool;
-    //
-    pub fn dimensions(&self) -> Dimensions {
-        Dimensions::default()
-    }
+pub enum UnitType {
+    Base,
+    Unitless,
+    Derived,
+    Compound,
 }
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub enum LinearFactor {
-    Base(BaseUnit, Frac),
-    Unitless(UnitlessUnit, Frac),
-    Derived(DerivedUnit, Frac),
+    Base(Rc<BaseUnit>, Frac),
+    Unitless(Rc<UnitlessUnit>, Frac),
+    Derived(Rc<DerivedUnit>, Frac),
 }
 
 impl LinearFactor {
@@ -74,31 +52,6 @@ pub struct BaseUnit {
     dimensions: Dimensions,
     prefixed: bool,
 }
-
-//#[pymethods]
-//impl BaseUnit {
-//    #[new]
-//    pub fn new(
-//        symbol: String,
-//        name: String,
-//        dimensions: Dimensions,
-//    ) -> Self {
-//        Self {
-//            symbol,
-//            name,
-//            dimensions,
-//            prefixed: false,
-//        }
-//    }
-//
-//    pub fn __repr__(&self) -> String {
-//        format!("BaseUnit({})", self.name())
-//    }
-//
-//    pub fn __str__(&self) -> String {
-//        self.symbol()
-//    }
-//}
 
 impl BaseUnit {
     pub fn new(symbol: String, name: String, dimensions: Dimensions) -> Self {
@@ -128,21 +81,21 @@ impl BaseUnit {
 }
 
 impl Mul for BaseUnit {
-    type Output = CompoundUnit;
+    type Output = Unit;
 
-    fn mul(self, rhs: Self) -> CompoundUnit {
-        CompoundUnit::new(&[
+    fn mul(self, rhs: Self) -> Unit {
+        Unit::new(&[
             LinearFactor::Base(self, 1.into()),
             LinearFactor::Base(rhs, 1.into()),
         ])
     }
 }
 
-impl From<BaseUnit> for Unit {
-    fn from(value: BaseUnit) -> Self {
-        Unit::Base(value)
-    }
-}
+//impl From<BaseUnit> for Unit {
+//    fn from(value: BaseUnit) -> Self {
+//        Unit::Base(value)
+//    }
+//}
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct UnitlessUnit;
@@ -181,9 +134,9 @@ pub struct DerivedUnit {
     symbol: String,
     name: String,
     prefix: Option<Prefix>,
-    def_number: f64,
+    def_number: Decimal,
     def_factors: Vec<LinearFactor>,
-    def_uncertainty: f64,
+    def_uncertainty: Decimal,
 }
 
 impl DerivedUnit {
@@ -191,9 +144,9 @@ impl DerivedUnit {
         symbol: String,
         name: String,
         //prefix: Option<Prefix>,
-        def_number: f64,
+        def_number: Decimal,
         def_factors: &[LinearFactor],
-        def_uncertainty: f64,
+        def_uncertainty: Decimal,
     ) -> Self {
         Self {
             symbol,
@@ -207,11 +160,11 @@ impl DerivedUnit {
 }
 
 impl DerivedUnit {
-    fn symbol(&self) -> String {
+    pub fn symbol(&self) -> String {
         self.symbol.clone()
     }
 
-    fn name(&self) -> String {
+    pub fn name(&self) -> String {
         self.name.clone()
     }
 
@@ -229,20 +182,44 @@ impl DerivedUnit {
 }
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
-pub struct CompoundUnit {
+pub struct Unit {
+    pub id: Unit128,
     pub factors: Vec<LinearFactor>,
 }
 
-impl CompoundUnit {
+impl Unit {
     pub fn new(factors: &[LinearFactor]) -> Self {
-        Self {
-            factors: factors.to_vec(),
-        }
+        todo!()
+        //Self {
+        //    factors: factors.to_vec(),
+        //}
     }
 }
 
-impl CompoundUnit {
-    fn symbol(&self) -> String {
+impl From<BaseUnit> for Unit {
+    fn from(value: BaseUnit) -> Self {
+        Self::new(&[LinearFactor::Base(value, 1.into())])
+    }
+}
+
+impl From<UnitlessUnit> for Unit {
+    fn from(value: UnitlessUnit) -> Self {
+        Self::new(&[LinearFactor::Unitless(value, 1.into())])
+    }
+}
+
+impl From<DerivedUnit> for Unit {
+    fn from(value: DerivedUnit) -> Self {
+        Self::new(&[LinearFactor::Derived(value, 1.into())])
+    }
+}
+
+impl Unit {
+    pub fn id(&self) -> Unit128 {
+        todo!()
+    }
+
+    pub fn symbol(&self) -> String {
         self.factors
             .iter()
             .map(|x| x.symbol())
@@ -250,15 +227,15 @@ impl CompoundUnit {
             .unwrap()
     }
 
-    fn name(&self) -> String {
+    pub fn name(&self) -> String {
         self.symbol()
     }
 
-    fn preceding_space(&self) -> bool {
+    pub fn preceding_space(&self) -> bool {
         true
     }
 
-    fn dimensions(&self) -> Dimensions {
+    pub fn dimensions(&self) -> Dimensions {
         self.factors
             .iter()
             .map(|x| x.dimensions())
@@ -267,19 +244,19 @@ impl CompoundUnit {
     }
 }
 
-impl Mul for CompoundUnit {
+impl Mul for Unit {
     type Output = Self;
 
-    fn mul(self, rhs: Self) -> CompoundUnit {
+    fn mul(self, rhs: Self) -> Unit {
         let new_factors = [self.factors, rhs.factors].concat();
-        CompoundUnit::new(&new_factors)
+        Unit::new(&new_factors)
     }
 }
 
-impl Div for CompoundUnit {
+impl Div for Unit {
     type Output = Self;
 
-    fn div(self, rhs: Self) -> CompoundUnit {
+    fn div(self, rhs: Self) -> Unit {
         let mut new_factors = self.factors;
         for factor in rhs.factors {
             let new_factor = match factor {
@@ -289,7 +266,7 @@ impl Div for CompoundUnit {
             };
             new_factors.push(new_factor);
         }
-        CompoundUnit::new(&new_factors)
+        Unit::new(&new_factors)
     }
 }
 
@@ -299,7 +276,7 @@ pub(crate) mod py {
     use pyo3::prelude::*;
 
     #[pyclass(frozen, eq, name = "Unit")]
-    #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+    #[derive(Clone, PartialEq, PartialOrd, Debug)]
     pub struct PyUnit(Unit);
 
     impl PyUnit {

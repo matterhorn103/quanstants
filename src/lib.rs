@@ -9,6 +9,7 @@ pub mod prefix;
 pub mod quantity;
 pub mod reg;
 pub mod unit;
+pub mod error;
 
 #[cfg(feature = "python")]
 mod bindings {

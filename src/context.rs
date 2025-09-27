@@ -1,4 +1,4 @@
-use crate::{id::Unit128, reg::UnitRegistry, unit::Unit};
+use crate::{error::QuanstantsError, id::Unit128, prefix::Prefix, reg::UnitRegistry, unit::Unit};
 
 #[derive(Debug, Default)]
 pub struct Context {
@@ -19,8 +19,13 @@ impl Context {
     pub fn unit_by_id(&self, id: &Unit128) -> Unit {
         self.unit_reg.get_by_id(id)
     }
+
+    pub fn prefix_by_name(&self, name: &str) -> Result<Prefix, QuanstantsError> {
+        Prefix::from_name(name)
+    }
 }
 
+// Convenience functions for pre-populated units
 impl Context {
     fn second(&self) -> Unit {
         self.unit_reg.get_by_name("second")
@@ -53,7 +58,7 @@ impl Context {
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
-    use crate::unit::py::PyUnit;
+    use crate::{prefix::py::PyPrefix, unit::py::PyUnit};
 
     use super::*;
     use pyo3::prelude::*;
@@ -81,6 +86,15 @@ pub(crate) mod py {
 
         fn unit_by_id(&self, id: u128) -> PyUnit {
             self.0.unit_by_id(&Unit128::from_bits(id)).into()
+        }
+
+        #[getter]
+        fn prefixes(slf: Py<Self>) -> PyPrefixes {
+            PyPrefixes { parent: slf }
+        }
+
+        fn prefix_by_name(&self, name: &str) -> PyPrefix {
+            self.0.prefix_by_name(name).unwrap().into()
         }
 
         #[getter]
@@ -174,6 +188,19 @@ pub(crate) mod py {
         // Square bracket notation lookup for units
         fn __getitem__(&self, py: Python, name: &str) -> PyUnit {
             self.parent.borrow(py).unit_by_name(name)
+        }
+    }
+
+    #[pyclass]
+    pub struct PyPrefixes {
+        parent: Py<PyContext>,
+    }
+
+    #[pymethods]
+    impl PyPrefixes {
+        // Square bracket notation lookup for units
+        fn __getitem__(&self, py: Python, name: &str) -> PyPrefix {
+            self.parent.borrow(py).prefix_by_name(name)
         }
     }
 }

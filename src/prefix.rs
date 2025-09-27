@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use crate::error::QuanstantsError;
+
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Prefix {
     // Metric
@@ -38,6 +40,84 @@ pub enum Prefix {
     exbi,
     zebi,
     yobi,
+}
+
+impl Prefix {
+    pub fn from_symbol(symbol: &str) -> Result<Self, QuanstantsError>  {
+        match symbol {
+            "q" =>  Ok(Self::quecto),
+            "r" =>  Ok(Self::ronto),
+            "y" =>  Ok(Self::yocto),
+            "z" =>  Ok(Self::zepto),
+            "a" =>  Ok(Self::atto),
+            "f" =>  Ok(Self::femto),
+            "p" =>  Ok(Self::pico),
+            "n" =>  Ok(Self::nano),
+            "μ" =>  Ok(Self::micro),
+            "m" =>  Ok(Self::milli),
+            "c" =>  Ok(Self::centi),
+            "d" =>  Ok(Self::deci),
+            "da" => Ok(Self::deca),
+            "h" =>  Ok(Self::hecto),
+            "k" =>  Ok(Self::kilo),
+            "M" =>  Ok(Self::mega),
+            "G" =>  Ok(Self::giga),
+            "T" =>  Ok(Self::tera),
+            "P" =>  Ok(Self::peta),
+            "E" =>  Ok(Self::exa),
+            "Z" =>  Ok(Self::zetta),
+            "Y" =>  Ok(Self::yotta),
+            "R" =>  Ok(Self::ronna),
+            "Q" =>  Ok(Self::quetta),
+            "Ki" => Ok(Self::kibi),
+            "Mi" => Ok(Self::mebi),
+            "Gi" => Ok(Self::gibi),
+            "Ti" => Ok(Self::tebi),
+            "Pi" => Ok(Self::pebi),
+            "Ei" => Ok(Self::exbi),
+            "Zi" => Ok(Self::zebi),
+            "Yi" => Ok(Self::yobi),
+            _ => Err(QuanstantsError::Parse),
+        }
+    }
+
+    pub fn from_name(name: &str) -> Result<Self, QuanstantsError> {
+        match name {
+            "quecto" => Ok(Self::quecto),
+            "ronto" => Ok(Self::ronto),
+            "yocto" => Ok(Self::yocto),
+            "zepto" => Ok(Self::zepto),
+            "atto" => Ok(Self::atto),
+            "femto" => Ok(Self::femto),
+            "pico" => Ok(Self::pico),
+            "nano" => Ok(Self::nano),
+            "micro" => Ok(Self::micro),
+            "milli" => Ok(Self::milli),
+            "centi" => Ok(Self::centi),
+            "deci" => Ok(Self::deci),
+            "deca" => Ok(Self::deca),
+            "hecto" => Ok(Self::hecto),
+            "kilo" => Ok(Self::kilo),
+            "mega" => Ok(Self::mega),
+            "giga" => Ok(Self::giga),
+            "tera" => Ok(Self::tera),
+            "peta" => Ok(Self::peta),
+            "exa" => Ok(Self::exa),
+            "zetta" => Ok(Self::zetta),
+            "yotta" => Ok(Self::yotta),
+            "ronna" => Ok(Self::ronna),
+            "quetta" => Ok(Self::quetta),
+            "kibi" => Ok(Self::kibi),
+            "mebi" => Ok(Self::mebi),
+            "gibi" => Ok(Self::gibi),
+            "tebi" => Ok(Self::tebi),
+            "pebi" => Ok(Self::pebi),
+            "exbi" => Ok(Self::exbi),
+            "zebi" => Ok(Self::zebi),
+            "yobi" => Ok(Self::yobi),
+            _ => Err(QuanstantsError::Parse),
+        }
+    }
 }
 
 impl Prefix {
@@ -228,6 +308,18 @@ pub(crate) mod py {
     #[pyclass(name = "Prefix")]
     #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
     pub struct PyPrefix(Prefix);
+
+    impl PyPrefix {
+        pub fn into_inner(self) -> Prefix {
+            self.0
+        }
+    }
+
+    impl From<Prefix> for PyPrefix {
+        fn from(value: Prefix) -> Self {
+            Self(value)
+        }
+    }
 
     #[pymethods]
     impl PyPrefix {

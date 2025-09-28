@@ -20,13 +20,13 @@ pub struct NumericFactor {
 }
 
 impl NumericFactor {
-    pub fn new(
-        sign: i8,
-        mantissa: u64,
-        base: u8,
-        exponent: i8,
-    ) -> Self {
-        NumericFactor { sign, mantissa, base, exponent }
+    pub fn new(sign: i8, mantissa: u64, base: u8, exponent: i8) -> Self {
+        NumericFactor {
+            sign,
+            mantissa,
+            base,
+            exponent,
+        }
     }
 }
 
@@ -39,13 +39,13 @@ pub struct NumericReference {
 }
 
 impl NumericReference {
-    pub fn new(
-        sign: i8,
-        mantissa: u32,
-        base: u8,
-        exponent: i8,
-    ) -> Self {
-        NumericReference { sign, mantissa, base, exponent }
+    pub fn new(sign: i8, mantissa: u32, base: u8, exponent: i8) -> Self {
+        NumericReference {
+            sign,
+            mantissa,
+            base,
+            exponent,
+        }
     }
 }
 
@@ -53,11 +53,7 @@ impl NumericReference {
 pub struct Unit128(pub u64, pub u64);
 
 impl Unit128 {
-    pub fn new(
-        factor: NumericFactor,
-        dimensions: Dimensions,
-        least_significant_byte: u8,
-    ) -> Self {
+    pub fn new(factor: NumericFactor, dimensions: Dimensions, least_significant_byte: u8) -> Self {
         let dim = least_significant_byte as u64
             | (dimensions.T.to_bits() as u64) << 8
             | (dimensions.L.to_bits() as u64) << 16
@@ -67,7 +63,11 @@ impl Unit128 {
             | (dimensions.N.to_bits() as u64) << 48
             | (dimensions.J.to_bits() as u64) << 56;
         let num = factor.exponent as u64
-            | (if factor.base == 10 { 0 } else { factor.base as u64 }) << 8
+            | (if factor.base == 10 {
+                0
+            } else {
+                factor.base as u64
+            }) << 8
             | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
             | (factor.mantissa - 1) << 16;
         Self(num, dim)
@@ -79,7 +79,9 @@ impl Unit128 {
         least_significant_byte: u8,
         reference: NumericReference,
     ) -> Self {
-        if factor.base != reference.base { panic!() }
+        if factor.base != reference.base {
+            panic!()
+        }
         let dim = least_significant_byte as u64
             | (dimensions.T.to_bits() as u64) << 8
             | (dimensions.L.to_bits() as u64) << 16
@@ -89,7 +91,11 @@ impl Unit128 {
             | (dimensions.N.to_bits() as u64) << 48
             | (dimensions.J.to_bits() as u64) << 56;
         let num = factor.exponent as u64
-            | (if factor.base == 10 { 0 } else { factor.base as u64 }) << 8
+            | (if factor.base == 10 {
+                0
+            } else {
+                factor.base as u64
+            }) << 8
             | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
             | (factor.mantissa as u64 - 1) << 16
             | (reference.exponent as u64) << 32
@@ -121,7 +127,7 @@ impl Unit128 {
     pub fn factor_exponent(&self) -> i8 {
         (self.0 & 0xFF) as i8
     }
-    
+
     pub fn factor_base(&self) -> u8 {
         let raw_base = ((self.0 >> 8) & 0x7F) as u8;
         if raw_base == 0 {
@@ -130,7 +136,7 @@ impl Unit128 {
             raw_base
         }
     }
-    
+
     pub fn factor_mantissa(&self) -> u64 {
         if self.is_referenced() {
             (self.0 >> 16) + 1
@@ -138,7 +144,7 @@ impl Unit128 {
             ((self.0 & 0x00000000FFFF0000) >> 16) + 1
         }
     }
-    
+
     pub fn factor_sign(&self) -> i8 {
         let b = ((self.0 >> 15) & 0x01) as u8;
         if b == 0 {

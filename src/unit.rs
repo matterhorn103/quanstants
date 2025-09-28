@@ -11,13 +11,11 @@ use crate::fraction::Frac;
 use crate::id::Unit128;
 use crate::prefix::Prefix;
 
-
 #[derive(Clone, Debug)]
 pub(crate) struct LinearFactor {
     pub(crate) unit: Arc<LinearUnit>,
     pub(crate) exponent: Frac,
 }
-
 
 // Intended to be stored on the heap, with user-facing units then carrying reference-counted smart
 // pointers to them to allow reuse
@@ -28,7 +26,7 @@ pub(crate) struct LinearUnit {
     pub(crate) is_base: bool,
     pub(crate) dimensions: Dimensions,
     pub(crate) symbol: Option<String>, // Compound units have None for this
-    pub(crate) name: Option<String>, // Compound units have None for this
+    pub(crate) name: Option<String>,   // Compound units have None for this
     pub(crate) prefix: Option<Prefix>, // Only possible for derived units
     pub(crate) number: Decimal,
     pub(crate) factors: Option<Arc<Vec<LinearFactor>>>, // Base units and unitless indicated by None
@@ -44,7 +42,6 @@ impl LinearUnit {
         todo!()
     }
 }
-
 
 // This is the user-facing struct representing a linear unit
 #[derive(Clone, Debug)]
@@ -106,7 +103,6 @@ impl Ord for Unit {
         self.id.normalize().cmp(&other.id.normalize())
     }
 }
-
 
 #[cfg(feature = "python")]
 pub(crate) mod py {

@@ -104,6 +104,7 @@ impl Ord for Unit {
     }
 }
 
+
 #[cfg(feature = "python")]
 pub(crate) mod py {
     use super::*;
@@ -117,11 +118,44 @@ pub(crate) mod py {
         pub fn into_inner(self) -> Unit {
             self.0
         }
+
+        fn __eq__(&self, other: Self) -> bool {
+            self.0 == other.0
+        }
     }
 
     impl From<Unit> for PyUnit {
         fn from(value: Unit) -> Self {
             Self(value)
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::id::NumericFactor;
+
+    use super::*;
+    #[test]
+    fn test_equality() {
+        let dimensions = Dimensions::new(1, 0, 0, 0, 0, 0, 0);
+        let id = Unit128::new(NumericFactor::new(1, 1, 10, 0), dimensions, 0x00);
+        let s_inner = LinearUnit {
+            is_base: true,
+            dimensions,
+            symbol: Some(String::from("s")),
+            name: Some(String::from("second")),
+            prefix: None,
+            number: 1.into(),
+            factors: None,
+            uncertainty: 0.into(),
+        };
+        let s = Unit {
+            id,
+            inner: Arc::new(s_inner),
+        };
+        let s2 = s.clone();
+        assert_eq!(s, s2);
     }
 }

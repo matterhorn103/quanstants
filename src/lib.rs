@@ -2,14 +2,14 @@
 
 pub mod context;
 pub mod dimensions;
+pub mod error;
 pub mod fraction;
 pub mod id;
-pub mod numeric;
+pub mod number;
 pub mod prefix;
 pub mod quantity;
 pub mod reg;
 pub mod unit;
-pub mod error;
 
 #[cfg(feature = "python")]
 mod bindings {

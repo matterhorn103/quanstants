@@ -1,63 +1,76 @@
 use std::{
-    fmt, hash::Hash, ops::{Add, Div, Mul, Sub}
+    fmt,
+    hash::Hash,
+    ops::{Add, Div, Mul, Sub},
 };
 
-use crate::{dimensions::Dimensions, numeric::Numeric, unit::Unit};
+use crate::{
+    dimensions::Dimensions,
+    number::{Number, Numeric},
+    unit::Unit,
+};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
-pub struct Quantity<T: Numeric> {
-    pub number: T,
+pub struct Quantity {
+    pub number: Number,
     pub unit: Unit,
-    pub uncertainty: T,
 }
 
-impl<T: Numeric> Quantity<T> {
-    pub fn new(number: T, unit: Unit, uncertainty: T) -> Self {
+impl Quantity {
+    pub fn new<T: Into<Number>>(number: T, unit: Unit) -> Self {
         Self {
-            number,
+            number: number.into(),
             unit,
-            uncertainty,
         }
     }
 }
 
-//impl<T: Numeric> Hash for Quantity<T> {
-//    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//        self.number.hash(state);
-//        self.unit.id;
-//        self.uncertainty.hash(state);
+//#[derive(Clone, PartialEq, PartialOrd, Debug)]
+//pub struct Quantity<T: Numeric> {
+//    pub number: T,
+//    pub unit: Unit,
+//    pub uncertainty: T,
+//}
+//
+//impl<T: Numeric> Quantity<T> {
+//    pub fn new(number: T, unit: Unit, uncertainty: T) -> Self {
+//        Self {
+//            number,
+//            unit,
+//            uncertainty,
+//        }
 //    }
 //}
 
-impl<T: Numeric> fmt::Display for Quantity<T> {
+impl fmt::Display for Quantity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.number, self.unit.symbol())
     }
 }
 
-impl<T: Numeric> Add for Quantity<T> {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        if self.unit == rhs.unit {
-            Self::new(self.number + rhs.number, self.unit, self.uncertainty)
-        } else {
-            panic!()
-        }
-    }
-}
-
-impl<T: Numeric> Sub for Quantity<T> {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        if self.unit == rhs.unit {
-            Self::new(self.number - rhs.number, self.unit, self.uncertainty)
-        } else {
-            panic!()
-        }
-    }
-}
+//impl Add for Quantity {
+//    type Output = Self;
+//
+//    fn add(self, rhs: Self) -> Self::Output {
+//        if self.unit == rhs.unit {
+//            Self::new(self.number + rhs.number, self.unit, self.uncertainty)
+//        } else {
+//            panic!()
+//        }
+//    }
+//}
+//
+//impl<T: Numeric> Sub for Quantity<T> {
+//    type Output = Self;
+//
+//    fn sub(self, rhs: Self) -> Self::Output {
+//        if self.unit == rhs.unit {
+//            Self::new(self.number - rhs.number, self.unit, self.uncertainty)
+//        } else {
+//            panic!()
+//        }
+//    }
+//}
 
 //impl Mul for Quantity {
 //    type Output = Self;
@@ -83,7 +96,7 @@ impl<T: Numeric> Sub for Quantity<T> {
 //    }
 //}
 
-impl<T: Numeric> Quantity<T> {
+impl Quantity {
     //pub fn pow(&self, exp: i32) -> Self {
     //    Self::new(self.number.powi(exp), self.unit.pow(exp), 0.0)
     //}
@@ -103,25 +116,13 @@ pub(crate) mod py {
 
     #[pyclass(name = "Quantity")]
     #[derive(Clone, PartialEq, PartialOrd, Debug)]
-    pub struct PyQuantity(Quantity<Decimal>);
+    pub struct PyQuantity(Quantity);
 
     #[pymethods]
     impl PyQuantity {
         #[new]
-        fn new(number: Decimal, unit: PyUnit, uncertainty: Decimal) -> Self {
-            PyQuantity(Quantity::new(number, unit.into_inner(), uncertainty))
-        }
-    }
-
-    #[pyclass(name = "FQuantity")]
-    #[derive(Clone, PartialEq, PartialOrd, Debug)]
-    pub struct PyFQuantity(Quantity<f64>);
-
-    #[pymethods]
-    impl PyFQuantity {
-        #[new]
-        fn new(number: f64, unit: PyUnit, uncertainty: f64) -> Self {
-            PyFQuantity(Quantity::new(number, unit.into_inner(), uncertainty))
+        fn new(number: Decimal, unit: PyUnit) -> Self {
+            PyQuantity(Quantity::new(number, unit.into_inner()))
         }
     }
 }

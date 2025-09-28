@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    dimensions::{self, Dimensions}, id::Unit128, prefix::Prefix, unit::{LinearUnit, Unit}
+    dimensions::{self, Dimensions}, id::{NumericFactor, Unit128}, prefix::Prefix, unit::{LinearUnit, Unit}
 };
 
 #[derive(Debug)]
@@ -40,7 +40,7 @@ impl UnitRegistry {
     }
 
     pub fn add_base(&mut self, dimensions: Dimensions, symbol: String, name: String, prefix: Option<Prefix>) {
-        let id = Unit128::new(1, 1, 10, 0, dimensions, 0x00);
+        let id = Unit128::new(NumericFactor::new(1, 1, 10, 0), dimensions, 0x00);
         let inner_unit = LinearUnit{
             is_base: true,
             dimensions,
@@ -57,7 +57,7 @@ impl UnitRegistry {
     }
 
     pub fn add_base_with_aliases(&mut self, dimensions: Dimensions, symbol: String, name: String, prefix: Option<Prefix>, aliases: Vec<String>) {
-        let id = Unit128::new(1, 1, 10, 0, dimensions, 0x00);
+        let id = Unit128::new(NumericFactor::new(1, 1, 10, 0), dimensions, 0x00);
         self.add_base(dimensions, symbol, name, prefix);
         for alias in aliases {
             self.string_map.insert(alias, id);

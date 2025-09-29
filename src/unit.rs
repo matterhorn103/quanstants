@@ -124,6 +124,22 @@ impl Ord for Unit {
     }
 }
 
+impl Mul for Unit {
+    type Output = Self;
+
+    fn mul(self, rhs: Unit) -> Unit {
+        todo!()
+    }
+}
+
+impl Div for Unit {
+    type Output = Self;
+
+    fn div(self, rhs: Unit) -> Unit {
+        todo!()
+    }
+}
+
 #[cfg(feature = "python")]
 pub(crate) mod py {
     use crate::id::py::PyUnitId;

@@ -50,7 +50,10 @@ impl NumericReference {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct Unit128(pub u64, pub u64);
+pub struct Unit128 {
+    pub num: u64,
+    pub dim: u64,
+}
 
 impl Unit128 {
     pub fn new(factor: NumericFactor, dimensions: Dimensions, least_significant_byte: u8) -> Self {
@@ -70,7 +73,7 @@ impl Unit128 {
             }) << 8
             | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
             | (factor.mantissa - 1) << 16;
-        Self(num, dim)
+        Self { num, dim }
     }
 
     pub fn new_referenced(
@@ -97,39 +100,39 @@ impl Unit128 {
                 factor.base as u64
             }) << 8
             | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
-            | (factor.mantissa as u64 - 1) << 16
+            | (factor.mantissa - 1) << 16
             | (reference.exponent as u64) << 32
             | ((i64::from(reference.mantissa) * (reference.sign as i64)) as u64) << 40;
-        Self(num, dim)
+        Self { num, dim }
     }
 
     pub fn is_referenced(&self) -> bool {
-        ((self.1 & 0b10000000) == 0b10000000) // 0xA* to 0xF* are for other systems entirely
-        || ((self.1 & 0xF0) == 0) // 0x0* is for normal linear units
+        ((self.dim & 0b10000000) == 0b10000000) // 0xA* to 0xF* are for other systems entirely
+        || ((self.dim & 0xF0) == 0) // 0x0* is for normal linear units
     }
 
     pub fn least_significant_byte(&self) -> u8 {
-        (self.1 & 0xFF) as u8
+        (self.dim & 0xFF) as u8
     }
 
     pub fn dimensions(&self) -> Dimensions {
         Dimensions {
-            T: Frac::from_bits(((self.1 >> 8) & 0xFF) as u8),
-            L: Frac::from_bits(((self.1 >> 16) & 0xFF) as u8),
-            M: Frac::from_bits(((self.1 >> 24) & 0xFF) as u8),
-            I: Frac::from_bits(((self.1 >> 32) & 0xFF) as u8),
-            Θ: Frac::from_bits(((self.1 >> 40) & 0xFF) as u8),
-            N: Frac::from_bits(((self.1 >> 48) & 0xFF) as u8),
-            J: Frac::from_bits(((self.1 >> 56) & 0xFF) as u8),
+            T: Frac::from_bits(((self.dim >> 8) & 0xFF) as u8),
+            L: Frac::from_bits(((self.dim >> 16) & 0xFF) as u8),
+            M: Frac::from_bits(((self.dim >> 24) & 0xFF) as u8),
+            I: Frac::from_bits(((self.dim >> 32) & 0xFF) as u8),
+            Θ: Frac::from_bits(((self.dim >> 40) & 0xFF) as u8),
+            N: Frac::from_bits(((self.dim >> 48) & 0xFF) as u8),
+            J: Frac::from_bits(((self.dim >> 56) & 0xFF) as u8),
         }
     }
 
     pub fn factor_exponent(&self) -> i8 {
-        (self.0 & 0xFF) as i8
+        (self.num & 0xFF) as i8
     }
 
     pub fn factor_base(&self) -> u8 {
-        let raw_base = ((self.0 >> 8) & 0x7F) as u8;
+        let raw_base = ((self.num >> 8) & 0x7F) as u8;
         if raw_base == 0 {
             10
         } else {
@@ -139,14 +142,14 @@ impl Unit128 {
 
     pub fn factor_mantissa(&self) -> u64 {
         if self.is_referenced() {
-            (self.0 >> 16) + 1
+            (self.num >> 16) + 1
         } else {
-            ((self.0 & 0x00000000FFFF0000) >> 16) + 1
+            ((self.num & 0x00000000FFFF0000) >> 16) + 1
         }
     }
 
     pub fn factor_sign(&self) -> i8 {
-        let b = ((self.0 >> 15) & 0x01) as u8;
+        let b = ((self.num >> 15) & 0x01) as u8;
         if b == 0 {
             1
         } else {
@@ -156,14 +159,14 @@ impl Unit128 {
 
     pub fn reference_exponent(&self) -> Option<i8> {
         if self.is_referenced() {
-            Some(((self.0 & 0x000000FF00000000) >> 16) as i8)
+            Some(((self.num & 0x000000FF00000000) >> 16) as i8)
         } else {
             None
         }
     }
 
     pub fn reference_base(&self) -> u8 {
-        let raw_base = ((self.0 >> 8) & 0x7F) as u8;
+        let raw_base = ((self.num >> 8) & 0x7F) as u8;
         if raw_base == 0 {
             10
         } else {
@@ -173,7 +176,7 @@ impl Unit128 {
 
     pub fn reference_mantissa(&self) -> Option<u32> {
         if self.is_referenced() {
-            Some((((self.0 & 0xFFFFFF0000000000) >> 16) as i32).unsigned_abs())
+            Some((((self.num & 0xFFFFFF0000000000) >> 16) as i32).unsigned_abs())
         } else {
             None
         }
@@ -181,25 +184,28 @@ impl Unit128 {
 
     pub fn reference_sign(&self) -> Option<i8> {
         if self.is_referenced() {
-            Some((((self.0 & 0xFFFFFF0000000000) >> 16) as i32).signum() as i8)
+            Some((((self.num & 0xFFFFFF0000000000) >> 16) as i32).signum() as i8)
         } else {
             None
         }
     }
 
     pub fn normalize(self) -> Self {
-        Self(self.0, (self.1 & 0xFFFFFFFFFFFFFFF0) | 0xA)
+        Self {
+            num: self.num,
+            dim: (self.dim & 0xFFFFFFFFFFFFFFF0) | 0xA,
+        }
     }
 
     pub fn from_bits(b: u128) -> Self {
-        Self(
-            (b >> 64) as u64,
-            (b & 0x0000000000000000FFFFFFFFFFFFFFFF) as u64,
-        )
+        Self {
+            num: (b >> 64) as u64,
+            dim: (b & 0x0000000000000000FFFFFFFFFFFFFFFF) as u64,
+        }
     }
 
     pub fn to_bits(self: Unit128) -> u128 {
-        (self.0 as u128) << 64 | self.1 as u128
+        (self.num as u128) << 64 | self.dim as u128
     }
 }
 
@@ -221,7 +227,7 @@ pub(crate) mod py {
     impl PyUnitId {
         #[new]
         fn new(num: u64, dim: u64) -> Self {
-            PyUnitId(Unit128(num, dim))
+            PyUnitId(Unit128 { num, dim })
         }
 
         fn __str__(&self) -> String {

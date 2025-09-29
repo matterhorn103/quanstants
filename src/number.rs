@@ -6,9 +6,9 @@ use std::{
 use num_traits::{self, FromPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 
-pub trait Numeric: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
+//pub trait Numeric: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
 
-impl<T> Numeric for T where T: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
+//impl<T> Numeric for T where T: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct Number {

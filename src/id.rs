@@ -243,7 +243,6 @@ impl Unit128 {
     #[allow(dead_code)]
     pub const UNITLESS: Unit128 = { Unit128 { num: 0, dim: 0 } };
 
-    #[allow(dead_code)]
     pub const ONE: Unit128 = Unit128::UNITLESS;
 }
 

@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     dimensions::Dimensions,
-    number::{Number, Numeric},
+    number::Number,
     unit::Unit,
 };
 

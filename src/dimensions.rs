@@ -51,6 +51,18 @@ impl Dimensions {
     }
 }
 
+impl Dimensions {
+    pub const ZERO: Dimensions = Dimensions {
+        T: Frac::ZERO,
+        L: Frac::ZERO,
+        M: Frac::ZERO,
+        I: Frac::ZERO,
+        Θ: Frac::ZERO,
+        N: Frac::ZERO,
+        J: Frac::ZERO,
+    };
+}
+
 impl Mul for Dimensions {
     type Output = Self;
 

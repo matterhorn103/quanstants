@@ -43,6 +43,19 @@ impl LinearUnit {
     }
 }
 
+impl LinearUnit {
+    #[allow(dead_code)]
+    pub const UNITLESS: LinearUnit = LinearUnit {
+        is_base: true,
+        dimensions: Dimensions::ZERO,
+        symbol: None,
+        name: None,
+        prefix: None,
+        number: Number::ONE,
+        factors: None,
+    };
+}
+
 // This is the user-facing struct representing a linear unit
 #[derive(Clone, Debug)]
 pub struct Unit {
@@ -54,15 +67,7 @@ impl Unit {
     pub fn unitless() -> Self {
         Unit {
             id: Unit128::UNITLESS,
-            inner: Arc::new(LinearUnit {
-                is_base: true,
-                dimensions: Dimensions::default(),
-                symbol: None,
-                name: None,
-                prefix: None,
-                number: Decimal::new(1, 0).into(),
-                factors: None,
-            }),
+            inner: Arc::new(LinearUnit::UNITLESS),
         }
     }
 

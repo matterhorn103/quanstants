@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use num_traits;
+use num_traits::{self, FromPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 
 pub trait Numeric: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
@@ -14,15 +14,6 @@ impl<T> Numeric for T where T: num_traits::Num + num_traits::NumOps + std::fmt::
 pub struct Number {
     number: Decimal,
     uncertainty: Decimal,
-}
-
-impl From<Decimal> for Number {
-    fn from(value: Decimal) -> Self {
-        Self {
-            number: value,
-            uncertainty: Decimal::ZERO,
-        }
-    }
 }
 
 impl Number {
@@ -135,6 +126,43 @@ impl Number {
             number,
             uncertainty,
         }
+    }
+}
+
+impl Number {
+    pub const ZERO: Number = Number {
+        number: Decimal::ZERO,
+        uncertainty: Decimal::ZERO,
+    };
+
+    pub const ONE: Number = Number {
+        number: Decimal::ONE,
+        uncertainty: Decimal::ZERO,
+    };
+}
+
+impl From<Decimal> for Number {
+    fn from(value: Decimal) -> Self {
+        Self {
+            number: value,
+            uncertainty: Decimal::ZERO,
+        }
+    }
+}
+
+impl FromPrimitive for Number {
+    fn from_i64(n: i64) -> Option<Self> {
+        Some(Self {
+            number: n.into(),
+            uncertainty: Decimal::ZERO,
+        })
+    }
+
+    fn from_u64(n: u64) -> Option<Self> {
+        Some(Self {
+            number: n.into(),
+            uncertainty: Decimal::ZERO,
+        })
     }
 }
 

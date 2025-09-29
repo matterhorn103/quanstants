@@ -30,6 +30,18 @@ impl NumericFactor {
     }
 }
 
+impl NumericFactor {
+    #[allow(dead_code)]
+    pub const ONE: NumericFactor = {
+        NumericFactor {
+            sign: 1,
+            mantissa: 1,
+            base: 10,
+            exponent: 0,
+        }
+    };
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct NumericReference {
     pub sign: i8,
@@ -47,6 +59,18 @@ impl NumericReference {
             exponent,
         }
     }
+}
+
+impl NumericReference {
+    #[allow(dead_code)]
+    pub const ONE: NumericReference = {
+        NumericReference {
+            sign: 1,
+            mantissa: 1,
+            base: 10,
+            exponent: 0,
+        }
+    };
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
@@ -213,6 +237,14 @@ impl fmt::Display for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x{:X}", self.to_bits())
     }
+}
+
+impl Unit128 {
+    #[allow(dead_code)]
+    pub const UNITLESS: Unit128 = { Unit128 { num: 0, dim: 0 } };
+
+    #[allow(dead_code)]
+    pub const ONE: Unit128 = Unit128::UNITLESS;
 }
 
 #[cfg(feature = "python")]

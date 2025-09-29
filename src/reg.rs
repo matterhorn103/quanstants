@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     dimensions::{self, Dimensions},
     id::{NumericFactor, Unit128},
+    number::Number,
     prefix::Prefix,
     unit::{LinearUnit, Unit},
 };
@@ -56,9 +57,8 @@ impl UnitRegistry {
             symbol: Some(symbol),
             name: Some(name.clone()),
             prefix,
-            number: 1.into(),
+            number: Number::ONE,
             factors: None,
-            uncertainty: 0.into(),
         };
         let unit = Unit {
             id,

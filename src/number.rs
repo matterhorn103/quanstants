@@ -10,7 +10,7 @@ use rust_decimal::{Decimal, MathematicalOps};
 
 //impl<T> Numeric for T where T: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
 
-#[derive(Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 pub struct Number {
     number: Decimal,
     uncertainty: Decimal,

@@ -8,7 +8,7 @@ use rust_decimal::Decimal;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
-use crate::id::Unit128;
+use crate::id::{NumericFactor, Unit128};
 use crate::prefix::Prefix;
 
 #[derive(Clone, Debug)]
@@ -27,7 +27,7 @@ pub(crate) struct LinearUnit {
     pub(crate) dimensions: Dimensions,
     pub(crate) symbol: Option<String>, // Compound units have None for this
     pub(crate) name: Option<String>,   // Compound units have None for this
-    pub(crate) prefix: Option<Prefix>, // Only possible for derived units
+    pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
     pub(crate) number: Decimal,
     pub(crate) factors: Option<Arc<Vec<LinearFactor>>>, // Base units and unitless indicated by None
     pub(crate) uncertainty: Decimal,
@@ -51,6 +51,24 @@ pub struct Unit {
 }
 
 impl Unit {
+    pub fn unitless() -> Self {
+        Unit {
+            id: Unit128::new(NumericFactor::new(1, 1, 10, 0), Dimensions::default(), 0x00),
+            inner: Arc::new(
+                LinearUnit {
+                    is_base: true,
+                    dimensions: Dimensions::default(),
+                    symbol: Some(String::from("(unitless)")),
+                    name: None,
+                    prefix: None,
+                    number: 1.into(),
+                    factors: None,
+                    uncertainty: 0.into(),
+                }
+            )
+        }
+    }
+
     pub fn is_base(&self) -> bool {
         todo!()
     }

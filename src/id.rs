@@ -211,7 +211,7 @@ impl Unit128 {
 
 impl fmt::Display for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:X}", self.to_bits())
+        write!(f, "0x{:X}", self.to_bits())
     }
 }
 
@@ -221,17 +221,25 @@ pub(crate) mod py {
     use pyo3::{prelude::*, types::PyType};
 
     #[pyclass(name = "UnitId")]
-    pub struct PyUnitId(Unit128);
+    pub struct PyUnitId(pub(crate) Unit128);
 
     #[pymethods]
     impl PyUnitId {
         #[new]
-        fn new(num: u64, dim: u64) -> Self {
-            PyUnitId(Unit128 { num, dim })
+        fn new(id: u128) -> Self {
+            PyUnitId(Unit128::from_bits(id))
+        }
+
+        fn __repr__(&self) -> String {
+            format!("UnitId({})", self.0)
         }
 
         fn __str__(&self) -> String {
-            format!("UnitId({})", self.0)
+            format!("{}", self.0)
+        }
+
+        fn __eq__(&self, other: &Self) -> bool {
+            self.0 == other.0
         }
 
         #[classmethod]

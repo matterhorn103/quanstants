@@ -104,9 +104,10 @@ impl Ord for Unit {
     }
 }
 
-
 #[cfg(feature = "python")]
 pub(crate) mod py {
+    use crate::id::py::PyUnitId;
+
     use super::*;
     use pyo3::prelude::*;
 
@@ -118,10 +119,6 @@ pub(crate) mod py {
         pub fn into_inner(self) -> Unit {
             self.0
         }
-
-        fn __eq__(&self, other: Self) -> bool {
-            self.0 == other.0
-        }
     }
 
     impl From<Unit> for PyUnit {
@@ -129,8 +126,19 @@ pub(crate) mod py {
             Self(value)
         }
     }
-}
 
+    #[pymethods]
+    impl PyUnit {
+        fn __eq__(&self, other: &Self) -> bool {
+            self.0 == other.0
+        }
+
+        #[getter]
+        fn id(&self) -> PyUnitId {
+            PyUnitId(self.0.id)
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

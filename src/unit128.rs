@@ -1,8 +1,14 @@
-use std::{fmt, num::ParseIntError};
+use std::{
+    fmt,
+    num::ParseIntError,
+    ops::{Div, Mul},
+};
 
-use crate::{dimensions::Dimensions, fraction::Frac};
+use rust_decimal::Decimal;
 
-// A UnitId consists of two 64-bit parts:
+use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, number::Number};
+
+// A 128-bit representation of a unit consists of two 64-bit parts:
 //   1. A 64-bit number in a custom format corresponding roughly to scientific notation
 //   2. A 64-bit representation of the dimensions of the unit
 // The numeric component is defined such that all zeroes for the first half of the ID does not
@@ -26,6 +32,72 @@ impl NumericFactor {
             mantissa,
             base,
             exponent,
+        }
+    }
+}
+
+impl TryFrom<Number> for NumericFactor {
+    type Error = QuanstantsError;
+
+    fn try_from(n: Number) -> Result<Self, QuanstantsError> {
+        n.number.try_into()
+    }
+}
+
+impl TryFrom<Decimal> for NumericFactor {
+    type Error = QuanstantsError;
+
+    fn try_from(n: Decimal) -> Result<Self, QuanstantsError> {
+        Ok(NumericFactor::new(
+            if n.is_sign_positive() { 1 } else { -1 },
+            n.mantissa().unsigned_abs() as u64,
+            10,
+            n.scale().try_into()?,
+        ))
+    }
+}
+
+impl TryFrom<NumericFactor> for Decimal {
+    type Error = QuanstantsError;
+
+    fn try_from(n: NumericFactor) -> Result<Self, QuanstantsError> {
+        todo!()
+    }
+}
+
+impl Mul for NumericFactor {
+    type Output = Self;
+
+    // At the moment, panics if the bases are different (obviously not ideal)
+    fn mul(self, rhs: Self) -> Self {
+        if self.base != rhs.base {
+            panic!()
+        } else {
+            NumericFactor {
+                sign: self.sign * rhs.sign,
+                mantissa: self.mantissa * rhs.mantissa,
+                base: self.base,
+                exponent: self.exponent + rhs.exponent,
+            }
+        }
+    }
+}
+
+impl Div for NumericFactor {
+    type Output = Self;
+
+    // At the moment, panics if the bases are different (obviously not ideal)
+    // Also loses precision in the mantissa!
+    fn div(self, rhs: Self) -> Self {
+        if self.base != rhs.base {
+            panic!()
+        } else {
+            NumericFactor {
+                sign: self.sign * rhs.sign,
+                mantissa: self.mantissa / rhs.mantissa,
+                base: self.base,
+                exponent: self.exponent - rhs.exponent,
+            }
         }
     }
 }
@@ -151,6 +223,15 @@ impl Unit128 {
         }
     }
 
+    pub fn factor(&self) -> NumericFactor {
+        NumericFactor::new(
+            self.factor_sign(),
+            self.factor_mantissa(),
+            self.factor_base(),
+            self.factor_exponent(),
+        )
+    }
+
     pub fn factor_exponent(&self) -> i8 {
         (self.num & 0xFF) as i8
     }
@@ -230,6 +311,40 @@ impl Unit128 {
 
     pub fn to_bits(self: Unit128) -> u128 {
         (self.num as u128) << 64 | self.dim as u128
+    }
+}
+
+impl Mul for Unit128 {
+    type Output = Self;
+
+    // Panics for referenced units
+    fn mul(self, rhs: Unit128) -> Unit128 {
+        if self.is_referenced() {
+            panic!()
+        } else {
+            Unit128::new(
+                self.factor() * rhs.factor(),
+                self.dimensions() * rhs.dimensions(),
+                (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
+            )
+        }
+    }
+}
+
+impl Div for Unit128 {
+    type Output = Self;
+
+    // Panics for referenced units
+    fn div(self, rhs: Unit128) -> Unit128 {
+        if self.is_referenced() {
+            panic!()
+        } else {
+            Unit128::new(
+                self.factor() / rhs.factor(),
+                self.dimensions() / rhs.dimensions(),
+                (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
+            )
+        }
     }
 }
 

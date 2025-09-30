@@ -2,10 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     dimensions::Dimensions,
-    id::{NumericFactor, Unit128},
     number::Number,
     prefix::Prefix,
-    unit::{LinearUnit, Unit},
+    unit::{LinearUnit, LinearUnitType, Unit},
+    unit128::{NumericFactor, Unit128},
 };
 
 #[derive(Debug)]
@@ -52,13 +52,13 @@ impl UnitRegistry {
     ) {
         let id = Unit128::new(NumericFactor::new(1, 1, 10, 0), dimensions, 0x00);
         let inner_unit = LinearUnit {
-            is_base: true,
+            utype: LinearUnitType::Base,
             dimensions,
             symbol: Some(symbol),
             name: Some(name.clone()),
             prefix,
             number: Number::ONE,
-            factors: None,
+            factors: vec![],
         };
         let unit = Unit {
             id,

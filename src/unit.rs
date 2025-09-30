@@ -1,18 +1,35 @@
 use std::cmp::Ordering;
 use std::fmt::Debug;
-use std::ops::{Div, Mul};
+use std::ops::{Div, Mul, Neg};
 use std::sync::Arc;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
-use crate::id::Unit128;
 use crate::number::Number;
 use crate::prefix::Prefix;
+use crate::unit128::Unit128;
 
 #[derive(Clone, Debug)]
 pub(crate) struct LinearFactor {
     pub(crate) unit: Arc<LinearUnit>,
     pub(crate) exponent: Frac,
+}
+
+impl LinearFactor {
+    pub(crate) fn inverse(self) -> Self {
+        LinearFactor {
+            unit: self.unit,
+            exponent: self.exponent.neg(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub(crate) enum LinearUnitType {
+    Unitless,
+    Base,
+    Derived,
+    Compound,
 }
 
 // Intended to be stored on the heap, with user-facing units then carrying reference-counted smart
@@ -21,35 +38,38 @@ pub(crate) struct LinearFactor {
 // A LinearUnit should not be cloned, it should be used and passed around only behind a pointer
 #[derive(Debug)]
 pub(crate) struct LinearUnit {
-    pub(crate) is_base: bool,
+    pub(crate) utype: LinearUnitType,
     pub(crate) dimensions: Dimensions,
     pub(crate) symbol: Option<String>, // Compound units have None for this
     pub(crate) name: Option<String>,   // Compound units have None for this
     pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
     pub(crate) number: Number,
-    pub(crate) factors: Option<Arc<Vec<LinearFactor>>>, // Base units and unitless indicated by None
+    pub(crate) factors: Vec<LinearFactor>, // Empty for base units and unitless
 }
 
 impl LinearUnit {
-    pub(crate) fn is_dimensionless(&self) -> bool {
-        self.dimensions.is_dimensionless()
-    }
-
-    pub(crate) fn id(&self) -> Unit128 {
-        todo!()
+    // Note that this may not give the true ID of the unit
+    pub(crate) fn generate_id(&self) -> Unit128 {
+        let lsb = match self.utype {
+            LinearUnitType::Unitless => 0x00,
+            LinearUnitType::Base => 0x00,
+            LinearUnitType::Derived => 0x0D,
+            LinearUnitType::Compound => 0x0C,
+        };
+        Unit128::new(self.number.try_into().unwrap(), self.dimensions, lsb)
     }
 }
 
 impl LinearUnit {
     #[allow(dead_code)]
     pub const UNITLESS: LinearUnit = LinearUnit {
-        is_base: true,
+        utype: LinearUnitType::Unitless,
         dimensions: Dimensions::DIMENSIONLESS,
         symbol: None,
         name: None,
         prefix: None,
         number: Number::ONE,
-        factors: None,
+        factors: vec![],
     };
 }
 
@@ -69,7 +89,7 @@ impl Unit {
     }
 
     pub fn is_base(&self) -> bool {
-        todo!()
+        matches!(self.inner.utype, LinearUnitType::Base)
     }
 
     pub fn is_compound_base(&self) -> bool {
@@ -77,7 +97,7 @@ impl Unit {
     }
 
     pub fn is_dimensionless(&self) -> bool {
-        self.inner.is_dimensionless()
+        self.inner.dimensions.is_dimensionless()
     }
 
     pub fn dimensions(&self) -> Dimensions {
@@ -98,6 +118,26 @@ impl Unit {
 
     pub fn name(&self) -> String {
         self.inner.name.clone().unwrap_or(self.generate_name())
+    }
+
+    pub fn number(&self) -> Number {
+        self.inner.number
+    }
+
+    fn to_factors(&self) -> Vec<LinearFactor> {
+        match self.inner.utype {
+            LinearUnitType::Base | LinearUnitType::Derived => {
+                vec![LinearFactor {
+                    unit: self.inner.clone(),
+                    exponent: 1.into(),
+                }]
+            }
+            LinearUnitType::Compound | LinearUnitType::Unitless => self.inner.factors.clone(),
+        }
+    }
+
+    fn to_inverse_factors(&self) -> Vec<LinearFactor> {
+        self.to_factors().into_iter().map(|x| x.inverse()).collect()
     }
 }
 
@@ -125,7 +165,24 @@ impl Mul for Unit {
     type Output = Self;
 
     fn mul(self, rhs: Unit) -> Unit {
-        todo!()
+        let new_inner = Arc::new(LinearUnit {
+            utype: LinearUnitType::Compound,
+            dimensions: self.dimensions() * rhs.dimensions(),
+            symbol: None,
+            name: None,
+            prefix: None,
+            number: self.number() * rhs.number(),
+            factors: self
+                .to_factors()
+                .into_iter()
+                .chain(rhs.to_inverse_factors())
+                .collect(),
+        });
+        let new_id = new_inner.generate_id();
+        Unit {
+            id: new_id,
+            inner: new_inner,
+        }
     }
 }
 
@@ -133,13 +190,30 @@ impl Div for Unit {
     type Output = Self;
 
     fn div(self, rhs: Unit) -> Unit {
-        todo!()
+        let new_inner = Arc::new(LinearUnit {
+            utype: LinearUnitType::Compound,
+            dimensions: self.dimensions() / rhs.dimensions(),
+            symbol: None,
+            name: None,
+            prefix: None,
+            number: self.number() / rhs.number(),
+            factors: self
+                .to_factors()
+                .into_iter()
+                .chain(rhs.to_inverse_factors())
+                .collect(),
+        });
+        let new_id = new_inner.generate_id();
+        Unit {
+            id: new_id,
+            inner: new_inner,
+        }
     }
 }
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
-    use crate::id::py::PyUnitId;
+    use crate::unit128::py::PyUnitId;
 
     use super::*;
     use pyo3::prelude::*;
@@ -175,7 +249,7 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
-    use crate::id::NumericFactor;
+    use crate::unit128::NumericFactor;
 
     use super::*;
     #[test]
@@ -183,13 +257,13 @@ mod tests {
         let dimensions = Dimensions::new(1, 0, 0, 0, 0, 0, 0);
         let id = Unit128::new(NumericFactor::new(1, 1, 10, 0), dimensions, 0x00);
         let s_inner = LinearUnit {
-            is_base: true,
+            utype: LinearUnitType::Base,
             dimensions,
             symbol: Some(String::from("s")),
             name: Some(String::from("second")),
             prefix: None,
             number: Number::ONE,
-            factors: None,
+            factors: Vec::new(),
         };
         let s = Unit {
             id,

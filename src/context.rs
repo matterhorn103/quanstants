@@ -1,4 +1,6 @@
-use crate::{error::QuanstantsError, id::Unit128, prefix::Prefix, reg::UnitRegistry, unit::Unit};
+use crate::{
+    error::QuanstantsError, prefix::Prefix, reg::UnitRegistry, unit::Unit, unit128::Unit128,
+};
 
 #[derive(Debug, Default)]
 pub struct Context {

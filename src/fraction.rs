@@ -1,7 +1,6 @@
 use num_rational::Ratio;
 use std::{
     fmt,
-    num::ParseIntError,
     ops::{Add, Deref, Div, Mul, Neg, Sub},
 };
 

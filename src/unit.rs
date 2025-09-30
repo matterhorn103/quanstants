@@ -1,14 +1,11 @@
 use std::cmp::Ordering;
 use std::fmt::Debug;
-use std::hash::Hash;
 use std::ops::{Div, Mul};
 use std::sync::Arc;
 
-use rust_decimal::Decimal;
-
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
-use crate::id::{NumericFactor, Unit128};
+use crate::id::Unit128;
 use crate::number::Number;
 use crate::prefix::Prefix;
 

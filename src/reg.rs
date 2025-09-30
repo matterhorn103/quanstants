@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    dimensions::{self, Dimensions},
+    dimensions::Dimensions,
     id::{NumericFactor, Unit128},
     number::Number,
     prefix::Prefix,

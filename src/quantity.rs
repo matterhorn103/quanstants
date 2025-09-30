@@ -5,11 +5,7 @@ use std::{
 
 use rust_decimal::Decimal;
 
-use crate::{
-    dimensions::Dimensions,
-    number::Number,
-    unit::Unit,
-};
+use crate::{dimensions::Dimensions, number::Number, unit::Unit};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct Quantity {
@@ -67,10 +63,7 @@ impl Mul for Quantity {
     type Output = Self;
 
     fn mul(self, rhs: Quantity) -> Quantity {
-        Quantity::new(
-            self.number * rhs.number,
-            self.unit * rhs.unit,
-        )
+        Quantity::new(self.number * rhs.number, self.unit * rhs.unit)
     }
 }
 
@@ -78,10 +71,7 @@ impl Div for Quantity {
     type Output = Self;
 
     fn div(self, rhs: Quantity) -> Quantity {
-        Quantity::new(
-            self.number / rhs.number,
-            self.unit / rhs.unit,
-        )
+        Quantity::new(self.number / rhs.number, self.unit / rhs.unit)
     }
 }
 

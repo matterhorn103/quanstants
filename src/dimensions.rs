@@ -182,8 +182,18 @@ mod tests {
     fn exponents() {
         let dim = Dimensions::new(1, 2, 0, -1, 0, 3, 0);
         let exp = dim.exponents();
-        assert_eq!(exp, [Frac::from(1), Frac::from(2), Frac::from(0), 
-                        Frac::from(-1), Frac::from(0), Frac::from(3), Frac::from(0)]);
+        assert_eq!(
+            exp,
+            [
+                Frac::from(1),
+                Frac::from(2),
+                Frac::from(0),
+                Frac::from(-1),
+                Frac::from(0),
+                Frac::from(3),
+                Frac::from(0)
+            ]
+        );
     }
 
     #[test]

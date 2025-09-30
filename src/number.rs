@@ -5,6 +5,7 @@ use std::{
 
 use num_traits::{self, FromPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
 
 //pub trait Numeric: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
 
@@ -12,11 +13,18 @@ use rust_decimal::{Decimal, MathematicalOps};
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 pub struct Number {
-    number: Decimal,
-    uncertainty: Decimal,
+    pub number: Decimal,
+    pub uncertainty: Decimal,
 }
 
 impl Number {
+    fn new(number: Decimal, uncertainty: Decimal) -> Self {
+        Number {
+            number,
+            uncertainty,
+        }
+    }
+
     fn relative_uncertainty(&self) -> Decimal {
         self.uncertainty / self.number
     }
@@ -24,11 +32,10 @@ impl Number {
     fn add_with_correlation(self, rhs: Self, correlation: Decimal) -> Self {
         let sigma_ab = correlation * self.uncertainty * rhs.uncertainty;
         let number = self.number + rhs.number;
-        let uncertainty = ((self.uncertainty.powu(2))
-            + (rhs.uncertainty.powu(2))
-            + (Decimal::new(2, 0) * sigma_ab))
-            .sqrt()
-            .unwrap();
+        let uncertainty =
+            ((self.uncertainty.powu(2)) + (rhs.uncertainty.powu(2)) + (dec!(2) * sigma_ab))
+                .sqrt()
+                .unwrap();
         Self {
             number,
             uncertainty,
@@ -39,7 +46,7 @@ impl Number {
         let sigma_ab = correlation * self.uncertainty * rhs.uncertainty;
         let number = self.number - rhs.number;
         let uncertainty = ((self.uncertainty.powu(2)) + (rhs.uncertainty.powu(2))
-            - (Decimal::new(2, 0) * sigma_ab))
+            - (dec!(2) * sigma_ab))
             .sqrt()
             .unwrap();
         Self {
@@ -53,7 +60,7 @@ impl Number {
         let number = self.number * rhs.number;
         let uncertainty = ((self.relative_uncertainty().powu(2))
             + (rhs.relative_uncertainty().powu(2))
-            + (Decimal::new(2, 0) * sigma_ab / number))
+            + (dec!(2) * sigma_ab / number))
             .sqrt()
             .unwrap()
             * number.abs();
@@ -68,7 +75,7 @@ impl Number {
         let number = self.number / rhs.number;
         let uncertainty = ((self.relative_uncertainty().powu(2))
             + (rhs.relative_uncertainty().powu(2))
-            - (Decimal::new(2, 0) * sigma_ab / number))
+            - (dec!(2) * sigma_ab / number))
             .sqrt()
             .unwrap()
             * number.abs();
@@ -88,10 +95,10 @@ impl Number {
 
     fn pow_with_correlation(self, rhs: Self, correlation: Decimal) -> Self {
         let sigma_ab = correlation * self.uncertainty * rhs.uncertainty;
-        let number = self.number / rhs.number;
-        let uncertainty = ((self.relative_uncertainty().powu(2))
-            + (rhs.relative_uncertainty().powu(2))
-            - (Decimal::new(2, 0) * sigma_ab / number))
+        let number = self.number.powd(rhs.number);
+        let uncertainty = ((self.relative_uncertainty() * rhs.number).powu(2)
+            + (self.number.ln() * rhs.uncertainty).powu(2)
+            + (dec!(2) * ((self.number.ln() * rhs.number) / self.number) * sigma_ab))
             .sqrt()
             .unwrap()
             * number.abs();
@@ -201,5 +208,132 @@ impl Div for Number {
 impl fmt::Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}+/-{}", self.number, self.uncertainty)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn relative_uncertainty() {
+        let n = Number::new(dec!(20), dec!(2));
+        assert_eq!(n.relative_uncertainty(), dec!(0.1));
+
+        let n2 = Number::new(dec!(500), dec!(5));
+        assert_eq!(n2.relative_uncertainty(), dec!(0.01));
+
+        let n3 = Number::new(dec!(1000), dec!(15));
+        assert_eq!(n3.relative_uncertainty(), dec!(0.015));
+    }
+
+    #[test]
+    fn addition() {
+        let n1 = Number::new(dec!(20), dec!(2));
+        let n2 = Number::new(dec!(30), dec!(5));
+        let result = n1 + n2;
+        assert_eq!(result.number, dec!(50));
+        assert_eq!(
+            result.uncertainty.round_dp(5),
+            dec!(5.3851648071345).round_dp(5)
+        );
+    }
+
+    #[test]
+    fn subtraction() {
+        let n1 = Number::new(dec!(20), dec!(2));
+        let n2 = Number::new(dec!(30), dec!(5));
+        let result = n1 - n2;
+        assert_eq!(result.number, dec!(-10));
+        assert_eq!(
+            result.uncertainty.round_dp(5),
+            dec!(5.3851648071345).round_dp(5)
+        );
+    }
+
+    #[test]
+    fn multiplication() {
+        let n1 = Number::new(dec!(20), dec!(2));
+        let n2 = Number::new(dec!(30), dec!(5));
+        let result = n1 * n2;
+        assert_eq!(result.number, dec!(600));
+        assert_eq!(
+            result.uncertainty.round_dp(5),
+            dec!(116.619037896906).round_dp(5)
+        );
+    }
+
+    #[test]
+    fn division() {
+        let n1 = Number::new(dec!(20), dec!(2));
+        let n2 = Number::new(dec!(30), dec!(5));
+        let result = n1 / n2;
+        assert_eq!(result.number.round_dp(10), dec!(0.6666666667).round_dp(10));
+        assert_eq!(
+            result.uncertainty.round_dp(5),
+            dec!(0.129576708774340).round_dp(5)
+        );
+    }
+
+    #[test]
+    fn division_reversed() {
+        let n1 = Number::new(dec!(20), dec!(2));
+        let n2 = Number::new(dec!(30), dec!(5));
+        let result = n2 / n1;
+        assert_eq!(result.number, dec!(1.5));
+        assert_eq!(
+            result.uncertainty.round_dp(5),
+            dec!(0.2915475947422).round_dp(5)
+        );
+    }
+
+    #[test]
+    fn exponentiation() {
+        let n1 = Number::new(dec!(20), dec!(2));
+
+        let result = n1.powd(dec!(2));
+        assert_eq!(result.number, dec!(400));
+        assert_eq!(result.uncertainty, dec!(80));
+
+        let result = n1.powi(2);
+        assert_eq!(result.number, dec!(400));
+        assert_eq!(result.uncertainty, dec!(80));
+    }
+
+    #[test]
+    fn natural_log() {
+        let n1 = Number::new(dec!(20), dec!(2));
+        let n2 = Number::new(dec!(30), dec!(5));
+        let ratio = n1 / n2;
+        let result = ratio.ln();
+        assert_eq!(
+            result.uncertainty.round_dp(5),
+            dec!(0.194365063161).round_dp(5)
+        );
+    }
+
+    #[test]
+    fn log_base10() {
+        let n1 = Number::new(dec!(20), dec!(2));
+        let n2 = Number::new(dec!(30), dec!(5));
+        let ratio = n1 / n2;
+        let result = ratio.log10();
+        assert_eq!(
+            result.uncertainty.round_dp(5),
+            dec!(0.08441167440582).round_dp(5)
+        );
+    }
+
+    #[test]
+    fn exponential() {
+        let n1 = Number::new(dec!(20), dec!(2));
+        let n2 = Number::new(dec!(30), dec!(5));
+        let ratio = n1 / n2;
+        let result = ratio.exp();
+        assert_eq!(
+            result.uncertainty.round_dp(5),
+            dec!(0.25238096660761).round_dp(5)
+        );
     }
 }

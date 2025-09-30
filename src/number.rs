@@ -18,19 +18,26 @@ pub struct Number {
 }
 
 impl Number {
-    fn new(number: Decimal, uncertainty: Decimal) -> Self {
+    pub fn new<T: Into<Decimal>>(number: T, uncertainty: T) -> Self {
         Number {
-            number,
-            uncertainty,
+            number: number.into(),
+            uncertainty: uncertainty.into(),
         }
     }
 
-    fn relative_uncertainty(&self) -> Decimal {
+    pub fn exact<T: Into<Decimal>>(number: T) -> Self {
+        Number {
+            number: number.into(),
+            uncertainty: Decimal::ZERO,
+        }
+    }
+
+    pub fn relative_uncertainty(&self) -> Decimal {
         self.uncertainty / self.number
     }
 
-    fn add_with_correlation(self, rhs: Self, correlation: Decimal) -> Self {
-        let sigma_ab = correlation * self.uncertainty * rhs.uncertainty;
+    pub fn add_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+        let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number + rhs.number;
         let uncertainty =
             ((self.uncertainty.powu(2)) + (rhs.uncertainty.powu(2)) + (dec!(2) * sigma_ab))
@@ -42,8 +49,8 @@ impl Number {
         }
     }
 
-    fn sub_with_correlation(self, rhs: Self, correlation: Decimal) -> Self {
-        let sigma_ab = correlation * self.uncertainty * rhs.uncertainty;
+    pub fn sub_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+        let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number - rhs.number;
         let uncertainty = ((self.uncertainty.powu(2)) + (rhs.uncertainty.powu(2))
             - (dec!(2) * sigma_ab))
@@ -55,8 +62,8 @@ impl Number {
         }
     }
 
-    fn mul_with_correlation(self, rhs: Self, correlation: Decimal) -> Self {
-        let sigma_ab = correlation * self.uncertainty * rhs.uncertainty;
+    pub fn mul_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+        let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number * rhs.number;
         let uncertainty = ((self.relative_uncertainty().powu(2))
             + (rhs.relative_uncertainty().powu(2))
@@ -70,8 +77,8 @@ impl Number {
         }
     }
 
-    fn div_with_correlation(self, rhs: Self, correlation: Decimal) -> Self {
-        let sigma_ab = correlation * self.uncertainty * rhs.uncertainty;
+    pub fn div_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+        let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number / rhs.number;
         let uncertainty = ((self.relative_uncertainty().powu(2))
             + (rhs.relative_uncertainty().powu(2))
@@ -85,16 +92,16 @@ impl Number {
         }
     }
 
-    fn powi(self, rhs: i64) -> Self {
+    pub fn powi(self, rhs: i64) -> Self {
         self.powd(rhs.into())
     }
 
-    fn powd(self, rhs: Decimal) -> Self {
+    pub fn powd(self, rhs: Decimal) -> Self {
         self.pow_with_correlation(rhs.into(), Decimal::ZERO)
     }
 
-    fn pow_with_correlation(self, rhs: Self, correlation: Decimal) -> Self {
-        let sigma_ab = correlation * self.uncertainty * rhs.uncertainty;
+    pub fn pow_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+        let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number.powd(rhs.number);
         let uncertainty = ((self.relative_uncertainty() * rhs.number).powu(2)
             + (self.number.ln() * rhs.uncertainty).powu(2)
@@ -108,7 +115,7 @@ impl Number {
         }
     }
 
-    fn ln(self) -> Self {
+    pub fn ln(self) -> Self {
         let number = self.number.ln();
         let uncertainty = self.relative_uncertainty().abs();
         Self {
@@ -117,7 +124,7 @@ impl Number {
         }
     }
 
-    fn log10(self) -> Self {
+    pub fn log10(self) -> Self {
         let number = self.number.log10();
         let uncertainty = (self.uncertainty / (Decimal::TEN.ln() * self.number)).abs();
         Self {
@@ -126,7 +133,7 @@ impl Number {
         }
     }
 
-    fn exp(self) -> Self {
+    pub fn exp(self) -> Self {
         let number = self.number.exp();
         let uncertainty = number.abs() * self.uncertainty.abs();
         Self {
@@ -149,9 +156,9 @@ impl Number {
 }
 
 impl From<Decimal> for Number {
-    fn from(value: Decimal) -> Self {
+    fn from(n: Decimal) -> Self {
         Self {
-            number: value,
+            number: n,
             uncertainty: Decimal::ZERO,
         }
     }
@@ -218,20 +225,20 @@ mod tests {
 
     #[test]
     fn relative_uncertainty() {
-        let n = Number::new(dec!(20), dec!(2));
+        let n = Number::new(20, 2);
         assert_eq!(n.relative_uncertainty(), dec!(0.1));
 
-        let n2 = Number::new(dec!(500), dec!(5));
+        let n2 = Number::new(500, 5);
         assert_eq!(n2.relative_uncertainty(), dec!(0.01));
 
-        let n3 = Number::new(dec!(1000), dec!(15));
+        let n3 = Number::new(1000, 15);
         assert_eq!(n3.relative_uncertainty(), dec!(0.015));
     }
 
     #[test]
     fn addition() {
-        let n1 = Number::new(dec!(20), dec!(2));
-        let n2 = Number::new(dec!(30), dec!(5));
+        let n1 = Number::new(20, 2);
+        let n2 = Number::new(30, 5);
         let result = n1 + n2;
         assert_eq!(result.number, dec!(50));
         assert_eq!(
@@ -242,8 +249,8 @@ mod tests {
 
     #[test]
     fn subtraction() {
-        let n1 = Number::new(dec!(20), dec!(2));
-        let n2 = Number::new(dec!(30), dec!(5));
+        let n1 = Number::new(20, 2);
+        let n2 = Number::new(30, 5);
         let result = n1 - n2;
         assert_eq!(result.number, dec!(-10));
         assert_eq!(
@@ -254,8 +261,8 @@ mod tests {
 
     #[test]
     fn multiplication() {
-        let n1 = Number::new(dec!(20), dec!(2));
-        let n2 = Number::new(dec!(30), dec!(5));
+        let n1 = Number::new(20, 2);
+        let n2 = Number::new(30, 5);
         let result = n1 * n2;
         assert_eq!(result.number, dec!(600));
         assert_eq!(
@@ -266,8 +273,8 @@ mod tests {
 
     #[test]
     fn division() {
-        let n1 = Number::new(dec!(20), dec!(2));
-        let n2 = Number::new(dec!(30), dec!(5));
+        let n1 = Number::new(20, 2);
+        let n2 = Number::new(30, 5);
         let result = n1 / n2;
         assert_eq!(result.number.round_dp(10), dec!(0.6666666667).round_dp(10));
         assert_eq!(
@@ -278,8 +285,8 @@ mod tests {
 
     #[test]
     fn division_reversed() {
-        let n1 = Number::new(dec!(20), dec!(2));
-        let n2 = Number::new(dec!(30), dec!(5));
+        let n1 = Number::new(20, 2);
+        let n2 = Number::new(30, 5);
         let result = n2 / n1;
         assert_eq!(result.number, dec!(1.5));
         assert_eq!(
@@ -290,7 +297,7 @@ mod tests {
 
     #[test]
     fn exponentiation() {
-        let n1 = Number::new(dec!(20), dec!(2));
+        let n1 = Number::new(20, 2);
 
         let result = n1.powd(dec!(2));
         assert_eq!(result.number, dec!(400));
@@ -303,8 +310,8 @@ mod tests {
 
     #[test]
     fn natural_log() {
-        let n1 = Number::new(dec!(20), dec!(2));
-        let n2 = Number::new(dec!(30), dec!(5));
+        let n1 = Number::new(20, 2);
+        let n2 = Number::new(30, 5);
         let ratio = n1 / n2;
         let result = ratio.ln();
         assert_eq!(
@@ -315,8 +322,8 @@ mod tests {
 
     #[test]
     fn log_base10() {
-        let n1 = Number::new(dec!(20), dec!(2));
-        let n2 = Number::new(dec!(30), dec!(5));
+        let n1 = Number::new(20, 2);
+        let n2 = Number::new(30, 5);
         let ratio = n1 / n2;
         let result = ratio.log10();
         assert_eq!(
@@ -327,8 +334,8 @@ mod tests {
 
     #[test]
     fn exponential() {
-        let n1 = Number::new(dec!(20), dec!(2));
-        let n2 = Number::new(dec!(30), dec!(5));
+        let n1 = Number::new(20, 2);
+        let n2 = Number::new(30, 5);
         let ratio = n1 / n2;
         let result = ratio.exp();
         assert_eq!(

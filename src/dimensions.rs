@@ -52,7 +52,7 @@ impl Dimensions {
 }
 
 impl Dimensions {
-    pub const ZERO: Dimensions = Dimensions {
+    pub const DIMENSIONLESS: Dimensions = Dimensions {
         T: Frac::ZERO,
         L: Frac::ZERO,
         M: Frac::ZERO,
@@ -161,9 +161,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_dimensions() {
-        let dim1 = Dimensions::default();
-        assert_eq!(dim1, Dimensions::new(0, 0, 0, 0, 0, 0, 0));
+    fn new() {
+        let dim = Dimensions::new(1, 2, 3, 0, -1, 0, 1);
+        assert_eq!(dim.T, Frac::from(1));
+        assert_eq!(dim.L, Frac::from(2));
+        assert_eq!(dim.M, Frac::from(3));
+        assert_eq!(dim.I, Frac::ZERO);
+        assert_eq!(dim.Θ, Frac::from(-1));
+        assert_eq!(dim.N, Frac::ZERO);
+        assert_eq!(dim.J, Frac::from(1));
+    }
+
+    #[test]
+    fn default() {
+        let dim = Dimensions::default();
+        assert_eq!(dim, Dimensions::new(0, 0, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
+    fn exponents() {
+        let dim = Dimensions::new(1, 2, 0, -1, 0, 3, 0);
+        let exp = dim.exponents();
+        assert_eq!(exp, [Frac::from(1), Frac::from(2), Frac::from(0), 
+                        Frac::from(-1), Frac::from(0), Frac::from(3), Frac::from(0)]);
+    }
+
+    #[test]
+    fn is_dimensionless_true() {
+        let dim = Dimensions::new(0, 0, 0, 0, 0, 0, 0);
+        assert!(dim.is_dimensionless());
+    }
+
+    #[test]
+    fn is_dimensionless_false() {
+        let dim = Dimensions::new(1, 0, 0, 0, 0, 0, 0);
+        assert!(!dim.is_dimensionless());
+    }
+
+    #[test]
+    fn dimensionless_const() {
+        let dim = Dimensions::DIMENSIONLESS;
+        assert_eq!(dim, Dimensions::new(0, 0, 0, 0, 0, 0, 0));
+        assert_eq!(dim.T, Frac::ZERO);
+        assert!(dim.is_dimensionless());
     }
 
     #[test]
@@ -182,7 +222,14 @@ mod tests {
 
     #[test]
     fn pow() {
-        let dim1 = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
-        assert_eq!(dim1.pow(2), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
+        let dim = Dimensions::new(0, 1, 0, 2, 0, 0, 0);
+        assert_eq!(dim.pow(2), Dimensions::new(0, 2, 0, 4, 0, 0, 0))
+    }
+
+    #[test]
+    fn display() {
+        let dim = Dimensions::new(1, -1, 0, 2, 0, -3, 0);
+        assert_eq!(dim.to_string(), "TL⁻¹I²N⁻³");
+        assert_eq!(Dimensions::DIMENSIONLESS.to_string(), "(dimensionless)");
     }
 }

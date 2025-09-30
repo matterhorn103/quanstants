@@ -47,7 +47,7 @@ impl LinearUnit {
     #[allow(dead_code)]
     pub const UNITLESS: LinearUnit = LinearUnit {
         is_base: true,
-        dimensions: Dimensions::ZERO,
+        dimensions: Dimensions::DIMENSIONLESS,
         symbol: None,
         name: None,
         prefix: None,

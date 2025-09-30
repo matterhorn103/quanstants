@@ -72,31 +72,6 @@ impl Frac {
     pub const ZERO: Frac = Frac(Ratio::ZERO);
 }
 
-// We should only use super/subscripts like these in the terminal, it's Unicode abuse
-fn char_to_superscript(character: char) -> char {
-    match character {
-        '1' => '¹',
-        '2' => '²',
-        '3' => '³',
-        '4' => '⁴',
-        '5' => '⁵',
-        '6' => '⁶',
-        '7' => '⁷',
-        '8' => '⁸',
-        '9' => '⁹',
-        '0' => '⁰',
-        '-' => '⁻',
-        '⁄' => '⁄',
-        _ => panic!(),
-    }
-}
-
-impl fmt::Display for Frac {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}⁄{}", self.numer(), self.denom())
-    }
-}
-
 impl From<i8> for Frac {
     fn from(value: i8) -> Self {
         Self(Ratio::from_integer(value))
@@ -173,6 +148,35 @@ impl Div<i8> for Frac {
     }
 }
 
+impl fmt::Display for Frac {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_integer() {
+            write!(f, "{}", self.to_integer())
+        } else {
+            write!(f, "{}⁄{}", self.numer(), self.denom())
+        }
+    }
+}
+
+// We should only use super/subscripts like these in the terminal, it's Unicode abuse
+fn char_to_superscript(character: char) -> char {
+    match character {
+        '1' => '¹',
+        '2' => '²',
+        '3' => '³',
+        '4' => '⁴',
+        '5' => '⁵',
+        '6' => '⁶',
+        '7' => '⁷',
+        '8' => '⁸',
+        '9' => '⁹',
+        '0' => '⁰',
+        '-' => '⁻',
+        '⁄' => '⁄',
+        _ => panic!(),
+    }
+}
+
 #[cfg(feature = "python")]
 pub(crate) mod py {
     use super::*;
@@ -227,28 +231,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new() {
+    fn new() {
         let f = Frac::new(3, 4);
         assert_eq!(*f.numer(), 3);
         assert_eq!(*f.denom(), 4);
     }
 
     #[test]
-    fn test_new_neg() {
+    fn new_neg() {
         let f = Frac::new(-3, 4);
         assert_eq!(*f.numer(), -3);
         assert_eq!(*f.denom(), 4);
     }
 
     #[test]
-    fn test_new_normalized_neg() {
+    fn new_normalized_neg() {
         let f = Frac::new(3, -4); // Sign should move to numerator (that's how Ratio normalizes)
         assert_eq!(*f.numer(), -3);
         assert_eq!(*f.denom(), 4);
     }
 
     #[test]
-    fn test_new_reduced() {
+    fn new_reduced() {
         let f = Frac::new(6, 8); // Should be reduced to 3/4
         assert_eq!(*f.numer(), 3);
         assert_eq!(*f.denom(), 4);
@@ -256,12 +260,12 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_new_zero_denominator() {
+    fn new_zero_denominator() {
         Frac::new(1, 0);
     }
 
     #[test]
-    fn test_is_zero() {
+    fn is_zero() {
         assert!(Frac::new(0, 1).is_zero());
         assert!(Frac::new(0, 5).is_zero());
         assert!(!Frac::new(1, 2).is_zero());
@@ -269,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn test_is_negative() {
+    fn is_negative() {
         assert!(Frac::new(-1, 2).is_negative());
         assert!(Frac::new(1, -2).is_negative());
         assert!(!Frac::new(1, 2).is_negative());
@@ -278,7 +282,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_i8() {
+    fn from_i8() {
         let f = Frac::from(5);
         assert_eq!(*f.numer(), 5);
         assert_eq!(*f.denom(), 1);
@@ -292,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_partial_eq_i8() {
+    fn partial_eq_i8() {
         assert!(Frac::new(6, 2) == 3);
         assert!(Frac::new(-4, 2) == -2);
         assert!(Frac::new(0, 1) == 0);
@@ -301,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn test_neg() {
+    fn neg() {
         let f = Frac::new(3, 4);
         let neg_f = -f;
         assert_eq!(*neg_f.numer(), -3);
@@ -314,7 +318,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add() {
+    fn add() {
         let a = Frac::new(1, 2);
         let b = Frac::new(1, 3);
         let result = a + b;
@@ -326,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sub() {
+    fn sub() {
         let a = Frac::new(3, 4);
         let b = Frac::new(1, 4);
         let result = a - b;
@@ -338,7 +342,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mul() {
+    fn mul() {
         let a = Frac::new(2, 3);
         let b = Frac::new(3, 4);
         let result = a * b;
@@ -350,7 +354,7 @@ mod tests {
     }
 
     #[test]
-    fn test_div() {
+    fn div() {
         let a = Frac::new(3, 4);
         let b = Frac::new(2, 3);
         let result = a / b;
@@ -362,9 +366,15 @@ mod tests {
     }
 
     #[test]
-    fn test_to_string() {
+    fn display() {
         let f = Frac::new(1, 2);
-        assert!(f.to_string() == "1⁄2")
+        assert_eq!(f.to_string(), "1⁄2");
+
+        let f = Frac::new(2, 1);
+        assert_eq!(f.to_string(), "2");
+
+        let f = Frac::new(0, 2);
+        assert_eq!(f.to_string(), "0");
     }
 
     #[test]
@@ -378,12 +388,12 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_char_to_superscript_invalid() {
+    fn char_to_superscript_invalid() {
         char_to_superscript('a'); // Should panic on invalid character
     }
 
     #[test]
-    fn test_to_superscript() {
+    fn to_superscript() {
         let f = Frac::new(1, 2);
         assert_eq!(f.to_superscript(), "¹⁄²");
 
@@ -392,14 +402,14 @@ mod tests {
     }
 
     #[test]
-    fn test_from_bits_zeroes() {
+    fn from_bits_zeroes() {
         // All zeroes is defined as being 0 even though 0 would properly be represented as 0/1
         let f = Frac::from_bits(0x00);
         assert!(f.is_zero());
     }
 
     #[test]
-    fn test_from_bits_integers() {
+    fn from_bits_integers() {
         // Test positive whole numbers
         let f = Frac::from_bits(0x05);
         assert_eq!(f, Frac::from(5));
@@ -409,7 +419,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_bits() {
+    fn from_bits() {
         // Test positive fractions
         let f = Frac::from_bits(0x21); // num=1, den=2
         assert_eq!(f, Frac::new(1, 2));
@@ -422,7 +432,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_bits_neg() {
+    fn from_bits_neg() {
         // Test negative integers
         let f = Frac::from_bits(0xF2); // num=2, den=-1
         assert_eq!(f, Frac::from(-2));
@@ -433,26 +443,26 @@ mod tests {
     }
 
     #[test]
-    fn test_to_bits_zero() {
+    fn to_bits_zero() {
         let f = Frac::new(0, 1);
         assert_eq!(f.to_bits(), 0x00);
     }
 
     #[test]
-    fn test_to_bits_positive() {
+    fn to_bits_positive() {
         let f = Frac::new(1, 2);
         // Should encode as positive with num=1, den=2
         assert_eq!(f.to_bits(), 0x21);
     }
 
     #[test]
-    fn test_to_bits_negative() {
+    fn to_bits_negative() {
         let f = Frac::new(-1, 2);
         assert_eq!(f.to_bits(), 0xE1);
     }
 
     #[test]
-    fn test_bits_roundtrip() {
+    fn bits_roundtrip() {
         for n in 0i8..=15 {
             for d in -7i8..=7 {
                 if d == 0 {
@@ -467,13 +477,13 @@ mod tests {
     }
 
     #[test]
-    fn test_default() {
+    fn default() {
         let f = Frac::default();
         assert!(f.is_zero());
     }
 
     #[test]
-    fn test_ordering() {
+    fn ordering() {
         let a = Frac::new(1, 3);
         let b = Frac::new(1, 2);
         let c = Frac::new(2, 3);
@@ -487,7 +497,7 @@ mod tests {
     }
 
     #[test]
-    fn test_equality() {
+    fn equality() {
         let a = Frac::new(2, 4);
         let b = Frac::new(1, 2);
         assert_eq!(a, b); // Should be equal after reduction
@@ -500,7 +510,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deref() {
+    fn deref() {
         let f = Frac::new(3, 4);
         // Test that we can call Ratio methods through Deref
         assert!(!f.is_integer());

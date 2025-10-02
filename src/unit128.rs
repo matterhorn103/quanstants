@@ -203,8 +203,12 @@ impl Unit128 {
     }
 
     pub fn is_referenced(&self) -> bool {
-        ((self.dim & 0b10000000) == 0b10000000) // 0xA* to 0xF* are for other systems entirely
-        || ((self.dim & 0xF0) == 0) // 0x0* is for normal linear units
+        // Tried to be efficient but logic is incorrect
+        //((self.dim & 0b10000000) == 0b10000000) // 0xA* to 0xF* are for other systems entirely
+        //|| ((self.dim & 0xF0) == 0) // 0x0* is for normal linear units
+
+        // Just keep it simple for now
+        (0x10..=0x9F).contains(&self.least_significant_byte())
     }
 
     pub fn least_significant_byte(&self) -> u8 {
@@ -445,5 +449,33 @@ pub(crate) mod py {
         fn to_bits(&self) -> u128 {
             self.0.to_bits()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new() {
+        let s = Unit128::new(NumericFactor::ONE, Dimensions::TIME, 0x00);
+        let _celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+        assert_eq!(s.dimensions(), Dimensions::TIME);
+    }
+
+    #[test]
+    fn lsb() {
+        assert_eq!(Unit128::UNITLESS.least_significant_byte(), 0x00);
+        assert_eq!(Unit128::SECOND.least_significant_byte(), 0x00);
+        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+        assert_eq!(celsius.least_significant_byte(), 0x41);
+    }
+
+    #[test]
+    fn is_referenced() {
+        assert!(!Unit128::UNITLESS.is_referenced());
+        assert!(!Unit128::SECOND.is_referenced());
+        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+        assert!(celsius.is_referenced())
     }
 }

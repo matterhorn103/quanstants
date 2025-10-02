@@ -229,6 +229,10 @@ pub(crate) mod py {
         pub fn into_inner(self) -> Unit {
             self.0
         }
+
+        pub fn borrow_inner(&self) -> &Unit {
+            &self.0
+        }
     }
 
     impl From<Unit> for PyUnit {
@@ -256,7 +260,7 @@ mod tests {
 
     use super::*;
     #[test]
-    fn test_equality() {
+    fn equality() {
         let s = Unit {
             id: Unit128::SECOND,
             inner: Arc::new(LinearUnit {

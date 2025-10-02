@@ -14,7 +14,7 @@ pub struct Quantity {
 }
 
 impl Quantity {
-    pub fn new<T: Into<Number>>(number: T, unit: Unit) -> Self {
+    pub fn new(number: impl Into<Number>, unit: Unit) -> Self {
         Self {
             number: number.into(),
             unit,
@@ -23,6 +23,13 @@ impl Quantity {
 
     pub fn dimensions(&self) -> Dimensions {
         self.unit.dimensions()
+    }
+
+    pub fn uncertainty(&self) -> Self {
+        Self::new(
+            self.number.uncertainty,
+            self.unit.clone(),
+        )
     }
 }
 
@@ -99,5 +106,110 @@ pub(crate) mod py {
         fn new(number: Decimal, unit: PyUnit) -> Self {
             PyQuantity(Quantity::new(number, unit.into_inner()))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::{unit::{LinearUnit, LinearUnitType}, unit128::Unit128};
+
+    use super::*;
+
+    #[test]
+    fn new() {
+        let n = Number::new(5, 0);
+        let u = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: Number::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let q = Quantity::new(n, u.clone());
+        assert_eq!(q.number, n);
+        assert_eq!(q.unit, u);
+    }
+
+    #[test]
+    fn dimensions() {
+        let n = Number::new(5, 0);
+        let u = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: Number::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let q = Quantity::new(n, u);
+        assert_eq!(q.dimensions(), Dimensions::TIME);
+    }
+
+    #[test]
+    fn uncertainty() {
+        let n = Number::new(20, 1);
+        let u = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: Number::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let q = Quantity::new(n, u.clone());
+        assert_eq!(q.uncertainty(), Quantity::new(Number::from(1), u));
+    }
+
+    #[test]
+    fn mul() {
+        let s = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: Number::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let q1 = Quantity::new(Number::new(5, 0), s.clone());
+        let q2 = Quantity::new(Number::new(8, 0), s.clone());
+        assert_eq!(q1 * q2, Quantity::new(Number::new(40, 0), s.clone() * s.clone()));
+    }
+
+    #[test]
+    fn div() {
+        let s = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: Number::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let q1 = Quantity::new(Number::new(40, 0), s.clone() * s.clone());
+        let q2 = Quantity::new(Number::new(8, 0), s.clone());
+        assert_eq!(q1 / q2, Quantity::new(Number::new(5, 0), s.clone()));
     }
 }

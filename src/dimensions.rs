@@ -51,18 +51,6 @@ impl Dimensions {
     }
 }
 
-impl Dimensions {
-    pub const DIMENSIONLESS: Dimensions = Dimensions {
-        T: Frac::ZERO,
-        L: Frac::ZERO,
-        M: Frac::ZERO,
-        I: Frac::ZERO,
-        Θ: Frac::ZERO,
-        N: Frac::ZERO,
-        J: Frac::ZERO,
-    };
-}
-
 impl Mul for Dimensions {
     type Output = Self;
 
@@ -115,6 +103,104 @@ impl fmt::Display for Dimensions {
         };
         write!(f, "{output}")
     }
+}
+
+impl Dimensions {
+    pub const DIMENSIONLESS: Dimensions = Dimensions {
+        T: Frac::ZERO,
+        L: Frac::ZERO,
+        M: Frac::ZERO,
+        I: Frac::ZERO,
+        Θ: Frac::ZERO,
+        N: Frac::ZERO,
+        J: Frac::ZERO,
+    };
+
+    pub const D: Dimensions = Dimensions::DIMENSIONLESS;
+
+    pub const TIME: Dimensions = Dimensions {
+        T: Frac::ONE,
+        L: Frac::ZERO,
+        M: Frac::ZERO,
+        I: Frac::ZERO,
+        Θ: Frac::ZERO,
+        N: Frac::ZERO,
+        J: Frac::ZERO,
+    };
+
+    pub const T: Dimensions = Dimensions::TIME;
+
+    pub const LENGTH: Dimensions = Dimensions {
+        T: Frac::ZERO,
+        L: Frac::ONE,
+        M: Frac::ZERO,
+        I: Frac::ZERO,
+        Θ: Frac::ZERO,
+        N: Frac::ZERO,
+        J: Frac::ZERO,
+    };
+
+    pub const L: Dimensions = Dimensions::LENGTH;
+
+    pub const MASS: Dimensions = Dimensions {
+        T: Frac::ZERO,
+        L: Frac::ZERO,
+        M: Frac::ONE,
+        I: Frac::ZERO,
+        Θ: Frac::ZERO,
+        N: Frac::ZERO,
+        J: Frac::ZERO,
+    };
+
+    pub const M: Dimensions = Dimensions::MASS;
+
+    pub const ELECTRIC_CURRENT: Dimensions = Dimensions {
+        T: Frac::ZERO,
+        L: Frac::ZERO,
+        M: Frac::ZERO,
+        I: Frac::ONE,
+        Θ: Frac::ZERO,
+        N: Frac::ZERO,
+        J: Frac::ZERO,
+    };
+
+    pub const I: Dimensions = Dimensions::ELECTRIC_CURRENT;
+
+    pub const THERMODYNAMIC_TEMPERATURE: Dimensions = Dimensions {
+        T: Frac::ZERO,
+        L: Frac::ZERO,
+        M: Frac::ZERO,
+        I: Frac::ZERO,
+        Θ: Frac::ONE,
+        N: Frac::ZERO,
+        J: Frac::ZERO,
+    };
+
+    pub const Θ: Dimensions = Dimensions::THERMODYNAMIC_TEMPERATURE;
+
+    pub const AMOUNT_OF_SUBSTANCE: Dimensions = Dimensions {
+        T: Frac::ZERO,
+        L: Frac::ZERO,
+        M: Frac::ZERO,
+        I: Frac::ZERO,
+        Θ: Frac::ZERO,
+        N: Frac::ONE,
+        J: Frac::ZERO,
+    };
+
+    pub const N: Dimensions = Dimensions::AMOUNT_OF_SUBSTANCE;
+
+    pub const LUMINOUS_INTENSITY: Dimensions = Dimensions {
+        T: Frac::ZERO,
+        L: Frac::ZERO,
+        M: Frac::ZERO,
+        I: Frac::ZERO,
+        Θ: Frac::ZERO,
+        N: Frac::ZERO,
+        J: Frac::ZERO,
+    };
+
+    pub const J: Dimensions = Dimensions::LUMINOUS_INTENSITY;
 }
 
 #[cfg(feature = "python")]

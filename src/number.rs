@@ -11,7 +11,7 @@ use rust_decimal_macros::dec;
 
 //impl<T> Numeric for T where T: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
 
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Number {
     pub number: Decimal,
     pub uncertainty: Decimal,
@@ -143,18 +143,6 @@ impl Number {
     }
 }
 
-impl Number {
-    pub const ZERO: Number = Number {
-        number: Decimal::ZERO,
-        uncertainty: Decimal::ZERO,
-    };
-
-    pub const ONE: Number = Number {
-        number: Decimal::ONE,
-        uncertainty: Decimal::ZERO,
-    };
-}
-
 impl From<Decimal> for Number {
     fn from(n: Decimal) -> Self {
         Self {
@@ -177,6 +165,26 @@ impl FromPrimitive for Number {
             number: n.into(),
             uncertainty: Decimal::ZERO,
         })
+    }
+}
+
+impl PartialEq for Number {
+    fn eq(&self, other: &Self) -> bool {
+        self.number == other.number
+    }
+}
+
+impl Eq for Number {}
+
+impl PartialOrd for Number {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.number.partial_cmp(&other.number)
+    }
+}
+
+impl Ord for Number {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.number.cmp(&other.number)
     }
 }
 
@@ -216,6 +224,18 @@ impl fmt::Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}+/-{}", self.number, self.uncertainty)
     }
+}
+
+impl Number {
+    pub const ZERO: Number = Number {
+        number: Decimal::ZERO,
+        uncertainty: Decimal::ZERO,
+    };
+
+    pub const ONE: Number = Number {
+        number: Decimal::ONE,
+        uncertainty: Decimal::ZERO,
+    };
 }
 
 #[cfg(test)]

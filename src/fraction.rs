@@ -69,6 +69,8 @@ impl Frac {
 
 impl Frac {
     pub const ZERO: Frac = Frac(Ratio::ZERO);
+
+    pub const ONE: Frac = Frac(Ratio::ONE);
 }
 
 impl From<i8> for Frac {

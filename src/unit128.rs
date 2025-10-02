@@ -360,19 +360,54 @@ impl Unit128 {
 
     pub const ONE: Unit128 = Unit128::UNITLESS;
 
-    pub const SECOND: Unit128 = { Unit128 { num: 0x0, dim: 0x1100 } };
+    pub const SECOND: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x1100,
+        }
+    };
 
-    pub const METRE: Unit128 = { Unit128 { num: 0x0, dim: 0x110000 } };
+    pub const METRE: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x110000,
+        }
+    };
 
-    pub const KILOGRAM: Unit128 = { Unit128 { num: 0x0, dim: 0x110000 } };
+    pub const KILOGRAM: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x110000,
+        }
+    };
 
-    pub const AMPERE: Unit128 = { Unit128 { num: 0x0, dim: 0x11000000 } };
+    pub const AMPERE: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x11000000,
+        }
+    };
 
-    pub const KELVIN: Unit128 = { Unit128 { num: 0x0, dim: 0x1100000000 } };
+    pub const KELVIN: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x1100000000,
+        }
+    };
 
-    pub const MOLE: Unit128 = { Unit128 { num: 0x0, dim: 0x110000000000 } };
+    pub const MOLE: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x110000000000,
+        }
+    };
 
-    pub const CANDELA: Unit128 = { Unit128 { num: 0x0, dim: 0x110000000000 } };
+    pub const CANDELA: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x110000000000,
+        }
+    };
 }
 
 #[cfg(feature = "python")]

@@ -48,16 +48,19 @@ pub(crate) struct LinearUnit {
 }
 
 impl LinearUnit {
-    // Note that this may not give the true ID of the unit
-    pub(crate) fn generate_id(&self) -> Unit128 {
-        let lsb = match self.utype {
-            LinearUnitType::Unitless => 0x00,
-            LinearUnitType::Base => 0x00,
-            LinearUnitType::Derived => 0x0D,
-            LinearUnitType::Compound => 0x0C,
-        };
-        Unit128::new(self.number.try_into().unwrap(), self.dimensions, lsb)
-    }
+    // Note that for derived units there is no way to know whether the unit has been assigned its
+    // own unique ID, so they are all returned with a least-significant bit of 0x0D as standard
+    //pub(crate) fn generate_id(&self) -> Unit128 {
+    //    let lsb = match self.utype {
+    //        LinearUnitType::Unitless => 0x00,
+    //        LinearUnitType::Base => 0x00,
+    //        LinearUnitType::Derived => 0x0D,
+    //        LinearUnitType::Compound => 0x0C,
+    //    };
+    // THIS WON'T WORK IN CURRENT STATE BECAUSE SELF.NUMBER IS FOR THE UNIT DEFINITION, NOT THE
+    // ACTUAL UNDERLYING NUMERIC FACTOR
+    //    Unit128::new(self.number.try_into().unwrap(), self.dimensions, lsb)
+    //}
 }
 
 impl LinearUnit {
@@ -178,7 +181,7 @@ impl Mul for Unit {
                 .chain(rhs.to_inverse_factors())
                 .collect(),
         });
-        let new_id = new_inner.generate_id();
+        let new_id = self.id * rhs.id;
         Unit {
             id: new_id,
             inner: new_inner,
@@ -203,7 +206,7 @@ impl Div for Unit {
                 .chain(rhs.to_inverse_factors())
                 .collect(),
         });
-        let new_id = new_inner.generate_id();
+        let new_id = self.id / rhs.id;
         Unit {
             id: new_id,
             inner: new_inner,
@@ -254,20 +257,17 @@ mod tests {
     use super::*;
     #[test]
     fn test_equality() {
-        let dimensions = Dimensions::new(1, 0, 0, 0, 0, 0, 0);
-        let id = Unit128::new(NumericFactor::new(1, 1, 10, 0), dimensions, 0x00);
-        let s_inner = LinearUnit {
-            utype: LinearUnitType::Base,
-            dimensions,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: Number::ONE,
-            factors: Vec::new(),
-        };
         let s = Unit {
-            id,
-            inner: Arc::new(s_inner),
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: Number::ONE,
+                factors: Vec::new(),
+            }),
         };
         let s2 = s.clone();
         assert_eq!(s, s2);

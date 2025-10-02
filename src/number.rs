@@ -152,21 +152,47 @@ impl From<Decimal> for Number {
     }
 }
 
-impl FromPrimitive for Number {
-    fn from_i64(n: i64) -> Option<Self> {
-        Some(Self {
-            number: n.into(),
-            uncertainty: Decimal::ZERO,
-        })
-    }
+//impl FromPrimitive for Number {
+//    fn from_i64(n: i64) -> Option<Self> {
+//        Some(Self {
+//            number: n.into(),
+//            uncertainty: Decimal::ZERO,
+//        })
+//    }
+//
+//    fn from_u64(n: u64) -> Option<Self> {
+//        Some(Self {
+//            number: n.into(),
+//            uncertainty: Decimal::ZERO,
+//        })
+//    }
+//}
 
-    fn from_u64(n: u64) -> Option<Self> {
-        Some(Self {
-            number: n.into(),
-            uncertainty: Decimal::ZERO,
-        })
-    }
+macro_rules! impl_from {
+    ($T:ty) => {
+        impl From<$T> for Number {
+            fn from(t: $T) -> Self {
+                Self {
+                    number: t.into(),
+                    uncertainty: Decimal::ZERO,
+                }
+            }
+        }
+    };
 }
+
+impl_from!(i8);
+impl_from!(i16);
+impl_from!(i32);
+impl_from!(i64);
+impl_from!(i128);
+impl_from!(isize);
+impl_from!(u8);
+impl_from!(u16);
+impl_from!(u32);
+impl_from!(u64);
+impl_from!(u128);
+impl_from!(usize);
 
 impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
@@ -178,7 +204,7 @@ impl Eq for Number {}
 
 impl PartialOrd for Number {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.number.partial_cmp(&other.number)
+        Some(self.cmp(other))
     }
 }
 
@@ -187,6 +213,35 @@ impl Ord for Number {
         self.number.cmp(&other.number)
     }
 }
+
+macro_rules! impl_comparisons {
+    ($t:ty) => {
+        impl PartialEq<$t> for Number {
+            fn eq(&self, other: &$t) -> bool {
+                self.number == Decimal::from(*other)
+            }
+        }
+
+        impl PartialOrd<$t> for Number {
+            fn partial_cmp(&self, other: &$t) -> Option<std::cmp::Ordering> {
+                self.number.partial_cmp(&Decimal::from(*other))
+            }
+        }
+    };
+}
+
+impl_comparisons!(i8);
+impl_comparisons!(i16);
+impl_comparisons!(i32);
+impl_comparisons!(i64);
+impl_comparisons!(i128);
+impl_comparisons!(isize);
+impl_comparisons!(u8);
+impl_comparisons!(u16);
+impl_comparisons!(u32);
+impl_comparisons!(u64);
+impl_comparisons!(u128);
+impl_comparisons!(usize);
 
 impl Add for Number {
     type Output = Self;

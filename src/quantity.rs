@@ -26,15 +26,15 @@ impl Quantity {
     }
 
     pub fn uncertainty(&self) -> Self {
-        Self::new(
-            self.number.uncertainty,
-            self.unit.clone(),
-        )
+        Self::new(self.number.uncertainty, self.unit.clone())
     }
 }
 
-impl From<Decimal> for Quantity {
-    fn from(value: Decimal) -> Self {
+impl<T> From<T> for Quantity
+where
+    T: Into<Number>,
+{
+    fn from(value: T) -> Self {
         Self {
             number: value.into(),
             unit: Unit::unitless(),
@@ -45,7 +45,7 @@ impl From<Decimal> for Quantity {
 impl Add for Quantity {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: Self) -> Self {
         if self.unit == rhs.unit {
             Self::new(self.number + rhs.number, self.unit)
         } else {
@@ -57,7 +57,7 @@ impl Add for Quantity {
 impl Sub for Quantity {
     type Output = Self;
 
-    fn sub(self, rhs: Self) -> Self::Output {
+    fn sub(self, rhs: Self) -> Self {
         if self.unit == rhs.unit {
             Self::new(self.number - rhs.number, self.unit)
         } else {
@@ -69,16 +69,54 @@ impl Sub for Quantity {
 impl Mul for Quantity {
     type Output = Self;
 
-    fn mul(self, rhs: Quantity) -> Quantity {
-        Quantity::new(self.number * rhs.number, self.unit * rhs.unit)
+    fn mul(self, rhs: Self) -> Self {
+        Self::new(self.number * rhs.number, self.unit * rhs.unit)
+    }
+}
+
+impl Mul<Unit> for Quantity {
+    type Output = Self;
+
+    fn mul(self, rhs: Unit) -> Self {
+        Self::new(self.number, self.unit * rhs)
+    }
+}
+
+impl<T> Mul<T> for Quantity
+where
+    T: Into<Number>,
+{
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self {
+        Self::new(self.number * rhs.into(), self.unit)
     }
 }
 
 impl Div for Quantity {
     type Output = Self;
 
-    fn div(self, rhs: Quantity) -> Quantity {
-        Quantity::new(self.number / rhs.number, self.unit / rhs.unit)
+    fn div(self, rhs: Self) -> Self {
+        Self::new(self.number / rhs.number, self.unit / rhs.unit)
+    }
+}
+
+impl Div<Unit> for Quantity {
+    type Output = Self;
+
+    fn div(self, rhs: Unit) -> Self {
+        Self::new(self.number, self.unit / rhs)
+    }
+}
+
+impl<T> Div<T> for Quantity
+where
+    T: Into<Number>,
+{
+    type Output = Self;
+
+    fn div(self, rhs: T) -> Self {
+        Self::new(self.number / rhs.into(), self.unit)
     }
 }
 
@@ -96,15 +134,39 @@ pub(crate) mod py {
     use pyo3::prelude::*;
     use rust_decimal::Decimal;
 
-    #[pyclass(name = "Quantity")]
+    #[pyclass(frozen, name = "Quantity")]
     #[derive(Clone, PartialEq, PartialOrd, Debug)]
     pub struct PyQuantity(Quantity);
+
+    impl PyQuantity {
+        pub fn into_inner(self) -> Quantity {
+            self.0
+        }
+
+        pub fn borrow_inner(&self) -> &Quantity {
+            &self.0
+        }
+
+        pub fn owned_inner(&self) -> Quantity {
+            self.0.clone()
+        }
+    }
+
+    impl From<Quantity> for PyQuantity {
+        fn from(value: Quantity) -> Self {
+            Self(value)
+        }
+    }
 
     #[pymethods]
     impl PyQuantity {
         #[new]
         fn new(number: Decimal, unit: PyUnit) -> Self {
             PyQuantity(Quantity::new(number, unit.into_inner()))
+        }
+
+        fn __str__(&self) -> String {
+            format!("{} {}", self.0.number, self.0.unit)
         }
     }
 }
@@ -113,7 +175,10 @@ pub(crate) mod py {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{unit::{LinearUnit, LinearUnitType}, unit128::Unit128};
+    use crate::{
+        unit::{LinearUnit, LinearUnitType},
+        unit128::Unit128,
+    };
 
     use super::*;
 
@@ -191,7 +256,10 @@ mod tests {
         };
         let q1 = Quantity::new(Number::new(5, 0), s.clone());
         let q2 = Quantity::new(Number::new(8, 0), s.clone());
-        assert_eq!(q1 * q2, Quantity::new(Number::new(40, 0), s.clone() * s.clone()));
+        assert_eq!(
+            q1 * q2,
+            Quantity::new(Number::new(40, 0), s.clone() * s.clone())
+        );
     }
 
     #[test]

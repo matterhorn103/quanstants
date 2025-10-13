@@ -18,25 +18,41 @@ pub struct Number {
 }
 
 impl Number {
-    pub fn new<T: Into<Decimal>>(number: T, uncertainty: T) -> Self {
+    pub fn new<T>(number: T, uncertainty: T) -> Self
+    where
+        T: Into<Decimal>,
+    {
         Number {
             number: number.into(),
             uncertainty: uncertainty.into(),
         }
     }
 
-    pub fn exact<T: Into<Decimal>>(number: T) -> Self {
+    pub fn exact<T>(number: T) -> Self
+    where
+        T: Into<Decimal>,
+    {
         Number {
             number: number.into(),
             uncertainty: Decimal::ZERO,
         }
     }
 
+    pub fn from_f64(number: f64, uncertainty: f64) -> Option<Self> {
+        Some(Number {
+            number: Decimal::from_f64(number)?,
+            uncertainty: Decimal::from_f64(uncertainty)?,
+        })
+    }
+
     pub fn relative_uncertainty(&self) -> Decimal {
         self.uncertainty / self.number
     }
 
-    pub fn add_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+    pub fn add_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+    where
+        T: Into<Decimal>,
+    {
         let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number + rhs.number;
         let uncertainty =
@@ -49,7 +65,10 @@ impl Number {
         }
     }
 
-    pub fn sub_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+    pub fn sub_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+    where
+        T: Into<Decimal>,
+    {
         let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number - rhs.number;
         let uncertainty = ((self.uncertainty.powu(2)) + (rhs.uncertainty.powu(2))
@@ -62,7 +81,10 @@ impl Number {
         }
     }
 
-    pub fn mul_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+    pub fn mul_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+    where
+        T: Into<Decimal>,
+    {
         let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number * rhs.number;
         let uncertainty = ((self.relative_uncertainty().powu(2))
@@ -77,7 +99,10 @@ impl Number {
         }
     }
 
-    pub fn div_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+    pub fn div_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+    where
+        T: Into<Decimal>,
+    {
         let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number / rhs.number;
         let uncertainty = ((self.relative_uncertainty().powu(2))
@@ -100,7 +125,10 @@ impl Number {
         self.pow_with_correlation(rhs.into(), Decimal::ZERO)
     }
 
-    pub fn pow_with_correlation<T: Into<Decimal>>(self, rhs: Self, correlation: T) -> Self {
+    pub fn pow_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+    where
+        T: Into<Decimal>,
+    {
         let sigma_ab = correlation.into() * self.uncertainty * rhs.uncertainty;
         let number = self.number.powd(rhs.number);
         let uncertainty = ((self.relative_uncertainty() * rhs.number).powu(2)
@@ -246,38 +274,159 @@ impl_comparisons!(usize);
 impl Add for Number {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: Self) -> Self {
         self.add_with_correlation(rhs, Decimal::ZERO)
+    }
+}
+
+impl Add for &Number {
+    type Output = Number;
+
+    fn add(self, rhs: Self) -> Number {
+        self.add_with_correlation(*rhs, Decimal::ZERO)
     }
 }
 
 impl Sub for Number {
     type Output = Self;
 
-    fn sub(self, rhs: Self) -> Self::Output {
+    fn sub(self, rhs: Self) -> Self {
         self.sub_with_correlation(rhs, Decimal::ZERO)
+    }
+}
+
+impl Sub for &Number {
+    type Output = Number;
+
+    fn sub(self, rhs: Self) -> Number {
+        self.sub_with_correlation(*rhs, Decimal::ZERO)
     }
 }
 
 impl Mul for Number {
     type Output = Self;
 
-    fn mul(self, rhs: Self) -> Self::Output {
+    fn mul(self, rhs: Self) -> Self {
         self.mul_with_correlation(rhs, Decimal::ZERO)
+    }
+}
+
+impl Mul for &Number {
+    type Output = Number;
+
+    fn mul(self, rhs: Self) -> Number {
+        self.mul_with_correlation(*rhs, Decimal::ZERO)
     }
 }
 
 impl Div for Number {
     type Output = Self;
 
-    fn div(self, rhs: Self) -> Self::Output {
+    fn div(self, rhs: Self) -> Self {
         self.div_with_correlation(rhs, Decimal::ZERO)
     }
 }
 
+impl Div for &Number {
+    type Output = Number;
+
+    fn div(self, rhs: Self) -> Number {
+        self.div_with_correlation(*rhs, Decimal::ZERO)
+    }
+}
+
+macro_rules! impl_arithmetic {
+    ($t:ty) => {
+        impl Add<$t> for Number {
+            type Output = Self;
+
+            fn add(self, rhs: $t) -> Number {
+                self.add_with_correlation(rhs.into(), Decimal::ZERO)
+            }
+        }
+
+        impl Add<Number> for $t {
+            type Output = Number;
+
+            fn add(self, rhs: Number) -> Number {
+                let num: Number = self.into();
+                num.add_with_correlation(rhs, Decimal::ZERO)
+            }
+        }
+
+        impl Sub<$t> for Number {
+            type Output = Self;
+
+            fn sub(self, rhs: $t) -> Number {
+                self.sub_with_correlation(rhs.into(), Decimal::ZERO)
+            }
+        }
+
+        impl Sub<Number> for $t {
+            type Output = Number;
+
+            fn sub(self, rhs: Number) -> Number {
+                let num: Number = self.into();
+                num.sub_with_correlation(rhs, Decimal::ZERO)
+            }
+        }
+
+        impl Mul<$t> for Number {
+            type Output = Self;
+
+            fn mul(self, rhs: $t) -> Number {
+                self.mul_with_correlation(rhs.into(), Decimal::ZERO)
+            }
+        }
+
+        impl Mul<Number> for $t {
+            type Output = Number;
+
+            fn mul(self, rhs: Number) -> Number {
+                let num: Number = self.into();
+                num.mul_with_correlation(rhs, Decimal::ZERO)
+            }
+        }
+
+        impl Div<$t> for Number {
+            type Output = Self;
+
+            fn div(self, rhs: $t) -> Number {
+                self.div_with_correlation(rhs.into(), Decimal::ZERO)
+            }
+        }
+
+        impl Div<Number> for $t {
+            type Output = Number;
+
+            fn div(self, rhs: Number) -> Number {
+                let num: Number = self.into();
+                num.div_with_correlation(rhs, Decimal::ZERO)
+            }
+        }
+    };
+}
+
+impl_arithmetic!(i8);
+impl_arithmetic!(i16);
+impl_arithmetic!(i32);
+impl_arithmetic!(i64);
+impl_arithmetic!(i128);
+impl_arithmetic!(isize);
+impl_arithmetic!(u8);
+impl_arithmetic!(u16);
+impl_arithmetic!(u32);
+impl_arithmetic!(u64);
+impl_arithmetic!(u128);
+impl_arithmetic!(usize);
+
 impl fmt::Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}+/-{}", self.number, self.uncertainty)
+        if self.uncertainty == Decimal::ZERO {
+            write!(f, "{}", self.number)
+        } else {
+            write!(f, "{}+/-{}", self.number, self.uncertainty)
+        }
     }
 }
 
@@ -323,6 +472,14 @@ mod tests {
     }
 
     #[test]
+    fn addition_with_int() {
+        let n1 = Number::new(20, 0);
+        let n2 = 30;
+        let result: Number = n1 + n2;
+        assert_eq!(result.number, dec!(50));
+    }
+
+    #[test]
     fn subtraction() {
         let n1 = Number::new(20, 2);
         let n2 = Number::new(30, 5);
@@ -332,6 +489,14 @@ mod tests {
             result.uncertainty.round_dp(5),
             dec!(5.3851648071345).round_dp(5)
         );
+    }
+
+    #[test]
+    fn subtraction_with_int() {
+        let n1 = Number::new(20, 0);
+        let n2 = 30;
+        let result: Number = n1 - n2;
+        assert_eq!(result.number, dec!(-10));
     }
 
     #[test]
@@ -347,6 +512,14 @@ mod tests {
     }
 
     #[test]
+    fn multiplication_with_int() {
+        let n1 = Number::new(20, 0);
+        let n2 = 30;
+        let result: Number = n1 * n2;
+        assert_eq!(result.number, dec!(600));
+    }
+
+    #[test]
     fn division() {
         let n1 = Number::new(20, 2);
         let n2 = Number::new(30, 5);
@@ -356,6 +529,14 @@ mod tests {
             result.uncertainty.round_dp(5),
             dec!(0.129576708774340).round_dp(5)
         );
+    }
+
+    #[test]
+    fn division_with_int() {
+        let n1 = Number::new(60, 0);
+        let n2 = 30;
+        let result: Number = n1 / n2;
+        assert_eq!(result.number, dec!(2));
     }
 
     #[test]

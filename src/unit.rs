@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 use std::ops::{Div, Mul, Neg};
 use std::sync::Arc;
 
@@ -107,20 +107,20 @@ impl Unit {
         self.inner.dimensions
     }
 
-    fn generate_symbol(&self) -> String {
+    fn generate_symbol(&self) -> &str {
         todo!()
     }
 
-    pub fn symbol(&self) -> String {
-        self.inner.symbol.clone().unwrap_or(self.generate_symbol())
+    pub fn symbol(&self) -> &str {
+        self.inner.symbol.as_deref().unwrap_or_else(|| self.generate_symbol())
     }
 
-    fn generate_name(&self) -> String {
+    fn generate_name(&self) -> &str {
         todo!()
     }
 
-    pub fn name(&self) -> String {
-        self.inner.name.clone().unwrap_or(self.generate_name())
+    pub fn name(&self) -> &str {
+        self.inner.name.as_deref().unwrap_or_else(|| self.generate_name())
     }
 
     pub fn number(&self) -> Number {
@@ -214,12 +214,22 @@ impl Div for Unit {
     }
 }
 
+impl fmt::Display for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.symbol())
+    }
+}
+
 #[cfg(feature = "python")]
 pub(crate) mod py {
-    use crate::unit128::py::PyUnitId;
+    use crate::{
+        quantity::{py::PyQuantity, Quantity},
+        unit128::py::PyUnitId,
+    };
 
     use super::*;
     use pyo3::prelude::*;
+    use rust_decimal::Decimal;
 
     #[pyclass(frozen, name = "Unit")]
     #[derive(Clone, Debug)]
@@ -232,6 +242,10 @@ pub(crate) mod py {
 
         pub fn borrow_inner(&self) -> &Unit {
             &self.0
+        }
+
+        pub fn owned_inner(&self) -> Unit {
+            self.0.clone()
         }
     }
 
@@ -247,18 +261,50 @@ pub(crate) mod py {
             self.0 == other.0
         }
 
+        fn __rmul__(&self, other: RArithmeticEnum) -> PyQuantity {
+            match other {
+                RArithmeticEnum::Quantity(py_quantity) => {
+                    PyQuantity::from(py_quantity.into_inner() * self.owned_inner())
+                }
+                RArithmeticEnum::Int(integer) => Quantity::new(integer, self.owned_inner()).into(),
+                RArithmeticEnum::Float(float) => {
+                    Quantity::new(Number::from_f64(float, 0.0).unwrap(), self.owned_inner()).into()
+                }
+                RArithmeticEnum::Decimal(decimal) => {
+                    Quantity::new(decimal, self.owned_inner()).into()
+                }
+                RArithmeticEnum::String(string) => {
+                    Quantity::new(Decimal::from_str_exact(&string).unwrap(), self.owned_inner()).into()
+                }
+            }
+        }
+
         #[getter]
         fn id(&self) -> PyUnitId {
             PyUnitId(self.0.id)
         }
+    }
+
+    #[derive(FromPyObject)]
+    enum RArithmeticEnum {
+        #[pyo3(transparent, annotation = "Quantity")]
+        Quantity(PyQuantity),
+        #[pyo3(transparent, annotation = "int")]
+        Int(isize),
+        #[pyo3(transparent, annotation = "float")]
+        Float(f64),
+        #[pyo3(transparent, annotation = "Decimal")]
+        Decimal(Decimal),
+        #[pyo3(transparent, annotation = "str")]
+        String(String),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::unit128::NumericFactor;
-
     use super::*;
+
     #[test]
     fn equality() {
         let s = Unit {
@@ -275,5 +321,23 @@ mod tests {
         };
         let s2 = s.clone();
         assert_eq!(s, s2);
+    }
+
+    #[test]
+    fn symbol() {
+        let s = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: Number::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        dbg!(&s.inner.symbol);
+        assert_eq!(s.symbol(), "s");
     }
 }

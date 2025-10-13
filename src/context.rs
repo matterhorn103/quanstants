@@ -90,6 +90,11 @@ pub(crate) mod py {
             self.0.unit_by_id(&Unit128::from_bits(id)).into()
         }
 
+        // Square bracket notation lookup for units
+        fn __getitem__(&self, name: &str) -> PyUnit {
+            self.unit_by_name(name)
+        }
+
         #[getter]
         fn prefixes(slf: Py<Self>) -> PyPrefixes {
             PyPrefixes { parent: slf }
@@ -200,7 +205,7 @@ pub(crate) mod py {
 
     #[pymethods]
     impl PyPrefixes {
-        // Square bracket notation lookup for units
+        // Square bracket notation lookup for prefixes
         fn __getitem__(&self, py: Python, name: &str) -> PyPrefix {
             self.parent.borrow(py).prefix_by_name(name)
         }

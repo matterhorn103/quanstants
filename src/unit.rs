@@ -9,28 +9,6 @@ use crate::number::Number;
 use crate::prefix::Prefix;
 use crate::unit128::Unit128;
 
-#[derive(Clone, Debug)]
-pub(crate) struct LinearFactor {
-    pub(crate) unit: Arc<LinearUnit>,
-    pub(crate) exponent: Frac,
-}
-
-impl LinearFactor {
-    pub(crate) fn inverse(self) -> Self {
-        LinearFactor {
-            unit: self.unit,
-            exponent: self.exponent.neg(),
-        }
-    }
-
-    pub(crate) fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
-        LinearFactor {
-            unit: self.unit,
-            exponent: self.exponent * exponent.into(),
-        }
-    }
-}
-
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum LinearUnitType {
     Unitless,
@@ -54,20 +32,25 @@ pub(crate) struct LinearUnit {
     pub(crate) factors: Vec<LinearFactor>, // Empty for base units and unitless
 }
 
+// Generally LinearUnit just stores data without having its own methods
+// Logic is implemented by the LinearFactor and Unit wrappers
 impl LinearUnit {
-    // Note that for derived units there is no way to know whether the unit has been assigned its
-    // own unique ID, so they are all returned with a least-significant bit of 0x0D as standard
-    //pub(crate) fn generate_id(&self) -> Unit128 {
-    //    let lsb = match self.utype {
-    //        LinearUnitType::Unitless => 0x00,
-    //        LinearUnitType::Base => 0x00,
-    //        LinearUnitType::Derived => 0x0D,
-    //        LinearUnitType::Compound => 0x0C,
-    //    };
-    // THIS WON'T WORK IN CURRENT STATE BECAUSE SELF.NUMBER IS FOR THE UNIT DEFINITION, NOT THE
-    // ACTUAL UNDERLYING NUMERIC FACTOR
-    //    Unit128::new(self.number.try_into().unwrap(), self.dimensions, lsb)
-    //}
+    pub(crate) fn symbol(&self, use_superscripts: bool) -> String {
+        match self.utype {
+            LinearUnitType::Unitless => String::from(""),
+            LinearUnitType::Base | LinearUnitType::Derived => self.symbol.clone().unwrap(),
+            LinearUnitType::Compound => self
+                .factors
+                .iter()
+                .map(|x| x.symbol(use_superscripts))
+                .collect::<Vec<_>>()
+                .join(" "),
+        }
+    }
+
+    pub(crate) fn name(&self) -> String {
+        todo!()
+    }
 }
 
 impl LinearUnit {
@@ -83,6 +66,44 @@ impl LinearUnit {
     };
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct LinearFactor {
+    pub(crate) unit: Arc<LinearUnit>,
+    pub(crate) exponent: Frac,
+}
+
+// Some logic is implemented on a per-LinearFactor basis to make it easier for a Unit to
+// iterate over its factors
+impl LinearFactor {
+    pub(crate) fn inverse(self) -> Self {
+        Self {
+            unit: self.unit,
+            exponent: self.exponent.neg(),
+        }
+    }
+
+    pub(crate) fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
+        // We maybe need to not just do this simple logic for compound units but for everything else
+        // it works fine
+        Self {
+            unit: self.unit,
+            exponent: self.exponent * exponent.into(),
+        }
+    }
+
+    pub(crate) fn symbol(&self, use_superscripts: bool) -> String {
+        // This will be fine as long as we don't allow LinearFactors to hold a Compound unit with a
+        // non-unity exponent
+        if self.exponent == 1 {
+            self.unit.symbol(false)
+        } else if use_superscripts {
+            format!("{}{}", self.unit.symbol(true), self.exponent.to_superscript())
+        } else {
+            format!("{}{}", self.unit.symbol(false), self.exponent)
+        }
+    }
+}
+
 // This is the user-facing struct representing a linear unit
 #[derive(Clone, Debug)]
 pub struct Unit {
@@ -92,7 +113,7 @@ pub struct Unit {
 
 impl Unit {
     pub fn unitless() -> Self {
-        Unit {
+        Self {
             id: Unit128::UNITLESS,
             inner: Arc::new(LinearUnit::UNITLESS),
         }
@@ -114,26 +135,12 @@ impl Unit {
         self.inner.dimensions
     }
 
-    fn generate_symbol(&self) -> &str {
-        todo!()
+    pub fn symbol(&self, use_superscripts: bool) -> String {
+        self.inner.symbol(use_superscripts)
     }
 
-    pub fn symbol(&self) -> &str {
-        self.inner
-            .symbol
-            .as_deref()
-            .unwrap_or_else(|| self.generate_symbol())
-    }
-
-    fn generate_name(&self) -> &str {
-        todo!()
-    }
-
-    pub fn name(&self) -> &str {
-        self.inner
-            .name
-            .as_deref()
-            .unwrap_or_else(|| self.generate_name())
+    pub fn name(&self) -> String {
+        self.inner.name()
     }
 
     pub fn number(&self) -> Number {
@@ -251,7 +258,7 @@ impl Div for Unit {
 
 impl fmt::Display for Unit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.symbol())
+        write!(f, "{}", self.symbol(false))
     }
 }
 
@@ -378,6 +385,25 @@ mod tests {
             }),
         };
         dbg!(&s.inner.symbol);
-        assert_eq!(s.symbol(), "s");
+        assert_eq!(s.symbol(false), "s");
+    }
+
+    #[test]
+    fn symbol_compound() {
+        let s = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: Number::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let s2 = s.clone() * s.clone();
+        dbg!(&s2.inner.symbol);
+        assert_eq!(s2.symbol(false), "s2");
     }
 }

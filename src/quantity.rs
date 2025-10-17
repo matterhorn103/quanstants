@@ -120,7 +120,7 @@ where
 
 impl fmt::Display for Quantity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.number, self.unit.symbol())
+        write!(f, "{} {}", self.number, self.unit.symbol(false))
     }
 }
 
@@ -164,7 +164,7 @@ pub(crate) mod py {
         }
 
         fn __str__(&self) -> String {
-            format!("{} {}", self.0.number, self.0.unit)
+            format!("{} {}", self.0.number, self.0.unit.symbol(true))
         }
     }
 }

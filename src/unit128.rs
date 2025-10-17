@@ -4,7 +4,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 
 use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, number::Number};
 
@@ -15,24 +15,40 @@ use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, numb
 // indicate a factor of 0 but of 1 and therefore all coherent SI units are contained within the
 // first 64 bits
 
-// TODO proper hashing
-
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct NumericFactor {
-    pub sign: i8,
-    pub mantissa: u64,
-    pub base: u8,
+    pub sign: i8, // +1 for positive numbers, -1 for negative
+    pub mantissa: u64, // m - 1 must fit into 48 bits i.e. a u48 (m up to 2^48, not 2^48 - 1)
+    pub base: u8, // base must fit into 7 bits i.e. a u7 (up to 2^7 - 1)
     pub exponent: i8,
 }
 
 impl NumericFactor {
+    const MAX_MANTISSA: u64 = (1 << 48);
+    const MAX_BASE: u8 = (1 << 7) - 1;
+
     pub fn new(sign: i8, mantissa: u64, base: u8, exponent: i8) -> Self {
-        NumericFactor {
-            sign,
-            mantissa,
-            base,
-            exponent,
+        Self::try_new(sign, mantissa, base, exponent).unwrap()
+    }
+
+    pub fn try_new(sign: i8, mantissa: u64, base: u8, exponent: i8) -> Result<Self, QuanstantsError> {
+        if (mantissa <= Self::MAX_MANTISSA) && (base <= Self::MAX_BASE) {
+            Ok(Self {
+                sign: (sign >> 7) | 1,
+                mantissa,
+                base,
+                exponent,
+            })
+        } else {
+            Err(QuanstantsError::Range)
         }
+    }
+
+    pub fn try_pow<T: Into<Frac>>(self, exponent: T) -> Result<Self, QuanstantsError> {
+        let exp = exponent.into().to_f64();
+        let dec: Decimal = self.try_into()?;
+        let new_dec = dec.checked_powf(exp).ok_or(QuanstantsError::Overflow)?;
+        Self::try_from(new_dec)
     }
 }
 
@@ -57,11 +73,48 @@ impl TryFrom<Decimal> for NumericFactor {
     }
 }
 
+impl TryFrom<NumericFactor> for i128 {
+    type Error = QuanstantsError;
+
+    fn try_from(n: NumericFactor) -> Result<i128, QuanstantsError> {
+        if n.exponent.is_positive() {
+            // The NumericFactor can be expressed as an integer
+            let b: i128 = n.base.into();
+            let e: u32 = n.exponent.try_into().expect("Already checked that exponent is positive");
+            let exponential_term = b.checked_pow(e).ok_or(QuanstantsError::Overflow)?;
+            let m: i128 = if n.sign.is_positive() { n.mantissa as i128 } else { -(n.mantissa as i128) }; // We know this will be fine
+            // Even if the exponential term fit into an i128, might overflow when multiplied by m
+            m.checked_mul(exponential_term).ok_or(QuanstantsError::Overflow)
+        } else {
+            // Not an int
+            Err(QuanstantsError::Cast)
+        }
+    }
+}
+
 impl TryFrom<NumericFactor> for Decimal {
     type Error = QuanstantsError;
 
-    fn try_from(n: NumericFactor) -> Result<Self, QuanstantsError> {
-        todo!()
+    fn try_from(n: NumericFactor) -> Result<Decimal, QuanstantsError> {
+        if n.exponent.is_positive() {
+            // The NumericFactor can be expressed as an integer, so let's do so
+            let m: i128 = n.try_into()?; 
+            match Decimal::try_from_i128_with_scale(m, 0) {
+                    Ok(result) => Ok(result),
+                    Err(_) => Err(QuanstantsError::Cast)
+                }
+        } else {
+            if n.base != 10 {
+                Err(QuanstantsError::Cast)
+            } else {
+                let e: u32 = n.exponent.unsigned_abs().into();
+                let m: i128 = if n.sign.is_positive() { n.mantissa as i128 } else { -(n.mantissa as i128) };
+                match Decimal::try_from_i128_with_scale(m, e) {
+                    Ok(result) => Ok(result),
+                    Err(_) => Err(QuanstantsError::Cast)
+                }
+            }
+        }
     }
 }
 
@@ -315,6 +368,20 @@ impl Unit128 {
 
     pub fn to_bits(self: Unit128) -> u128 {
         (self.num as u128) << 64 | self.dim as u128
+    }
+
+    pub fn pow<T: Into<Frac>>(self, exponent: T) -> Unit128 {
+        // Panics for referenced units
+        let exp: Frac = exponent.into();
+        if self.is_referenced() {
+            panic!()
+        } else {
+            Unit128::new(
+                self.factor().try_pow(exp).unwrap(),
+                self.dimensions().pow(exp),
+                (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
+            )
+        }
     }
 }
 

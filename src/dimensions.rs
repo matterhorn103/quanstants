@@ -33,7 +33,7 @@ impl Dimensions {
         [self.T, self.L, self.M, self.I, self.Θ, self.N, self.J]
     }
 
-    pub fn pow<T: Into<Frac>>(&self, exponent: T) -> Dimensions {
+    pub fn pow<T: Into<Frac>>(self, exponent: T) -> Dimensions {
         let exp: Frac = exponent.into();
         Dimensions {
             T: self.T * exp,

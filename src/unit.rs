@@ -22,6 +22,10 @@ impl LinearFactor {
             exponent: self.exponent.neg(),
         }
     }
+
+    pub(crate) fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
+        LinearFactor { unit: self.unit, exponent: self.exponent * exponent.into()}
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -40,11 +44,11 @@ pub(crate) enum LinearUnitType {
 pub(crate) struct LinearUnit {
     pub(crate) utype: LinearUnitType,
     pub(crate) dimensions: Dimensions,
-    pub(crate) symbol: Option<String>, // Compound units have None for this
-    pub(crate) name: Option<String>,   // Compound units have None for this
-    pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
-    pub(crate) number: Number,
-    pub(crate) factors: Vec<LinearFactor>, // Empty for base units and unitless
+    pub(crate) symbol: Option<String>,      // Compound units have None for this
+    pub(crate) name: Option<String>,        // Compound units have None for this
+    pub(crate) prefix: Option<Prefix>,      // Only possible for derived or base units
+    pub(crate) number: Number,              // 1 for everything except derived units
+    pub(crate) factors: Vec<LinearFactor>,  // Empty for base units and unitless
 }
 
 impl LinearUnit {
@@ -142,6 +146,28 @@ impl Unit {
     fn to_inverse_factors(&self) -> Vec<LinearFactor> {
         self.to_factors().into_iter().map(|x| x.inverse()).collect()
     }
+
+    pub fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
+        let exponent: Frac = exponent.into();
+        let new_inner = Arc::new(LinearUnit {
+            utype: LinearUnitType::Compound,
+            dimensions: self.dimensions().pow(exponent),
+            symbol: None,
+            name: None,
+            prefix: None,
+            number: self.number().powf(exponent.to_f64()),
+            factors: self
+                .to_factors()
+                .into_iter()
+                .map(|x| x.pow(exponent))
+                .collect(),
+        });
+        let new_id = self.id.pow(exponent);
+        Unit {
+            id: new_id,
+            inner: new_inner,
+        }
+    }
 }
 
 impl PartialEq for Unit {
@@ -167,7 +193,7 @@ impl Ord for Unit {
 impl Mul for Unit {
     type Output = Self;
 
-    fn mul(self, rhs: Unit) -> Unit {
+    fn mul(self, rhs: Self) -> Self {
         let new_inner = Arc::new(LinearUnit {
             utype: LinearUnitType::Compound,
             dimensions: self.dimensions() * rhs.dimensions(),
@@ -178,11 +204,11 @@ impl Mul for Unit {
             factors: self
                 .to_factors()
                 .into_iter()
-                .chain(rhs.to_inverse_factors())
+                .chain(rhs.to_factors())
                 .collect(),
         });
         let new_id = self.id * rhs.id;
-        Unit {
+        Self {
             id: new_id,
             inner: new_inner,
         }
@@ -192,7 +218,7 @@ impl Mul for Unit {
 impl Div for Unit {
     type Output = Self;
 
-    fn div(self, rhs: Unit) -> Unit {
+    fn div(self, rhs: Self) -> Self {
         let new_inner = Arc::new(LinearUnit {
             utype: LinearUnitType::Compound,
             dimensions: self.dimensions() / rhs.dimensions(),
@@ -207,7 +233,7 @@ impl Div for Unit {
                 .collect(),
         });
         let new_id = self.id / rhs.id;
-        Unit {
+        Self {
             id: new_id,
             inner: new_inner,
         }
@@ -277,6 +303,10 @@ pub(crate) mod py {
                     Quantity::new(Decimal::from_str_exact(&string).unwrap(), self.owned_inner()).into()
                 }
             }
+        }
+
+        fn __pow__(&self, other: i8, _modulo: &Bound<'_, PyAny>) -> Self {
+            Self(self.owned_inner().pow(other))
         }
 
         #[getter]

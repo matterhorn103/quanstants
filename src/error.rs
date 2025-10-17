@@ -4,6 +4,8 @@ use std::{error::Error, fmt, num::TryFromIntError};
 pub enum QuanstantsError {
     Parse,
     Cast,
+    Range,
+    Overflow,
 }
 
 impl fmt::Display for QuanstantsError {
@@ -11,6 +13,8 @@ impl fmt::Display for QuanstantsError {
         match *self {
             QuanstantsError::Parse => write!(f, "Failed to parse"),
             QuanstantsError::Cast => write!(f, "Failed to cast"),
+            QuanstantsError::Range => write!(f, "Input lies outside of valid range"),
+            QuanstantsError::Overflow => write!(f, "Operation would cause type to exceed valid range"),
         }
     }
 }

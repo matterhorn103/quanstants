@@ -125,6 +125,11 @@ impl Number {
         self.pow_with_correlation(rhs.into(), Decimal::ZERO)
     }
 
+    pub fn powf(self, rhs: f64) -> Self {
+        let rhs = Self::from_f64(rhs, 0.0).unwrap();
+        self.pow_with_correlation(rhs, Decimal::ZERO)
+    }
+
     pub fn pow_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
     where
         T: Into<Decimal>,

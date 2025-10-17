@@ -3,6 +3,7 @@ use std::{
     fmt,
     ops::{Add, Deref, Div, Mul, Neg, Sub},
 };
+use num_traits::ToPrimitive;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct Frac(Ratio<i8>);
@@ -64,6 +65,10 @@ impl Frac {
             };
             (den as u8) << 4 | num
         }
+    }
+
+    pub fn to_f64(&self) -> f64 {
+        self.0.to_f64().expect("Should only be None if numer and denom not expressible as i64, which is impossible for us")
     }
 }
 

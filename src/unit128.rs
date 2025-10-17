@@ -266,35 +266,197 @@ impl Unit128 {
     pub const KILOGRAM: Unit128 = {
         Unit128 {
             num: 0x0,
-            dim: 0x110000,
+            dim: 0x11000000,
         }
     };
 
     pub const AMPERE: Unit128 = {
         Unit128 {
             num: 0x0,
-            dim: 0x11000000,
+            dim: 0x0000001100000000,
         }
     };
 
     pub const KELVIN: Unit128 = {
         Unit128 {
             num: 0x0,
-            dim: 0x1100000000,
+            dim: 0x0000110000000000,
         }
     };
 
     pub const MOLE: Unit128 = {
         Unit128 {
             num: 0x0,
-            dim: 0x110000000000,
+            dim: 0x0011000000000000,
         }
     };
 
     pub const CANDELA: Unit128 = {
         Unit128 {
             num: 0x0,
-            dim: 0x110000000000,
+            dim: 0x1100000000000000,
+        }
+    };
+
+    pub const GRAM: Unit128 = {
+        Unit128 {
+            num: 0xFD,
+            dim: 0x1100000D,
+        }
+    };
+
+    pub const RADIAN: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x0000000000000001,
+        }
+    };
+
+    pub const STERADIAN: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x0000000000000002,
+        }
+    };
+
+    pub const HERTZ: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000000000F101, // s-1
+        }
+    };
+
+    pub const NEWTON: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000001111F201, // kg m s-2
+        }
+    };
+
+    pub const PASCAL: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x0000000011F1F201, // kg m-1 s-2
+        }
+    };
+
+    pub const JOULE: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000001112F201, // kg m2 s-2
+        }
+    };
+
+    pub const WATT: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000001112F301, // kg m2 s-3
+        }
+    };
+
+    pub const COULOMB: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x0000001100001101, // s A
+        }
+    };
+
+    pub const VOLT: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000F11112F301, // kg m2 s-3 A-1
+        }
+    };
+
+    pub const FARAD: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x00000012F1F21401, // kg-1 m-2 s4 A2
+        }
+    };
+
+    pub const OHM: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000F21112F301, // kg m2 s-3 A-2
+        }
+    };
+
+    pub const SIEMENS: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x00000012F1F21301, // kg-1 m-2 s3 A2
+        }
+    };
+
+    pub const WEBER: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000F11112F201, // kg m2 s-2 A-1
+        }
+    };
+
+    pub const TESLA: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000F11100F201, // kg s-2 A-1
+        }
+    };
+
+    pub const HENRY: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000F11112F201, // kg m2 s-2 A-1
+        }
+    };
+
+    /// The referenced degree Celsius, for relative temperatures
+    pub const DEGREE_CELSIUS: Unit128 = {
+        Unit128 {
+            num: 0x006AB3FE00000000,
+            dim: 0x0000110000000041,
+        }
+    };
+
+    pub const LUMEN: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x1100000000000001, // cd sr
+        }
+    };
+
+    pub const LUX: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x1100000000F20001, // cd sr m-2
+        }
+    };
+
+    pub const BECQUEREL: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000000000F102, // s-1
+        }
+    };
+
+    pub const GRAY: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000000012F201, // m2 s-2
+        }
+    };
+
+    pub const SIEVERT: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000000012F202, // m2 s-2
+        }
+    };
+
+    pub const KATAL: Unit128 = {
+        Unit128 {
+            num: 0x0,
+            dim: 0x000000000000F101, // mol s-1
         }
     };
 }

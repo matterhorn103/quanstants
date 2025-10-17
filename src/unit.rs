@@ -24,7 +24,10 @@ impl LinearFactor {
     }
 
     pub(crate) fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
-        LinearFactor { unit: self.unit, exponent: self.exponent * exponent.into()}
+        LinearFactor {
+            unit: self.unit,
+            exponent: self.exponent * exponent.into(),
+        }
     }
 }
 
@@ -44,11 +47,11 @@ pub(crate) enum LinearUnitType {
 pub(crate) struct LinearUnit {
     pub(crate) utype: LinearUnitType,
     pub(crate) dimensions: Dimensions,
-    pub(crate) symbol: Option<String>,      // Compound units have None for this
-    pub(crate) name: Option<String>,        // Compound units have None for this
-    pub(crate) prefix: Option<Prefix>,      // Only possible for derived or base units
-    pub(crate) number: Number,              // 1 for everything except derived units
-    pub(crate) factors: Vec<LinearFactor>,  // Empty for base units and unitless
+    pub(crate) symbol: Option<String>, // Compound units have None for this
+    pub(crate) name: Option<String>,   // Compound units have None for this
+    pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
+    pub(crate) number: Number,         // 1 for everything except derived units
+    pub(crate) factors: Vec<LinearFactor>, // Empty for base units and unitless
 }
 
 impl LinearUnit {
@@ -116,7 +119,10 @@ impl Unit {
     }
 
     pub fn symbol(&self) -> &str {
-        self.inner.symbol.as_deref().unwrap_or_else(|| self.generate_symbol())
+        self.inner
+            .symbol
+            .as_deref()
+            .unwrap_or_else(|| self.generate_symbol())
     }
 
     fn generate_name(&self) -> &str {
@@ -124,7 +130,10 @@ impl Unit {
     }
 
     pub fn name(&self) -> &str {
-        self.inner.name.as_deref().unwrap_or_else(|| self.generate_name())
+        self.inner
+            .name
+            .as_deref()
+            .unwrap_or_else(|| self.generate_name())
     }
 
     pub fn number(&self) -> Number {
@@ -299,9 +308,11 @@ pub(crate) mod py {
                 RArithmeticEnum::Decimal(decimal) => {
                     Quantity::new(decimal, self.owned_inner()).into()
                 }
-                RArithmeticEnum::String(string) => {
-                    Quantity::new(Decimal::from_str_exact(&string).unwrap(), self.owned_inner()).into()
-                }
+                RArithmeticEnum::String(string) => Quantity::new(
+                    Decimal::from_str_exact(&string).unwrap(),
+                    self.owned_inner(),
+                )
+                .into(),
             }
         }
 
@@ -332,7 +343,6 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
-    use crate::unit128::NumericFactor;
     use super::*;
 
     #[test]

@@ -1,9 +1,9 @@
 use num_rational::Ratio;
+use num_traits::ToPrimitive;
 use std::{
     fmt,
     ops::{Add, Deref, Div, Mul, Neg, Sub},
 };
-use num_traits::ToPrimitive;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct Frac(Ratio<i8>);

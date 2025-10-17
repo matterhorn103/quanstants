@@ -28,6 +28,7 @@ impl Context {
 }
 
 // Convenience functions for pre-populated units
+#[allow(dead_code)]
 impl Context {
     fn second(&self) -> Unit {
         self.unit_reg.get_by_name("second")

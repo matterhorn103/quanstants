@@ -1,6 +1,5 @@
 use std::{
     fmt,
-    num::ParseIntError,
     ops::{Div, Mul},
 };
 
@@ -17,9 +16,9 @@ use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, numb
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct NumericFactor {
-    pub sign: i8, // +1 for positive numbers, -1 for negative
+    pub sign: i8,      // +1 for positive numbers, -1 for negative
     pub mantissa: u64, // m - 1 must fit into 48 bits i.e. a u48 (m up to 2^48, not 2^48 - 1)
-    pub base: u8, // base must fit into 7 bits i.e. a u7 (up to 2^7 - 1)
+    pub base: u8,      // base must fit into 7 bits i.e. a u7 (up to 2^7 - 1)
     pub exponent: i8,
 }
 
@@ -31,7 +30,12 @@ impl NumericFactor {
         Self::try_new(sign, mantissa, base, exponent).unwrap()
     }
 
-    pub fn try_new(sign: i8, mantissa: u64, base: u8, exponent: i8) -> Result<Self, QuanstantsError> {
+    pub fn try_new(
+        sign: i8,
+        mantissa: u64,
+        base: u8,
+        exponent: i8,
+    ) -> Result<Self, QuanstantsError> {
         if (mantissa <= Self::MAX_MANTISSA) && (base <= Self::MAX_BASE) {
             Ok(Self {
                 sign: (sign >> 7) | 1,
@@ -80,11 +84,19 @@ impl TryFrom<NumericFactor> for i128 {
         if n.exponent.is_positive() {
             // The NumericFactor can be expressed as an integer
             let b: i128 = n.base.into();
-            let e: u32 = n.exponent.try_into().expect("Already checked that exponent is positive");
+            let e: u32 = n
+                .exponent
+                .try_into()
+                .expect("Already checked that exponent is positive");
             let exponential_term = b.checked_pow(e).ok_or(QuanstantsError::Overflow)?;
-            let m: i128 = if n.sign.is_positive() { n.mantissa as i128 } else { -(n.mantissa as i128) }; // We know this will be fine
-            // Even if the exponential term fit into an i128, might overflow when multiplied by m
-            m.checked_mul(exponential_term).ok_or(QuanstantsError::Overflow)
+            let m: i128 = if n.sign.is_positive() {
+                n.mantissa as i128
+            } else {
+                -(n.mantissa as i128)
+            }; // We know this will be fine
+               // Even if the exponential term fit into an i128, might overflow when multiplied by m
+            m.checked_mul(exponential_term)
+                .ok_or(QuanstantsError::Overflow)
         } else {
             // Not an int
             Err(QuanstantsError::Cast)
@@ -98,20 +110,24 @@ impl TryFrom<NumericFactor> for Decimal {
     fn try_from(n: NumericFactor) -> Result<Decimal, QuanstantsError> {
         if n.exponent.is_positive() {
             // The NumericFactor can be expressed as an integer, so let's do so
-            let m: i128 = n.try_into()?; 
+            let m: i128 = n.try_into()?;
             match Decimal::try_from_i128_with_scale(m, 0) {
-                    Ok(result) => Ok(result),
-                    Err(_) => Err(QuanstantsError::Cast)
-                }
+                Ok(result) => Ok(result),
+                Err(_) => Err(QuanstantsError::Cast),
+            }
         } else {
             if n.base != 10 {
                 Err(QuanstantsError::Cast)
             } else {
                 let e: u32 = n.exponent.unsigned_abs().into();
-                let m: i128 = if n.sign.is_positive() { n.mantissa as i128 } else { -(n.mantissa as i128) };
+                let m: i128 = if n.sign.is_positive() {
+                    n.mantissa as i128
+                } else {
+                    -(n.mantissa as i128)
+                };
                 match Decimal::try_from_i128_with_scale(m, e) {
                     Ok(result) => Ok(result),
-                    Err(_) => Err(QuanstantsError::Cast)
+                    Err(_) => Err(QuanstantsError::Cast),
                 }
             }
         }

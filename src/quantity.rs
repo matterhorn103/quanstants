@@ -3,8 +3,6 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use rust_decimal::Decimal;
-
 use crate::{dimensions::Dimensions, number::Number, unit::Unit};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]

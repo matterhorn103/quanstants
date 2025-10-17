@@ -7,7 +7,7 @@ use crate::{
 #[derive(Debug)]
 pub struct UnitRegistry {
     units: HashMap<Unit128, Unit>,
-    string_map: HashMap<String, Unit128>,
+    string_map: HashMap<String, Unit>,
 }
 
 impl UnitRegistry {
@@ -39,14 +39,14 @@ impl UnitRegistry {
         //self.string_map.insert(name, id);
     }
 
-    pub fn add_base(
+    pub(crate) fn add_base(
         &mut self,
         dimensions: Dimensions,
         symbol: String,
         name: String,
         prefix: Option<Prefix>,
     ) {
-        let id = Unit128::new(ExponentialNumber::new(1, 1, 10, 0), dimensions, 0x00);
+        let id = Unit128::new(ExponentialNumber::ONE, dimensions, 0x00);
         let inner_unit = LinearUnit {
             utype: LinearUnitType::Base,
             dimensions,
@@ -60,11 +60,25 @@ impl UnitRegistry {
             id,
             inner: Arc::new(inner_unit),
         };
-        self.units.insert(id, unit);
-        self.string_map.insert(name, id);
+        self.units.insert(id, unit.clone());
+        self.string_map.insert(name, unit);
     }
 
-    pub fn add_base_with_aliases(
+    pub(crate) fn add_base_with_alt_spellings(
+        &mut self,
+        dimensions: Dimensions,
+        symbol: String,
+        name: String,
+        prefix: Option<Prefix>,
+        alt_spellings: Vec<String>,
+    ) {
+        self.add_base(dimensions, symbol.clone(), name, prefix);
+        for spelling in alt_spellings {
+            self.add_base(dimensions, symbol.clone(), spelling, prefix);
+        }
+    }
+
+    pub(crate) fn add_base_with_aliases(
         &mut self,
         dimensions: Dimensions,
         symbol: String,
@@ -72,16 +86,15 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
         aliases: Vec<String>,
     ) {
-        let id = Unit128::new(ExponentialNumber::new(1, 1, 10, 0), dimensions, 0x00);
-        self.add_base(dimensions, symbol, name, prefix);
+        let id = Unit128::new(ExponentialNumber::ONE, dimensions, 0x00);
+        self.add_base(dimensions, symbol.clone(), name, prefix);
         for alias in aliases {
-            self.string_map.insert(alias, id);
+            self.string_map.insert(alias, self.get_by_id(&id).clone());
         }
     }
 
     pub fn get_by_name(&self, name: &str) -> Unit {
-        let id = self.string_map.get(name).unwrap();
-        self.get_by_id(id)
+        self.string_map.get(name).unwrap().clone()
     }
 
     pub fn get_by_id(&self, id: &Unit128) -> Unit {
@@ -105,7 +118,7 @@ impl UnitRegistry {
             String::from("second"),
             None,
         );
-        self.add_base_with_aliases(
+        self.add_base_with_alt_spellings(
             Dimensions::new(0, 1, 0, 0, 0, 0, 0),
             String::from("m"),
             String::from("metre"),

@@ -1,11 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    dimensions::Dimensions,
-    number::Number,
-    prefix::Prefix,
-    unit::{LinearUnit, LinearUnitType, Unit},
-    unit128::{NumericFactor, Unit128},
+    dimensions::Dimensions, exponum::ExponentialNumber, number::Number, prefix::Prefix, unit::{LinearUnit, LinearUnitType, Unit}, unit128::Unit128,
 };
 
 #[derive(Debug)]
@@ -50,7 +46,7 @@ impl UnitRegistry {
         name: String,
         prefix: Option<Prefix>,
     ) {
-        let id = Unit128::new(NumericFactor::new(1, 1, 10, 0), dimensions, 0x00);
+        let id = Unit128::new(ExponentialNumber::new(1, 1, 10, 0), dimensions, 0x00);
         let inner_unit = LinearUnit {
             utype: LinearUnitType::Base,
             dimensions,
@@ -76,7 +72,7 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
         aliases: Vec<String>,
     ) {
-        let id = Unit128::new(NumericFactor::new(1, 1, 10, 0), dimensions, 0x00);
+        let id = Unit128::new(ExponentialNumber::new(1, 1, 10, 0), dimensions, 0x00);
         self.add_base(dimensions, symbol, name, prefix);
         for alias in aliases {
             self.string_map.insert(alias, id);

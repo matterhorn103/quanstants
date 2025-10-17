@@ -3,9 +3,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use rust_decimal::{Decimal, MathematicalOps};
-
-use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, number::Number};
+use crate::{dimensions::Dimensions, exponum::ExponentialNumber, fraction::Frac};
 
 // A 128-bit representation of a unit consists of two 64-bit parts:
 //   1. A 64-bit number in a custom format corresponding roughly to scientific notation
@@ -15,213 +13,17 @@ use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, numb
 // first 64 bits
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct NumericFactor {
-    pub sign: i8,      // +1 for positive numbers, -1 for negative
-    pub mantissa: u64, // m - 1 must fit into 48 bits i.e. a u48 (m up to 2^48, not 2^48 - 1)
-    pub base: u8,      // base must fit into 7 bits i.e. a u7 (up to 2^7 - 1)
-    pub exponent: i8,
-}
-
-impl NumericFactor {
-    const MAX_MANTISSA: u64 = (1 << 48);
-    const MAX_BASE: u8 = (1 << 7) - 1;
-
-    pub fn new(sign: i8, mantissa: u64, base: u8, exponent: i8) -> Self {
-        Self::try_new(sign, mantissa, base, exponent).unwrap()
-    }
-
-    pub fn try_new(
-        sign: i8,
-        mantissa: u64,
-        base: u8,
-        exponent: i8,
-    ) -> Result<Self, QuanstantsError> {
-        if (mantissa <= Self::MAX_MANTISSA) && (base <= Self::MAX_BASE) {
-            Ok(Self {
-                sign: (sign >> 7) | 1,
-                mantissa,
-                base,
-                exponent,
-            })
-        } else {
-            Err(QuanstantsError::Range)
-        }
-    }
-
-    pub fn try_pow<T: Into<Frac>>(self, exponent: T) -> Result<Self, QuanstantsError> {
-        let exp = exponent.into().to_f64();
-        let dec: Decimal = self.try_into()?;
-        let new_dec = dec.checked_powf(exp).ok_or(QuanstantsError::Overflow)?;
-        Self::try_from(new_dec)
-    }
-}
-
-impl TryFrom<Number> for NumericFactor {
-    type Error = QuanstantsError;
-
-    fn try_from(n: Number) -> Result<Self, QuanstantsError> {
-        n.number.try_into()
-    }
-}
-
-impl TryFrom<Decimal> for NumericFactor {
-    type Error = QuanstantsError;
-
-    fn try_from(n: Decimal) -> Result<Self, QuanstantsError> {
-        Ok(NumericFactor::new(
-            if n.is_sign_positive() { 1 } else { -1 },
-            n.mantissa().unsigned_abs() as u64,
-            10,
-            n.scale().try_into()?,
-        ))
-    }
-}
-
-impl TryFrom<NumericFactor> for i128 {
-    type Error = QuanstantsError;
-
-    fn try_from(n: NumericFactor) -> Result<i128, QuanstantsError> {
-        if n.exponent.is_positive() {
-            // The NumericFactor can be expressed as an integer
-            let b: i128 = n.base.into();
-            let e: u32 = n
-                .exponent
-                .try_into()
-                .expect("Already checked that exponent is positive");
-            let exponential_term = b.checked_pow(e).ok_or(QuanstantsError::Overflow)?;
-            let m: i128 = if n.sign.is_positive() {
-                n.mantissa as i128
-            } else {
-                -(n.mantissa as i128)
-            }; // We know this will be fine
-               // Even if the exponential term fit into an i128, might overflow when multiplied by m
-            m.checked_mul(exponential_term)
-                .ok_or(QuanstantsError::Overflow)
-        } else {
-            // Not an int
-            Err(QuanstantsError::Cast)
-        }
-    }
-}
-
-impl TryFrom<NumericFactor> for Decimal {
-    type Error = QuanstantsError;
-
-    fn try_from(n: NumericFactor) -> Result<Decimal, QuanstantsError> {
-        if n.exponent.is_positive() {
-            // The NumericFactor can be expressed as an integer, so let's do so
-            let m: i128 = n.try_into()?;
-            match Decimal::try_from_i128_with_scale(m, 0) {
-                Ok(result) => Ok(result),
-                Err(_) => Err(QuanstantsError::Cast),
-            }
-        } else {
-            if n.base != 10 {
-                Err(QuanstantsError::Cast)
-            } else {
-                let e: u32 = n.exponent.unsigned_abs().into();
-                let m: i128 = if n.sign.is_positive() {
-                    n.mantissa as i128
-                } else {
-                    -(n.mantissa as i128)
-                };
-                match Decimal::try_from_i128_with_scale(m, e) {
-                    Ok(result) => Ok(result),
-                    Err(_) => Err(QuanstantsError::Cast),
-                }
-            }
-        }
-    }
-}
-
-impl Mul for NumericFactor {
-    type Output = Self;
-
-    // At the moment, panics if the bases are different (obviously not ideal)
-    fn mul(self, rhs: Self) -> Self {
-        if self.base != rhs.base {
-            panic!()
-        } else {
-            NumericFactor {
-                sign: self.sign * rhs.sign,
-                mantissa: self.mantissa * rhs.mantissa,
-                base: self.base,
-                exponent: self.exponent + rhs.exponent,
-            }
-        }
-    }
-}
-
-impl Div for NumericFactor {
-    type Output = Self;
-
-    // At the moment, panics if the bases are different (obviously not ideal)
-    // Also loses precision in the mantissa!
-    fn div(self, rhs: Self) -> Self {
-        if self.base != rhs.base {
-            panic!()
-        } else {
-            NumericFactor {
-                sign: self.sign * rhs.sign,
-                mantissa: self.mantissa / rhs.mantissa,
-                base: self.base,
-                exponent: self.exponent - rhs.exponent,
-            }
-        }
-    }
-}
-
-impl NumericFactor {
-    #[allow(dead_code)]
-    pub const ONE: NumericFactor = {
-        NumericFactor {
-            sign: 1,
-            mantissa: 1,
-            base: 10,
-            exponent: 0,
-        }
-    };
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct NumericReference {
-    pub sign: i8,
-    pub mantissa: u32,
-    pub base: u8,
-    pub exponent: i8,
-}
-
-impl NumericReference {
-    pub fn new(sign: i8, mantissa: u32, base: u8, exponent: i8) -> Self {
-        NumericReference {
-            sign,
-            mantissa,
-            base,
-            exponent,
-        }
-    }
-}
-
-impl NumericReference {
-    #[allow(dead_code)]
-    pub const ONE: NumericReference = {
-        NumericReference {
-            sign: 1,
-            mantissa: 1,
-            base: 10,
-            exponent: 0,
-        }
-    };
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Unit128 {
     pub num: u64,
     pub dim: u64,
 }
 
 impl Unit128 {
-    pub fn new(factor: NumericFactor, dimensions: Dimensions, least_significant_byte: u8) -> Self {
+    pub fn new(
+        factor: ExponentialNumber,
+        dimensions: Dimensions,
+        least_significant_byte: u8,
+    ) -> Self {
         let dim = least_significant_byte as u64
             | (dimensions.T.to_bits() as u64) << 8
             | (dimensions.L.to_bits() as u64) << 16
@@ -242,10 +44,10 @@ impl Unit128 {
     }
 
     pub fn new_referenced(
-        factor: NumericFactor,
+        factor: ExponentialNumber,
         dimensions: Dimensions,
         least_significant_byte: u8,
-        reference: NumericReference,
+        reference: ExponentialNumber,
     ) -> Self {
         if factor.base != reference.base {
             panic!()
@@ -267,7 +69,7 @@ impl Unit128 {
             | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
             | (factor.mantissa - 1) << 16
             | (reference.exponent as u64) << 32
-            | ((i64::from(reference.mantissa) * (reference.sign as i64)) as u64) << 40;
+            | (((reference.mantissa as i64) * (reference.sign as i64)) as u64) << 40;
         Self { num, dim }
     }
 
@@ -296,8 +98,8 @@ impl Unit128 {
         }
     }
 
-    pub fn factor(&self) -> NumericFactor {
-        NumericFactor::new(
+    pub fn factor(&self) -> ExponentialNumber {
+        ExponentialNumber::new(
             self.factor_sign(),
             self.factor_mantissa(),
             self.factor_base(),
@@ -541,7 +343,7 @@ mod tests {
 
     #[test]
     fn new() {
-        let s = Unit128::new(NumericFactor::ONE, Dimensions::TIME, 0x00);
+        let s = Unit128::new(ExponentialNumber::ONE, Dimensions::TIME, 0x00);
         let _celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
         assert_eq!(s.dimensions(), Dimensions::TIME);
     }

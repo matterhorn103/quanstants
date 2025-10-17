@@ -3,6 +3,7 @@
 pub mod context;
 pub mod dimensions;
 pub mod error;
+pub mod exponum;
 pub mod fraction;
 pub mod number;
 pub mod prefix;

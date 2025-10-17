@@ -97,7 +97,11 @@ impl LinearFactor {
         if self.exponent == 1 {
             self.unit.symbol(false)
         } else if use_superscripts {
-            format!("{}{}", self.unit.symbol(true), self.exponent.to_superscript())
+            format!(
+                "{}{}",
+                self.unit.symbol(true),
+                self.exponent.to_superscript()
+            )
         } else {
             format!("{}{}", self.unit.symbol(false), self.exponent)
         }

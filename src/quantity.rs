@@ -3,16 +3,16 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use crate::{dimensions::Dimensions, number::Number, unit::Unit};
+use crate::{dimensions::Dimensions, number::SciNum, unit::Unit};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct Quantity {
-    pub number: Number,
+    pub number: SciNum,
     pub unit: Unit,
 }
 
 impl Quantity {
-    pub fn new(number: impl Into<Number>, unit: Unit) -> Self {
+    pub fn new(number: impl Into<SciNum>, unit: Unit) -> Self {
         Self {
             number: number.into(),
             unit,
@@ -30,7 +30,7 @@ impl Quantity {
 
 impl<T> From<T> for Quantity
 where
-    T: Into<Number>,
+    T: Into<SciNum>,
 {
     fn from(value: T) -> Self {
         Self {
@@ -82,7 +82,7 @@ impl Mul<Unit> for Quantity {
 
 impl<T> Mul<T> for Quantity
 where
-    T: Into<Number>,
+    T: Into<SciNum>,
 {
     type Output = Self;
 
@@ -109,7 +109,7 @@ impl Div<Unit> for Quantity {
 
 impl<T> Div<T> for Quantity
 where
-    T: Into<Number>,
+    T: Into<SciNum>,
 {
     type Output = Self;
 
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn new() {
-        let n = Number::new(5, 0);
+        let n = SciNum::new(5, 0);
         let u = Unit {
             id: Unit128::SECOND,
             inner: Arc::new(LinearUnit {
@@ -191,7 +191,7 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn dimensions() {
-        let n = Number::new(5, 0);
+        let n = SciNum::new(5, 0);
         let u = Unit {
             id: Unit128::SECOND,
             inner: Arc::new(LinearUnit {
@@ -211,7 +211,7 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn uncertainty() {
-        let n = Number::new(20, 1);
+        let n = SciNum::new(20, 1);
         let u = Unit {
             id: Unit128::SECOND,
             inner: Arc::new(LinearUnit {
@@ -230,12 +230,12 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
         let q = Quantity::new(n, u.clone());
-        assert_eq!(q.uncertainty(), Quantity::new(Number::from(1), u));
+        assert_eq!(q.uncertainty(), Quantity::new(SciNum::from(1), u));
     }
 
     #[test]
@@ -248,15 +248,15 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
-        let q1 = Quantity::new(Number::new(5, 0), s.clone());
-        let q2 = Quantity::new(Number::new(8, 0), s.clone());
+        let q1 = Quantity::new(SciNum::new(5, 0), s.clone());
+        let q2 = Quantity::new(SciNum::new(8, 0), s.clone());
         assert_eq!(
             q1 * q2,
-            Quantity::new(Number::new(40, 0), s.clone() * s.clone())
+            Quantity::new(SciNum::new(40, 0), s.clone() * s.clone())
         );
     }
 
@@ -270,12 +270,12 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
-        let q1 = Quantity::new(Number::new(40, 0), s.clone() * s.clone());
-        let q2 = Quantity::new(Number::new(8, 0), s.clone());
-        assert_eq!(q1 / q2, Quantity::new(Number::new(5, 0), s.clone()));
+        let q1 = Quantity::new(SciNum::new(40, 0), s.clone() * s.clone());
+        let q2 = Quantity::new(SciNum::new(8, 0), s.clone());
+        assert_eq!(q1 / q2, Quantity::new(SciNum::new(5, 0), s.clone()));
     }
 }

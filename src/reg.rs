@@ -1,7 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    dimensions::Dimensions, exponum::ExponentialNumber, number::Number, prefix::Prefix, unit::{LinearUnit, LinearUnitType, Unit}, unit128::Unit128,
+    dimensions::Dimensions,
+    exponum::ExponentialNumber,
+    number::SciNum,
+    prefix::Prefix,
+    unit::{LinearUnit, LinearUnitType, Unit},
+    unit128::Unit128,
 };
 
 #[derive(Debug)]
@@ -53,7 +58,7 @@ impl UnitRegistry {
             symbol: Some(symbol),
             name: Some(name.clone()),
             prefix,
-            number: Number::ONE,
+            number: SciNum::ONE,
             factors: vec![],
         };
         let unit = Unit {

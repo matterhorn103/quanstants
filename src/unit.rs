@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
-use crate::number::Number;
+use crate::number::SciNum;
 use crate::prefix::Prefix;
 use crate::unit128::Unit128;
 
@@ -28,7 +28,7 @@ pub(crate) struct LinearUnit {
     pub(crate) symbol: Option<String>, // Compound units have None for this
     pub(crate) name: Option<String>,   // Compound units have None for this
     pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
-    pub(crate) number: Number,         // 1 for everything except derived units
+    pub(crate) number: SciNum,         // 1 for everything except derived units
     pub(crate) factors: Vec<LinearFactor>, // Empty for base units and unitless
 }
 
@@ -61,7 +61,7 @@ impl LinearUnit {
         symbol: None,
         name: None,
         prefix: None,
-        number: Number::ONE,
+        number: SciNum::ONE,
         factors: vec![],
     };
 }
@@ -147,7 +147,7 @@ impl Unit {
         self.inner.name()
     }
 
-    pub fn number(&self) -> Number {
+    pub fn number(&self) -> SciNum {
         self.inner.number
     }
 
@@ -314,7 +314,7 @@ pub(crate) mod py {
                 }
                 RArithmeticEnum::Int(integer) => Quantity::new(integer, self.owned_inner()).into(),
                 RArithmeticEnum::Float(float) => {
-                    Quantity::new(Number::from_f64(float, 0.0).unwrap(), self.owned_inner()).into()
+                    Quantity::new(SciNum::from_f64(float, 0.0).unwrap(), self.owned_inner()).into()
                 }
                 RArithmeticEnum::Decimal(decimal) => {
                     Quantity::new(decimal, self.owned_inner()).into()
@@ -366,7 +366,7 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
@@ -384,7 +384,7 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
@@ -402,7 +402,7 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };

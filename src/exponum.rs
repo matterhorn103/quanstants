@@ -2,16 +2,16 @@ use std::ops::{Div, Mul};
 
 use rust_decimal::{Decimal, MathematicalOps};
 
-use crate::{error::QuanstantsError, fraction::Frac, number::Number};
+use crate::{error::QuanstantsError, fraction::Frac, number::SciNum};
 
 /// A non-zero number in exponential notation (equivalent to scientific notation when _b_ = 10).
-/// 
+///
 /// Has the form _s_ _m_ _b_<sup><i>e</i></sup>, where:
 /// - _s_ is +1 or −1
 /// - _m_ is a positive non-zero integer between 1 and 2<sup>48</sup>
 /// - _b_ is a positive non-zero integer between 1 and (2<sup>7</sup> − 1)
 /// - _e_ is a signed integer
-/// 
+///
 /// Though the in-memory representation uses 128 bits (for now), the restrictions allow the number
 /// to be encoded within 64 bits.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
@@ -56,10 +56,10 @@ impl ExponentialNumber {
     }
 }
 
-impl TryFrom<Number> for ExponentialNumber {
+impl TryFrom<SciNum> for ExponentialNumber {
     type Error = QuanstantsError;
 
-    fn try_from(n: Number) -> Result<Self, QuanstantsError> {
+    fn try_from(n: SciNum) -> Result<Self, QuanstantsError> {
         n.number.try_into()
     }
 }

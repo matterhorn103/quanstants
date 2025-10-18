@@ -11,42 +11,122 @@ use rust_decimal_macros::dec;
 
 //impl<T> Numeric for T where T: num_traits::Num + num_traits::NumOps + std::fmt::Display {}
 
+/// A Decimal extended to have an associated uncertainty at the same scale as well as an extra
+/// scaling factor of 10<sup><i>exponent</i></sup>.
 #[derive(Copy, Clone, Debug)]
-pub struct Number {
-    pub number: Decimal,
-    pub uncertainty: Decimal,
+pub struct SciNum {
+    number: Decimal,
+    uncertainty_lo: u32,
+    uncertainty_mid: u32,
+    uncertainty_hi: u32,
+    exponent: i32,
 }
 
-impl Number {
+impl SciNum {
+    fn new_with_exponent<T>(number: T, uncertainty: T, exponent: i32) -> Self
+    where
+        T: Into<Decimal>,
+    {
+        let num: Decimal = number.into();
+        let mut uncert: Decimal = uncertainty.into();
+        uncert.rescale(num.scale());
+        let unpacked_uncert = uncert.unpack();
+        SciNum {
+            number: num,
+            uncertainty_lo: unpacked_uncert.lo,
+            uncertainty_mid: unpacked_uncert.mid,
+            uncertainty_hi: unpacked_uncert.hi,
+            exponent,
+        }
+    }
+
     pub fn new<T>(number: T, uncertainty: T) -> Self
     where
         T: Into<Decimal>,
     {
-        Number {
-            number: number.into(),
-            uncertainty: uncertainty.into(),
-        }
+        Self::new_with_exponent(number, uncertainty, 0)
+    }
+
+    pub fn new_big<T>(number: T, uncertainty: T, exponent: i32) -> Self
+    where
+        T: Into<Decimal>,
+    {
+        Self::new_with_exponent(number, uncertainty, exponent)
     }
 
     pub fn exact<T>(number: T) -> Self
     where
         T: Into<Decimal>,
     {
-        Number {
+        Self {
             number: number.into(),
-            uncertainty: Decimal::ZERO,
+            uncertainty_lo: 0,
+            uncertainty_mid: 0,
+            uncertainty_hi: 0,
+            exponent: 0,
         }
     }
 
-    pub fn from_f64(number: f64, uncertainty: f64) -> Option<Self> {
-        Some(Number {
-            number: Decimal::from_f64(number)?,
-            uncertainty: Decimal::from_f64(uncertainty)?,
-        })
+    pub fn exact_big<T>(number: T, exponent: i32) -> Self
+    where
+        T: Into<Decimal>,
+    {
+        Self {
+            number: number.into(),
+            uncertainty_lo: 0,
+            uncertainty_mid: 0,
+            uncertainty_hi: 0,
+            exponent,
+        }
     }
 
-    pub fn relative_uncertainty(&self) -> Decimal {
-        self.uncertainty / self.number
+    pub fn number(&self) -> Self {
+        Self {
+            number: self.number,
+            uncertainty_lo: 0,
+            uncertainty_mid: 0,
+            uncertainty_hi: 0,
+            exponent: self.exponent,
+        }
+    }
+
+    pub(crate) fn uncertainty_dec(&self) -> Decimal {
+        Decimal::from_parts(
+            self.uncertainty_lo,
+            self.uncertainty_mid,
+            self.uncertainty_hi,
+            false,
+            self.decimal_scale(),
+        )
+    }
+
+    pub fn uncertainty(&self) -> Self {
+        Self {
+            number: self.uncertainty_dec(),
+            uncertainty_lo: 0,
+            uncertainty_mid: 0,
+            uncertainty_hi: 0,
+            exponent: self.exponent,
+        }
+    }
+
+    pub(crate) fn decimal_scale(&self) -> u32 {
+        self.number.scale()
+    }
+
+    pub(crate) fn exponent(&self) -> i32 {
+        self.exponent
+    }
+
+    pub fn from_f64(number: f64, uncertainty: f64) -> Option<Self> {
+        Some(Self::new(
+            Decimal::from_f64(number)?,
+            Decimal::from_f64(uncertainty)?,
+        ))
+    }
+
+    pub(crate) fn relative_uncertainty_dec(&self) -> Decimal {
+        self.uncertainty_dec() / self.number
     }
 
     pub fn add_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
@@ -203,7 +283,7 @@ impl From<Decimal> for Number {
 
 macro_rules! impl_from {
     ($T:ty) => {
-        impl From<$T> for Number {
+        impl From<$T> for Num256 {
             fn from(t: $T) -> Self {
                 Self {
                     number: t.into(),
@@ -227,21 +307,21 @@ impl_from!(u64);
 impl_from!(u128);
 impl_from!(usize);
 
-impl PartialEq for Number {
+impl PartialEq for SciNum {
     fn eq(&self, other: &Self) -> bool {
         self.number == other.number
     }
 }
 
-impl Eq for Number {}
+impl Eq for SciNum {}
 
-impl PartialOrd for Number {
+impl PartialOrd for SciNum {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Number {
+impl Ord for SciNum {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.number.cmp(&other.number)
     }
@@ -249,13 +329,13 @@ impl Ord for Number {
 
 macro_rules! impl_comparisons {
     ($t:ty) => {
-        impl PartialEq<$t> for Number {
+        impl PartialEq<$t> for Num256 {
             fn eq(&self, other: &$t) -> bool {
                 self.number == Decimal::from(*other)
             }
         }
 
-        impl PartialOrd<$t> for Number {
+        impl PartialOrd<$t> for Num256 {
             fn partial_cmp(&self, other: &$t) -> Option<std::cmp::Ordering> {
                 self.number.partial_cmp(&Decimal::from(*other))
             }
@@ -276,7 +356,7 @@ impl_comparisons!(u64);
 impl_comparisons!(u128);
 impl_comparisons!(usize);
 
-impl Add for Number {
+impl Add for SciNum {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
@@ -284,15 +364,15 @@ impl Add for Number {
     }
 }
 
-impl Add for &Number {
-    type Output = Number;
+impl Add for &SciNum {
+    type Output = SciNum;
 
-    fn add(self, rhs: Self) -> Number {
+    fn add(self, rhs: Self) -> SciNum {
         self.add_with_correlation(*rhs, Decimal::ZERO)
     }
 }
 
-impl Sub for Number {
+impl Sub for SciNum {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
@@ -300,15 +380,15 @@ impl Sub for Number {
     }
 }
 
-impl Sub for &Number {
-    type Output = Number;
+impl Sub for &SciNum {
+    type Output = SciNum;
 
-    fn sub(self, rhs: Self) -> Number {
+    fn sub(self, rhs: Self) -> SciNum {
         self.sub_with_correlation(*rhs, Decimal::ZERO)
     }
 }
 
-impl Mul for Number {
+impl Mul for SciNum {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
@@ -316,15 +396,15 @@ impl Mul for Number {
     }
 }
 
-impl Mul for &Number {
-    type Output = Number;
+impl Mul for &SciNum {
+    type Output = SciNum;
 
-    fn mul(self, rhs: Self) -> Number {
+    fn mul(self, rhs: Self) -> SciNum {
         self.mul_with_correlation(*rhs, Decimal::ZERO)
     }
 }
 
-impl Div for Number {
+impl Div for SciNum {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
@@ -332,17 +412,17 @@ impl Div for Number {
     }
 }
 
-impl Div for &Number {
-    type Output = Number;
+impl Div for &SciNum {
+    type Output = SciNum;
 
-    fn div(self, rhs: Self) -> Number {
+    fn div(self, rhs: Self) -> SciNum {
         self.div_with_correlation(*rhs, Decimal::ZERO)
     }
 }
 
 macro_rules! impl_arithmetic {
     ($t:ty) => {
-        impl Add<$t> for Number {
+        impl Add<$t> for Num256 {
             type Output = Self;
 
             fn add(self, rhs: $t) -> Number {
@@ -350,16 +430,16 @@ macro_rules! impl_arithmetic {
             }
         }
 
-        impl Add<Number> for $t {
-            type Output = Number;
+        impl Add<Num256> for $t {
+            type Output = Num256;
 
-            fn add(self, rhs: Number) -> Number {
-                let num: Number = self.into();
+            fn add(self, rhs: Num256) -> Num256 {
+                let num: Num256 = self.into();
                 num.add_with_correlation(rhs, Decimal::ZERO)
             }
         }
 
-        impl Sub<$t> for Number {
+        impl Sub<$t> for Num256 {
             type Output = Self;
 
             fn sub(self, rhs: $t) -> Number {
@@ -367,16 +447,16 @@ macro_rules! impl_arithmetic {
             }
         }
 
-        impl Sub<Number> for $t {
-            type Output = Number;
+        impl Sub<Num256> for $t {
+            type Output = Num256;
 
-            fn sub(self, rhs: Number) -> Number {
-                let num: Number = self.into();
+            fn sub(self, rhs: Num256) -> Num256 {
+                let num: Num256 = self.into();
                 num.sub_with_correlation(rhs, Decimal::ZERO)
             }
         }
 
-        impl Mul<$t> for Number {
+        impl Mul<$t> for Num256 {
             type Output = Self;
 
             fn mul(self, rhs: $t) -> Number {
@@ -384,16 +464,16 @@ macro_rules! impl_arithmetic {
             }
         }
 
-        impl Mul<Number> for $t {
-            type Output = Number;
+        impl Mul<Num256> for $t {
+            type Output = Num256;
 
-            fn mul(self, rhs: Number) -> Number {
-                let num: Number = self.into();
+            fn mul(self, rhs: Num256) -> Num256 {
+                let num: Num256 = self.into();
                 num.mul_with_correlation(rhs, Decimal::ZERO)
             }
         }
 
-        impl Div<$t> for Number {
+        impl Div<$t> for Num256 {
             type Output = Self;
 
             fn div(self, rhs: $t) -> Number {
@@ -401,11 +481,11 @@ macro_rules! impl_arithmetic {
             }
         }
 
-        impl Div<Number> for $t {
-            type Output = Number;
+        impl Div<Num256> for $t {
+            type Output = Num256;
 
-            fn div(self, rhs: Number) -> Number {
-                let num: Number = self.into();
+            fn div(self, rhs: Num256) -> Num256 {
+                let num: Num256 = self.into();
                 num.div_with_correlation(rhs, Decimal::ZERO)
             }
         }
@@ -425,7 +505,7 @@ impl_arithmetic!(u64);
 impl_arithmetic!(u128);
 impl_arithmetic!(usize);
 
-impl fmt::Display for Number {
+impl fmt::Display for SciNum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.uncertainty == Decimal::ZERO {
             write!(f, "{}", self.number)
@@ -436,12 +516,12 @@ impl fmt::Display for Number {
 }
 
 impl Number {
-    pub const ZERO: Number = Number {
+    pub const ZERO: SciNum = SciNum {
         number: Decimal::ZERO,
         uncertainty: Decimal::ZERO,
     };
 
-    pub const ONE: Number = Number {
+    pub const ONE: SciNum = SciNum {
         number: Decimal::ONE,
         uncertainty: Decimal::ZERO,
     };
@@ -454,20 +534,20 @@ mod tests {
 
     #[test]
     fn relative_uncertainty() {
-        let n = Number::new(20, 2);
+        let n = SciNum::new(20, 2);
         assert_eq!(n.relative_uncertainty(), dec!(0.1));
 
-        let n2 = Number::new(500, 5);
+        let n2 = SciNum::new(500, 5);
         assert_eq!(n2.relative_uncertainty(), dec!(0.01));
 
-        let n3 = Number::new(1000, 15);
+        let n3 = SciNum::new(1000, 15);
         assert_eq!(n3.relative_uncertainty(), dec!(0.015));
     }
 
     #[test]
     fn addition() {
-        let n1 = Number::new(20, 2);
-        let n2 = Number::new(30, 5);
+        let n1 = SciNum::new(20, 2);
+        let n2 = SciNum::new(30, 5);
         let result = n1 + n2;
         assert_eq!(result.number, dec!(50));
         assert_eq!(
@@ -478,16 +558,16 @@ mod tests {
 
     #[test]
     fn addition_with_int() {
-        let n1 = Number::new(20, 0);
+        let n1 = SciNum::new(20, 0);
         let n2 = 30;
-        let result: Number = n1 + n2;
+        let result: SciNum = n1 + n2;
         assert_eq!(result.number, dec!(50));
     }
 
     #[test]
     fn subtraction() {
-        let n1 = Number::new(20, 2);
-        let n2 = Number::new(30, 5);
+        let n1 = SciNum::new(20, 2);
+        let n2 = SciNum::new(30, 5);
         let result = n1 - n2;
         assert_eq!(result.number, dec!(-10));
         assert_eq!(
@@ -498,16 +578,16 @@ mod tests {
 
     #[test]
     fn subtraction_with_int() {
-        let n1 = Number::new(20, 0);
+        let n1 = SciNum::new(20, 0);
         let n2 = 30;
-        let result: Number = n1 - n2;
+        let result: SciNum = n1 - n2;
         assert_eq!(result.number, dec!(-10));
     }
 
     #[test]
     fn multiplication() {
-        let n1 = Number::new(20, 2);
-        let n2 = Number::new(30, 5);
+        let n1 = SciNum::new(20, 2);
+        let n2 = SciNum::new(30, 5);
         let result = n1 * n2;
         assert_eq!(result.number, dec!(600));
         assert_eq!(
@@ -518,16 +598,16 @@ mod tests {
 
     #[test]
     fn multiplication_with_int() {
-        let n1 = Number::new(20, 0);
+        let n1 = SciNum::new(20, 0);
         let n2 = 30;
-        let result: Number = n1 * n2;
+        let result: SciNum = n1 * n2;
         assert_eq!(result.number, dec!(600));
     }
 
     #[test]
     fn division() {
-        let n1 = Number::new(20, 2);
-        let n2 = Number::new(30, 5);
+        let n1 = SciNum::new(20, 2);
+        let n2 = SciNum::new(30, 5);
         let result = n1 / n2;
         assert_eq!(result.number.round_dp(10), dec!(0.6666666667).round_dp(10));
         assert_eq!(
@@ -538,16 +618,16 @@ mod tests {
 
     #[test]
     fn division_with_int() {
-        let n1 = Number::new(60, 0);
+        let n1 = SciNum::new(60, 0);
         let n2 = 30;
-        let result: Number = n1 / n2;
+        let result: SciNum = n1 / n2;
         assert_eq!(result.number, dec!(2));
     }
 
     #[test]
     fn division_reversed() {
-        let n1 = Number::new(20, 2);
-        let n2 = Number::new(30, 5);
+        let n1 = SciNum::new(20, 2);
+        let n2 = SciNum::new(30, 5);
         let result = n2 / n1;
         assert_eq!(result.number, dec!(1.5));
         assert_eq!(
@@ -558,7 +638,7 @@ mod tests {
 
     #[test]
     fn exponentiation() {
-        let n1 = Number::new(20, 2);
+        let n1 = SciNum::new(20, 2);
 
         let result = n1.powd(dec!(2));
         assert_eq!(result.number, dec!(400));
@@ -571,8 +651,8 @@ mod tests {
 
     #[test]
     fn natural_log() {
-        let n1 = Number::new(20, 2);
-        let n2 = Number::new(30, 5);
+        let n1 = SciNum::new(20, 2);
+        let n2 = SciNum::new(30, 5);
         let ratio = n1 / n2;
         let result = ratio.ln();
         assert_eq!(
@@ -583,8 +663,8 @@ mod tests {
 
     #[test]
     fn log_base10() {
-        let n1 = Number::new(20, 2);
-        let n2 = Number::new(30, 5);
+        let n1 = SciNum::new(20, 2);
+        let n2 = SciNum::new(30, 5);
         let ratio = n1 / n2;
         let result = ratio.log10();
         assert_eq!(
@@ -595,8 +675,8 @@ mod tests {
 
     #[test]
     fn exponential() {
-        let n1 = Number::new(20, 2);
-        let n2 = Number::new(30, 5);
+        let n1 = SciNum::new(20, 2);
+        let n2 = SciNum::new(30, 5);
         let ratio = n1 / n2;
         let result = ratio.exp();
         assert_eq!(

@@ -3,7 +3,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{dimensions::Dimensions, exponum::ExponentialNumber, fraction::Frac};
+use crate::{dimensions::Dimensions, number::SciNum, fraction::Frac};
 
 // A 128-bit representation of a unit consists of two 64-bit parts:
 //   1. A 64-bit number in a custom format corresponding roughly to scientific notation
@@ -20,7 +20,7 @@ pub struct Unit128 {
 
 impl Unit128 {
     pub fn new(
-        factor: ExponentialNumber,
+        factor: SciNum,
         dimensions: Dimensions,
         least_significant_byte: u8,
     ) -> Self {
@@ -32,26 +32,16 @@ impl Unit128 {
             | (dimensions.Θ.to_bits() as u64) << 40
             | (dimensions.N.to_bits() as u64) << 48
             | (dimensions.J.to_bits() as u64) << 56;
-        let num = factor.exponent as u64
-            | (if factor.base == 10 {
-                0
-            } else {
-                factor.base as u64
-            }) << 8
-            | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
-            | (factor.mantissa - 1) << 16;
+        let num = Unit128::factor_to_bits(factor);
         Self { num, dim }
     }
 
     pub fn new_referenced(
-        factor: ExponentialNumber,
+        factor: SciNum,
         dimensions: Dimensions,
         least_significant_byte: u8,
-        reference: ExponentialNumber,
+        reference: SciNum,
     ) -> Self {
-        if factor.base != reference.base {
-            panic!()
-        }
         let dim = least_significant_byte as u64
             | (dimensions.T.to_bits() as u64) << 8
             | (dimensions.L.to_bits() as u64) << 16
@@ -60,16 +50,7 @@ impl Unit128 {
             | (dimensions.Θ.to_bits() as u64) << 40
             | (dimensions.N.to_bits() as u64) << 48
             | (dimensions.J.to_bits() as u64) << 56;
-        let num = factor.exponent as u64
-            | (if factor.base == 10 {
-                0
-            } else {
-                factor.base as u64
-            }) << 8
-            | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
-            | (factor.mantissa - 1) << 16
-            | (reference.exponent as u64) << 32
-            | (((reference.mantissa as i64) * (reference.sign as i64)) as u64) << 40;
+        let num = Unit128::factor_and_reference_to_bits(factor, reference);
         Self { num, dim }
     }
 
@@ -98,8 +79,8 @@ impl Unit128 {
         }
     }
 
-    pub fn factor(&self) -> ExponentialNumber {
-        ExponentialNumber::new(
+    pub fn factor(&self) -> SciNum {
+        SciNum::new_exact(
             self.factor_sign(),
             self.factor_mantissa(),
             self.factor_base(),
@@ -240,6 +221,22 @@ impl Div for Unit128 {
 impl fmt::Display for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x{:X}", self.to_bits())
+    }
+}
+
+impl Unit128 {
+    pub(crate) fn factor_to_bits(factor: SciNum) -> u64 {
+        let dec = factor.number_dec().trunc_with_scale(14);
+        dec.scale() as u64 | ((dec.mantissa() - 1) as u64) << 8
+    }
+
+    pub(crate) fn factor_and_reference_to_bits(factor: SciNum, reference: SciNum) -> u64 {
+        let dec_factor = factor.number_dec().trunc_with_scale(6);
+        let dec_ref = reference.number_dec().trunc_with_scale(6);
+        dec_factor.scale() as u64
+            | ((dec_factor.mantissa() - 1) as u64) << 8
+            | (dec_ref.scale() as u64) << 32
+            | (dec_ref.mantissa() as u64) << 40
     }
 }
 
@@ -505,7 +502,7 @@ mod tests {
 
     #[test]
     fn new() {
-        let s = Unit128::new(ExponentialNumber::ONE, Dimensions::TIME, 0x00);
+        let s = Unit128::new(SciNum::ONE, Dimensions::TIME, 0x00);
         let _celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
         assert_eq!(s.dimensions(), Dimensions::TIME);
     }

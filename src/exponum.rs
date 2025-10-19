@@ -56,14 +56,6 @@ impl ExponentialNumber {
     }
 }
 
-impl TryFrom<SciNum> for ExponentialNumber {
-    type Error = QuanstantsError;
-
-    fn try_from(n: SciNum) -> Result<Self, QuanstantsError> {
-        n.number.try_into()
-    }
-}
-
 impl TryFrom<Decimal> for ExponentialNumber {
     type Error = QuanstantsError;
 

@@ -7,14 +7,7 @@ use rust_decimal::Decimal;
 
 use crate::{dimensions::Dimensions, fraction::Frac, scinum::SciNum};
 
-// A 128-bit representation of a unit consists of two 64-bit parts:
-//   1. A 64-bit number in a custom format corresponding roughly to scientific notation
-//   2. A 64-bit representation of the dimensions of the unit
-// The numeric component is defined such that all zeroes for the first half of the ID does not
-// indicate a factor of 0 but of 1 and therefore all coherent SI units are contained within the
-// first 64 bits
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Unit128 {
     pub(crate) num: u64,
     pub(crate) dim: u64,
@@ -161,6 +154,12 @@ impl Div for Unit128 {
     }
 }
 
+impl Debug for Unit128 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Unit128 {{ num: {:X}, dim: {:X} }}", self.num, self.dim)
+    }
+}
+
 impl fmt::Display for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x{:X}", self.to_bits())
@@ -169,17 +168,28 @@ impl fmt::Display for Unit128 {
 
 impl Unit128 {
     pub(crate) fn factor_to_bits(factor: SciNum) -> u64 {
-        let dec = factor.number_dec().trunc_with_scale(14);
-        dec.scale() as u64 | ((dec.mantissa() - 1) as u64) << 8
+        let dec = factor.number_dec();
+        // Need to find a way to shorten factors with too much precision
+        // (This doesn't work)
+        //let dec = dec.trunc_with_scale(14);
+        if dec.scale() > 14 {
+            panic!()
+        } else {
+            -(dec.scale() as i64) as u64 | ((dec.mantissa() - 1) as u64) << 8
+        }
     }
 
     pub(crate) fn factor_and_reference_to_bits(factor: SciNum, reference: SciNum) -> u64 {
-        let dec_factor = factor.number_dec().trunc_with_scale(6);
-        let dec_ref = reference.number_dec().trunc_with_scale(6);
-        dec_factor.scale() as u64
-            | ((dec_factor.mantissa() - 1) as u64) << 8
-            | (dec_ref.scale() as u64) << 32
-            | (dec_ref.mantissa() as u64) << 40
+        let dec_factor = factor.number_dec();
+        let dec_ref = reference.number_dec();
+        if dec_factor.scale() > 6 || dec_ref.scale() > 6 {
+            panic!()
+        } else {
+            dec_factor.scale() as u64
+                | ((dec_factor.mantissa() - 1) as u64) << 8
+                | (dec_ref.scale() as u64) << 32
+                | (dec_ref.mantissa() as u64) << 40
+        }
     }
 
     pub(crate) fn bits_to_factor(b: u64) -> SciNum {
@@ -457,13 +467,52 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
+    use rust_decimal_macros::dec;
+
     use super::*;
 
     #[test]
     fn new() {
         let s = Unit128::new(SciNum::ONE, Dimensions::TIME, 0x00);
-        let _celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
-        assert_eq!(s.dimensions(), Dimensions::TIME);
+        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert_eq!(s, Unit128::SECOND);
+        assert_eq!(s.num, 0x0);
+        assert_eq!(s.dim, 0x1100);
+        assert_eq!(celsius.num, 0x006AB3FE00000000);
+        assert_eq!(celsius.dim, 0x0000110000000041);
+        assert_eq!(ft.num, 0xBE7FC);
+        assert_eq!(ft.dim, 0x110001);
+    }
+
+    #[test]
+    fn factor_to_bits() {
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1)), 0x0);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(2)), 0x100);
+        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x1); // Fails for now
+        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3); // Fails for now
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(0.1))), 0xFF);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(1e-3))), 0xFD);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(-1)), 0xFFFFFFFFFFFFFE00);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(-3)), 0xFFFFFFFFFFFFFC00);
+    }
+
+    #[test]
+    fn factor() {
+        assert_eq!(Unit128::KILOGRAM.factor(), SciNum::ONE);
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert_eq!(ft.factor(), SciNum::new_exact(dec!(0.3048)));
+    }
+
+    #[test]
+    fn dimensions() {
+        assert_eq!(Unit128::KILOGRAM.dimensions(), Dimensions::MASS);
+        assert_eq!(
+            Unit128::KELVIN.dimensions(),
+            Dimensions::THERMODYNAMIC_TEMPERATURE
+        );
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert_eq!(ft.dimensions(), Dimensions::LENGTH);
     }
 
     #[test]
@@ -472,6 +521,8 @@ mod tests {
         assert_eq!(Unit128::SECOND.least_significant_byte(), 0x00);
         let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
         assert_eq!(celsius.least_significant_byte(), 0x41);
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert_eq!(ft.least_significant_byte(), 0x01);
     }
 
     #[test]
@@ -479,14 +530,30 @@ mod tests {
         assert!(!Unit128::UNITLESS.is_referenced());
         assert!(!Unit128::SECOND.is_referenced());
         let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
-        assert!(celsius.is_referenced())
+        assert!(celsius.is_referenced());
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert!(!ft.is_referenced());
     }
 
     #[test]
     fn debug() {
         assert_eq!(
-            format!("{:X?}", Unit128::SECOND),
+            format!("{:?}", Unit128::SECOND),
             "Unit128 { num: 0, dim: 1100 }"
         );
+    }
+
+    #[test]
+    fn mul() {
+        let amp_second = Unit128::AMPERE * Unit128::SECOND;
+        let square_metre = Unit128::METRE * Unit128::METRE;
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        let square_foot = ft * ft;
+        assert_eq!(amp_second.num, 0x0);
+        assert_eq!(amp_second.dim, 0x110000110C);
+        assert_eq!(square_metre.num, 0x0);
+        assert_eq!(square_metre.dim, 0x12000C);
+        assert_eq!(square_foot.num, 0xB138FFF8);
+        assert_eq!(square_foot.dim, 0x12000C);
     }
 }

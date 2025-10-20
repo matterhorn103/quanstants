@@ -386,6 +386,42 @@ mod tests {
     }
 
     #[test]
+    fn mul() {
+        let s = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: SciNum::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let m = Unit {
+            id: Unit128::METRE,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::LENGTH,
+                symbol: Some(String::from("m")),
+                name: Some(String::from("metre")),
+                prefix: None,
+                number: SciNum::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let ms = m.clone() * s.clone();
+        let mm = m.clone() * m.clone();
+        assert_eq!(ms.symbol(false), "m s");
+        assert_eq!(ms.id, Unit128::from_bits(0x11110C));
+        assert_eq!(ms.dimensions(), Dimensions::new(1, 1, 0, 0, 0, 0, 0));
+        assert_eq!(mm.symbol(false), "m m");
+        assert_eq!(mm.id, Unit128::from_bits(0x12000C));
+        assert_eq!(mm.dimensions(), Dimensions::new(0, 2, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
     fn symbol() {
         let s = Unit {
             id: Unit128::SECOND,

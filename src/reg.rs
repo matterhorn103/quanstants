@@ -2,8 +2,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     dimensions::Dimensions,
-    number::SciNum,
     prefix::Prefix,
+    scinum::SciNum,
     unit::{LinearUnit, LinearUnitType, Unit},
     unit128::Unit128,
 };

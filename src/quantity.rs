@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use crate::{dimensions::Dimensions, number::SciNum, unit::Unit};
+use crate::{dimensions::Dimensions, scinum::SciNum, unit::Unit};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct Quantity {

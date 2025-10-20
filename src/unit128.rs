@@ -5,7 +5,7 @@ use std::{
 
 use rust_decimal::Decimal;
 
-use crate::{dimensions::Dimensions, number::SciNum, fraction::Frac};
+use crate::{dimensions::Dimensions, fraction::Frac, scinum::SciNum};
 
 // A 128-bit representation of a unit consists of two 64-bit parts:
 //   1. A 64-bit number in a custom format corresponding roughly to scientific notation
@@ -21,11 +21,7 @@ pub struct Unit128 {
 }
 
 impl Unit128 {
-    pub fn new(
-        factor: SciNum,
-        dimensions: Dimensions,
-        least_significant_byte: u8,
-    ) -> Self {
+    pub fn new(factor: SciNum, dimensions: Dimensions, least_significant_byte: u8) -> Self {
         let dim = least_significant_byte as u64
             | (dimensions.T.to_bits() as u64) << 8
             | (dimensions.L.to_bits() as u64) << 16

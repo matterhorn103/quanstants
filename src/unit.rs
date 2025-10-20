@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
-use crate::number::SciNum;
 use crate::prefix::Prefix;
+use crate::scinum::SciNum;
 use crate::unit128::Unit128;
 
 #[derive(Copy, Clone, Debug)]

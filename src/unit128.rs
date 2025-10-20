@@ -3,6 +3,8 @@ use std::{
     ops::{Div, Mul},
 };
 
+use rust_decimal::Decimal;
+
 use crate::{dimensions::Dimensions, number::SciNum, fraction::Frac};
 
 // A 128-bit representation of a unit consists of two 64-bit parts:
@@ -80,41 +82,10 @@ impl Unit128 {
     }
 
     pub fn factor(&self) -> SciNum {
-        SciNum::new_exact(
-            self.factor_sign(),
-            self.factor_mantissa(),
-            self.factor_base(),
-            self.factor_exponent(),
-        )
-    }
-
-    pub fn factor_exponent(&self) -> i8 {
-        (self.num & 0xFF) as i8
-    }
-
-    pub fn factor_base(&self) -> u8 {
-        let raw_base = ((self.num >> 8) & 0x7F) as u8;
-        if raw_base == 0 {
-            10
-        } else {
-            raw_base
-        }
-    }
-
-    pub fn factor_mantissa(&self) -> u64 {
         if self.is_referenced() {
-            (self.num >> 16) + 1
+            Unit128::bits_to_factor_and_reference(self.num).0
         } else {
-            ((self.num & 0x00000000FFFF0000) >> 16) + 1
-        }
-    }
-
-    pub fn factor_sign(&self) -> i8 {
-        let b = ((self.num >> 15) & 0x01) as u8;
-        if b == 0 {
-            1
-        } else {
-            -1
+            Unit128::bits_to_factor(self.num)
         }
     }
 
@@ -126,32 +97,8 @@ impl Unit128 {
         }
     }
 
-    pub fn reference_base(&self) -> u8 {
-        let raw_base = ((self.num >> 8) & 0x7F) as u8;
-        if raw_base == 0 {
-            10
-        } else {
-            raw_base
-        }
-    }
-
-    pub fn reference_mantissa(&self) -> Option<u32> {
-        if self.is_referenced() {
-            Some((((self.num & 0xFFFFFF0000000000) >> 16) as i32).unsigned_abs())
-        } else {
-            None
-        }
-    }
-
-    pub fn reference_sign(&self) -> Option<i8> {
-        if self.is_referenced() {
-            Some((((self.num & 0xFFFFFF0000000000) >> 16) as i32).signum() as i8)
-        } else {
-            None
-        }
-    }
-
     pub fn normalize(self) -> Self {
+        // Will need to normalize the number as well I guess
         Self {
             num: self.num,
             dim: (self.dim & 0xFFFFFFFFFFFFFFF0) | 0xA,
@@ -176,7 +123,7 @@ impl Unit128 {
             panic!()
         } else {
             Unit128::new(
-                self.factor().try_pow(exp).unwrap(),
+                self.factor().powfrac(exp),
                 self.dimensions().pow(exp),
                 (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
             )
@@ -237,6 +184,22 @@ impl Unit128 {
             | ((dec_factor.mantissa() - 1) as u64) << 8
             | (dec_ref.scale() as u64) << 32
             | (dec_ref.mantissa() as u64) << 40
+    }
+
+    pub(crate) fn bits_to_factor(b: u64) -> SciNum {
+        let scale = (b & 0x0000_0000_0000_00FF) as u32;
+        let mantissa = ((b >> 8) as i128) + 1;
+        Decimal::from_i128_with_scale(mantissa, scale).into()
+    }
+
+    pub(crate) fn bits_to_factor_and_reference(b: u64) -> (SciNum, SciNum) {
+        let factor_scale = (b & 0x0000_0000_0000_00FF) as u32;
+        let factor_mantissa = (((b & 0x0000_0000_FFFF_FF00) >> 8) as i128) + 1;
+        let factor: SciNum = Decimal::from_i128_with_scale(factor_mantissa, factor_scale).into();
+        let ref_scale = ((b & 0x0000_00FF_0000_0000) >> 32) as u32;
+        let ref_mantissa = (b >> 40) as i128;
+        let reference: SciNum = Decimal::from_i128_with_scale(ref_mantissa, ref_scale).into();
+        (factor, reference)
     }
 }
 

@@ -7,6 +7,8 @@ use num_traits::{self, FromPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 
+use crate::fraction::Frac;
+
 /// A Decimal extended to have an associated uncertainty at the same scale, with both sharing the
 /// same scaling factor of 10<sup><i>exponent</i></sup>.
 /// For now, the exponent must always be 0, so the range of representable values is exactly the same
@@ -165,10 +167,11 @@ impl SciNum {
     {
         let sigma_ab = correlation.into() * self.uncertainty_dec() * rhs.uncertainty_dec();
         let number = self.number_dec() + rhs.number_dec();
-        let uncertainty =
+        let uncertainty = if self.is_exact() && rhs.is_exact() { Decimal::ZERO } else {
             ((self.uncertainty_dec().powu(2)) + (rhs.uncertainty_dec().powu(2)) + (dec!(2) * sigma_ab))
                 .sqrt()
-                .unwrap();
+                .unwrap()
+        };
         Self::new(number, uncertainty)
     }
 
@@ -178,10 +181,12 @@ impl SciNum {
     {
         let sigma_ab = correlation.into() * self.uncertainty_dec() * rhs.uncertainty_dec();
         let number = self.number_dec() - rhs.number_dec();
-        let uncertainty = ((self.uncertainty_dec().powu(2)) + (rhs.uncertainty_dec().powu(2))
+        let uncertainty = if self.is_exact() && rhs.is_exact() { Decimal::ZERO } else {
+            ((self.uncertainty_dec().powu(2)) + (rhs.uncertainty_dec().powu(2))
             - (dec!(2) * sigma_ab))
             .sqrt()
-            .unwrap();
+            .unwrap()
+        };
         Self::new(number, uncertainty)
     }
 
@@ -191,12 +196,14 @@ impl SciNum {
     {
         let sigma_ab = correlation.into() * self.uncertainty_dec() * rhs.uncertainty_dec();
         let number = self.number_dec() * rhs.number_dec();
-        let uncertainty = ((self.relative_uncertainty_dec().powu(2))
+        let uncertainty = if self.is_exact() && rhs.is_exact() { Decimal::ZERO } else {
+            ((self.relative_uncertainty_dec().powu(2))
             + (rhs.relative_uncertainty_dec().powu(2))
             + (dec!(2) * sigma_ab / number))
             .sqrt()
             .unwrap()
-            * number.abs();
+            * number.abs()
+        };
         Self::new(number, uncertainty)
     }
 
@@ -206,26 +213,39 @@ impl SciNum {
     {
         let sigma_ab = correlation.into() * self.uncertainty_dec() * rhs.uncertainty_dec();
         let number = self.number_dec() / rhs.number_dec();
-        let uncertainty = ((self.relative_uncertainty_dec().powu(2))
+        let uncertainty = if self.is_exact() && rhs.is_exact() { Decimal::ZERO } else {
+            ((self.relative_uncertainty_dec().powu(2))
             + (rhs.relative_uncertainty_dec().powu(2))
             - (dec!(2) * sigma_ab / number))
             .sqrt()
             .unwrap()
-            * number.abs();
+            * number.abs()
+        };
         Self::new(number, uncertainty)
     }
 
+    #[inline]
     pub fn powi(self, rhs: i64) -> Self {
         self.powd(rhs.into())
     }
 
+    #[inline]
     pub fn powd(self, rhs: Decimal) -> Self {
         self.pow_with_correlation(rhs.into(), Decimal::ZERO)
     }
 
+    #[inline]
     pub fn powf(self, rhs: f64) -> Self {
         let rhs = Self::from_f64(rhs, 0.0).unwrap();
         self.pow_with_correlation(rhs, Decimal::ZERO)
+    }
+
+    #[inline]
+    pub fn powfrac(self, rhs: Frac) -> Self {
+        let n: Decimal = (*rhs.numer()).into();
+        let d: Decimal = (*rhs.denom()).into();
+        let rhs = n / d;
+        self.powd(rhs)
     }
 
     pub fn pow_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
@@ -234,12 +254,14 @@ impl SciNum {
     {
         let sigma_ab = correlation.into() * self.uncertainty_dec() * rhs.uncertainty_dec();
         let number = self.number_dec().powd(rhs.number_dec());
-        let uncertainty = ((self.relative_uncertainty_dec() * rhs.number_dec()).powu(2)
+        let uncertainty = if self.is_exact() && rhs.is_exact() { Decimal::ZERO } else {
+            ((self.relative_uncertainty_dec() * rhs.number_dec()).powu(2)
             + (self.number_dec().ln() * rhs.uncertainty_dec()).powu(2)
             + (dec!(2) * ((self.number_dec().ln() * rhs.number_dec()) / self.number_dec()) * sigma_ab))
             .sqrt()
             .unwrap()
-            * number.abs();
+            * number.abs()
+        };
         Self::new(number, uncertainty)
     }
 

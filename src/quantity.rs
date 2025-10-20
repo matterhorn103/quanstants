@@ -24,7 +24,7 @@ impl Quantity {
     }
 
     pub fn uncertainty(&self) -> Self {
-        Self::new(self.number.uncertainty, self.unit.clone())
+        Self::new(self.number.uncertainty(), self.unit.clone())
     }
 }
 

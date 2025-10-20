@@ -109,7 +109,7 @@ impl LinearFactor {
 }
 
 // This is the user-facing struct representing a linear unit
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Unit {
     pub id: Unit128,
     pub(crate) inner: Arc<LinearUnit>,
@@ -260,9 +260,20 @@ impl Div for Unit {
     }
 }
 
+impl Debug for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Unit {{ id: {:X}, inner: {} }}",
+            self.id.to_bits(),
+            self.inner.symbol(true)
+        )
+    }
+}
+
 impl fmt::Display for Unit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.symbol(false))
+        write!(f, "{}", self.symbol(true))
     }
 }
 
@@ -409,5 +420,22 @@ mod tests {
         let s2 = s.clone() * s.clone();
         dbg!(&s2.inner.symbol);
         assert_eq!(s2.symbol(false), "s2");
+    }
+
+    #[test]
+    fn debug() {
+        let s = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: SciNum::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        assert_eq!(format!("{:?}", s), "Unit { id: 1100, inner: s }");
     }
 }

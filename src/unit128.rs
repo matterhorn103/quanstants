@@ -1,5 +1,5 @@
 use std::{
-    fmt,
+    fmt::{self, Debug},
     ops::{Div, Mul},
 };
 
@@ -16,8 +16,8 @@ use crate::{dimensions::Dimensions, fraction::Frac, scinum::SciNum};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Unit128 {
-    pub num: u64,
-    pub dim: u64,
+    pub(crate) num: u64,
+    pub(crate) dim: u64,
 }
 
 impl Unit128 {
@@ -480,5 +480,13 @@ mod tests {
         assert!(!Unit128::SECOND.is_referenced());
         let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
         assert!(celsius.is_referenced())
+    }
+
+    #[test]
+    fn debug() {
+        assert_eq!(
+            format!("{:X?}", Unit128::SECOND),
+            "Unit128 { num: 0, dim: 1100 }"
+        );
     }
 }

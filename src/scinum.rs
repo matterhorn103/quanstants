@@ -1,5 +1,5 @@
 use std::{
-    fmt,
+    fmt::{self, Debug},
     ops::{Add, Div, Mul, Sub},
 };
 
@@ -13,7 +13,7 @@ use crate::fraction::Frac;
 /// same scaling factor of 10<sup><i>exponent</i></sup>.
 /// For now, the exponent must always be 0, so the range of representable values is exactly the same
 /// as rust_decimal::Decimal
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct SciNum {
     negative: bool,
     number_scale: u16,
@@ -552,6 +552,15 @@ impl_arithmetic!(u64);
 impl_arithmetic!(u128);
 impl_arithmetic!(usize);
 
+impl Debug for SciNum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SciNum")
+            .field("number", &self.number_dec())
+            .field("uncertainty", &self.uncertainty_dec())
+            .finish()
+    }
+}
+
 impl fmt::Display for SciNum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_exact() {
@@ -839,5 +848,11 @@ mod tests {
             result.uncertainty_dec().round_dp(5),
             dec!(0.25238096660761).round_dp(5)
         );
+    }
+
+    #[test]
+    fn debug() {
+        let n = SciNum::new(20, 2);
+        assert_eq!(format!("{:?}", n), "SciNum { number: 20, uncertainty: 2 }");
     }
 }

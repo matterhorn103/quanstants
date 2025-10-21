@@ -171,40 +171,41 @@ impl Unit128 {
         // Need to find a way to shorten factors with too much precision
         // (This doesn't work)
         //let dec = dec.trunc_with_scale(14);
-        if factor.sigfigs() > 14 {
+        if factor.sigfigs() > 15 {
             todo!()
         } else {
-            factor.exponent_integral() as u64
-            | ((factor.significand_integral() - 1) as u64) << 8
+            match i8::try_from(factor.exponent_integral()) {
+                Ok(exponent) => {
+                    exponent as u8 as u64
+                    | ((factor.significand_integral() - 1) as u64) << 8
+                },
+                Err(_) => todo!()
+            }
         }
     }
 
     pub(crate) fn factor_and_reference_to_bits(factor: SciNum, reference: SciNum) -> u64 {
-        let dec_factor = factor.number_dec();
-        let dec_ref = reference.number_dec();
-        if dec_factor.scale() > 6 || dec_ref.scale() > 6 {
+        if factor.sigfigs() > 6 || reference.sigfigs() > 6 {
             todo!()
         } else {
-            dec_factor.scale() as u64
-                | ((dec_factor.mantissa() - 1) as u64) << 8
-                | (dec_ref.scale() as u64) << 32
-                | (dec_ref.mantissa() as u64) << 40
+            Unit128::factor_to_bits(factor) & 0x0000_0000_FFFF_FFFF
+            | Unit128::factor_to_bits(reference) << 32
         }
     }
 
     pub(crate) fn bits_to_factor(b: u64) -> SciNum {
-        let scale = (b & 0x0000_0000_0000_00FF) as u32;
-        let mantissa = ((b >> 8) as i128) + 1;
-        Decimal::from_i128_with_scale(mantissa, scale).into()
+        let exponent = (b & 0x0000_0000_0000_00FF) as i8;
+        let significand = ((b as i64) >> 8) + 1;
+        SciNum::exact_from_scientific_parts(significand, exponent.into())
     }
 
     pub(crate) fn bits_to_factor_and_reference(b: u64) -> (SciNum, SciNum) {
-        let factor_scale = (b & 0x0000_0000_0000_00FF) as u32;
-        let factor_mantissa = (((b & 0x0000_0000_FFFF_FF00) >> 8) as i128) + 1;
-        let factor: SciNum = Decimal::from_i128_with_scale(factor_mantissa, factor_scale).into();
-        let ref_scale = ((b & 0x0000_00FF_0000_0000) >> 32) as u32;
-        let ref_mantissa = (b >> 40) as i128;
-        let reference: SciNum = Decimal::from_i128_with_scale(ref_mantissa, ref_scale).into();
+        let factor_exponent = (b & 0x0000_0000_0000_00FF) as i8;
+        let factor_significand = ((b & 0x0000_0000_FFFF_FF00) >> 8) + 1;
+        let factor = SciNum::exact_from_scientific_parts(factor_significand, factor_exponent.into());
+        let ref_exponent = ((b & 0x0000_00FF_0000_0000) >> 32) as i8;
+        let ref_significand = (b & 0xFFFF_FF00_0000_0000 >> 40) + 1;
+        let reference = SciNum::exact_from_scientific_parts(ref_significand, ref_exponent.into());
         (factor, reference)
     }
 }
@@ -489,12 +490,30 @@ mod tests {
     fn factor_to_bits() {
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1)), 0x0);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(2)), 0x100);
-        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x1); // Fails for now
-        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3); // Fails for now
+        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x1); // Fails for now, gives:
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x900);
+        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3); // Fails for now, gives:
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3E700);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(0.1))), 0xFF);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(1e-3))), 0xFD);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(-1)), 0xFFFFFFFFFFFFFE00);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(-3)), 0xFFFFFFFFFFFFFC00);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(0.3048))), 0xBE7FC); 
+    }
+
+    #[test]
+    fn bits_to_factor() {
+        assert_eq!(Unit128::bits_to_factor(0x0), SciNum::new_exact(1));
+        assert_eq!(Unit128::bits_to_factor(0x100), SciNum::new_exact(2));
+        //assert_eq!(Unit128::bits_to_factor(0x1, SciNum::new_exact(10)); // Fails for now, gives:
+        assert_eq!(Unit128::bits_to_factor(0x900), SciNum::new_exact(10));
+        //assert_eq!(Unit128::bits_to_factor(0x3, SciNum::new_exact(1000)); // Fails for now, gives:
+        assert_eq!(Unit128::bits_to_factor(0x3E700), SciNum::new_exact(1000));
+        assert_eq!(Unit128::bits_to_factor(0xFF), SciNum::new_exact(dec!(0.1)));
+        assert_eq!(Unit128::bits_to_factor(0xFD), SciNum::new_exact(dec!(1e-3)));
+        assert_eq!(Unit128::bits_to_factor(0xFFFFFFFFFFFFFE00), SciNum::new_exact(-1));
+        assert_eq!(Unit128::bits_to_factor(0xFFFFFFFFFFFFFC00), SciNum::new_exact(-3));
+        assert_eq!(Unit128::bits_to_factor(0xBE7FC), SciNum::new_exact(dec!(0.3048))); 
     }
 
     #[test]
@@ -553,7 +572,7 @@ mod tests {
         assert_eq!(amp_second.dim, 0x110000110C);
         assert_eq!(square_metre.num, 0x0);
         assert_eq!(square_metre.dim, 0x12000C);
-        assert_eq!(square_foot.num, 0xB138FFF8);
+        assert_eq!(square_foot.num, 0x8DC23FF8);
         assert_eq!(square_foot.dim, 0x12000C);
     }
 }

@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use num_traits::{self, FromPrimitive};
+use num_traits::{self, FromPrimitive, Zero};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 
@@ -79,6 +79,20 @@ impl SciNum {
         }
     }
 
+    pub fn exact_from_scientific_parts<T>(significand: T, exponent: i16) -> Self
+    where
+        T: Into<Decimal>,
+    {
+        let significand: Decimal = significand.into();
+        if exponent == 0 {
+            Self::new_exact(significand)
+        } else if exponent.is_positive() {
+            Self::new_exact(significand * Decimal::from(10_u32.pow(exponent as u32)))
+        } else {
+            Self::new_exact(significand / Decimal::from(10_u32.pow(exponent.unsigned_abs() as u32)))
+        }
+    }
+
     #[inline]
     pub fn number(&self) -> Self {
         Self {
@@ -143,10 +157,10 @@ impl SciNum {
     /// Corresponds to representation of the number as `mmmmm × 10^nn`.
     #[inline]
     pub fn significand_integral(&self) -> i128 {
-        let unsigned = (self.number_hi as i128) << 64
-        | (self.number_mid as i128) << 32
-        | self.number_lo as i128;
-        if self.negative { -unsigned } else { unsigned }
+        let unsigned = (self.number_hi as u128) << 64
+        | (self.number_mid as u128) << 32
+        | self.number_lo as u128;
+        if self.negative { -(unsigned as i128) } else { unsigned as i128 }
     }
     
     /// Returns the exponent _n_ of the number when represented with _m_ as an integer.
@@ -191,6 +205,14 @@ impl SciNum {
     pub fn exponent_normalized(&self) -> i16 {
         todo!()
     }
+    
+    /// Returns the number of significant decimal digits in the significand.
+    #[inline]
+    pub fn sigfigs(&self) -> u32 {
+        // This might not be the same thing
+        let significand = self.significand_integral();
+        if significand == 0 { 0 } else { significand.abs().ilog10() + 1 }
+    }
 
     /// Returns the scale of the last significant place.
     /// 
@@ -203,13 +225,6 @@ impl SciNum {
     pub fn precision(&self) -> i32 {
         // For now, the exponent is guaranteed to be zero, so equal to the scale of the decimal rep
         -(i32::from(self.number_scale))
-    }
-
-    /// Returns the number of significant decimal digits in the significand
-    #[inline]
-    pub fn sigfigs(&self) -> u8 {
-        // This might not be the same thing
-        self.number_scale
     }
     
     #[inline]
@@ -731,6 +746,16 @@ mod tests {
     }
 
     #[test]
+    fn exact_from_scientific_parts() {
+        let n = SciNum::exact_from_scientific_parts(67, 0);
+        assert_eq!(n, SciNum::new_exact(dec!(67)));
+        let n2 = SciNum::exact_from_scientific_parts(236, 3);
+        assert_eq!(n2, SciNum::new_exact(dec!(2.36e5)));
+        let n3 = SciNum::exact_from_scientific_parts(236, -6);
+        assert_eq!(n3, SciNum::new_exact(dec!(2.36e-4)));
+    }
+
+    #[test]
     fn num_dec() {
         let n = SciNum::new(20, 2);
         assert_eq!(n.number_dec(), dec!(20));
@@ -755,11 +780,27 @@ mod tests {
     }
 
     #[test]
-    fn is_exact() {
-        let n1 = SciNum::new_exact(dec!(45.1));
-        let n2 = SciNum::new(500, 5);
-        assert!(n1.is_exact());
-        assert!(!n2.is_exact());
+    fn sigfigs() {
+        let n = SciNum::new_exact(dec!(123.45));
+        assert_eq!(n.sigfigs(), 5);
+        
+        let n2 = SciNum::new_exact(dec!(0.00123));
+        assert_eq!(n2.sigfigs(), 3);
+
+        let n3 = SciNum::new_exact(dec!(1234));
+        assert_eq!(n3.sigfigs(), 4);
+    }
+
+    #[test]
+    fn sigfigs_trailing_zeros() {
+        let n = SciNum::new_exact(dec!(123.4500));
+        assert_eq!(n.sigfigs(), 7);
+        
+        let n2 = SciNum::new_exact(dec!(0.001230));
+        assert_eq!(n2.sigfigs(), 4);
+        
+        let n3 = SciNum::new_exact(dec!(1230));
+        assert_eq!(n3.sigfigs(), 4);
     }
 
     #[test]
@@ -768,6 +809,14 @@ mod tests {
         assert_eq!(SciNum::new_exact(dec!(0.020)).precision(), -3);
         assert_eq!(SciNum::new_exact(dec!(2)).precision(), 0);
         //assert_eq!(SciNum::new_exact(dec!(2e3)).precision(), 3); // Fails for now
+    }
+
+    #[test]
+    fn is_exact() {
+        let n1 = SciNum::new_exact(dec!(45.1));
+        let n2 = SciNum::new(500, 5);
+        assert!(n1.is_exact());
+        assert!(!n2.is_exact());
     }
 
     #[test]
@@ -840,6 +889,9 @@ mod tests {
             result.uncertainty_dec().round_dp(5),
             dec!(116.619037896906).round_dp(5)
         );
+        let ft = SciNum::new_exact(dec!(0.3048));
+        let square_ft = ft * ft;
+        assert_eq!(square_ft.number_dec(), dec!(0.09290304));
     }
 
     #[test]

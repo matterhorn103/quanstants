@@ -168,14 +168,14 @@ impl fmt::Display for Unit128 {
 
 impl Unit128 {
     pub(crate) fn factor_to_bits(factor: SciNum) -> u64 {
-        let dec = factor.number_dec();
         // Need to find a way to shorten factors with too much precision
         // (This doesn't work)
         //let dec = dec.trunc_with_scale(14);
-        if dec.scale() > 14 {
-            panic!()
+        if factor.sigfigs() > 14 {
+            todo!()
         } else {
-            -(dec.scale() as i64) as u64 | ((dec.mantissa() - 1) as u64) << 8
+            factor.exponent_integral() as u64
+            | ((factor.significand_integral() - 1) as u64) << 8
         }
     }
 
@@ -183,7 +183,7 @@ impl Unit128 {
         let dec_factor = factor.number_dec();
         let dec_ref = reference.number_dec();
         if dec_factor.scale() > 6 || dec_ref.scale() > 6 {
-            panic!()
+            todo!()
         } else {
             dec_factor.scale() as u64
                 | ((dec_factor.mantissa() - 1) as u64) << 8

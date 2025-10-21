@@ -9,19 +9,26 @@ use rust_decimal_macros::dec;
 
 use crate::fraction::Frac;
 
-/// A Decimal extended to have an associated uncertainty at the same scale, with both sharing the
-/// same scaling factor of 10<sup><i>exponent</i></sup>.
-/// For now, the exponent must always be 0, so the range of representable values is exactly the same
-/// as rust_decimal::Decimal
+/// A decimal float in scientific notation with an associated uncertainty.
+/// 
+/// Represents a number of the form _m_ × 10<sup><i>n</i></sup>
+///
+/// Essentially a Decimal from rust_decimal extended to have an uncertainty.
+/// 
+/// A SciNum also contains an associated exponent, which is the exponent for an
+/// additional scaling factor of 10<sup><i>exponent</i></sup>, which applies to both the number
+/// and uncertainty.
+/// For now, the scaling factor exponent must always be 0, so the range of representable values is
+/// exactly the same as rust_decimal::Decimal.
 #[derive(Copy, Clone)]
 pub struct SciNum {
     negative: bool,
-    number_scale: u16,
+    number_scale: u8,
     number_lo: u32,
     number_mid: u32,
     number_hi: u32,
     exponent: i16,
-    uncertainty_scale: u16,
+    uncertainty_scale: u8,
     uncertainty_lo: u32,
     uncertainty_mid: u32,
     uncertainty_hi: u32,
@@ -40,12 +47,12 @@ impl SciNum {
         let uncertainty = uncertainty.unpack();
         Self {
             negative: number.negative,
-            number_scale: number.scale as u16,
+            number_scale: number.scale as u8,
             number_lo: number.lo,
             number_mid: number.mid,
             number_hi: number.hi,
             exponent: 0,
-            uncertainty_scale: uncertainty.scale as u16,
+            uncertainty_scale: uncertainty.scale as u8,
             uncertainty_lo: uncertainty.lo,
             uncertainty_mid: uncertainty.mid,
             uncertainty_hi: uncertainty.hi,
@@ -60,7 +67,7 @@ impl SciNum {
         let number = number.unpack();
         Self {
             negative: number.negative,
-            number_scale: number.scale as u16,
+            number_scale: number.scale as u8,
             number_lo: number.lo,
             number_mid: number.mid,
             number_hi: number.hi,
@@ -131,14 +138,83 @@ impl SciNum {
         self.uncertainty_dec() / self.number_dec().abs()
     }
 
+    /// Returns the significand _m_ of the number when represented with _m_ as an integer.
+    /// 
+    /// Corresponds to representation of the number as `mmmmm × 10^nn`.
+    #[inline]
+    pub fn significand_integral(&self) -> i128 {
+        let unsigned = (self.number_hi as i128) << 64
+        | (self.number_mid as i128) << 32
+        | self.number_lo as i128;
+        if self.negative { -unsigned } else { unsigned }
+    }
+    
+    /// Returns the exponent _n_ of the number when represented with _m_ as an integer.
+    /// 
+    /// Corresponds to representation of the number as `mmmmm × 10^nn`.
+    #[inline]
+    pub fn exponent_integral(&self) -> i16 {
+        self.exponent - (i16::from(self.number_scale))
+    }
+
+    /// Returns the significand _m_ of the number when represented with normalized notation
+    /// i.e. with 10 > _m_ >= 1.
+    /// 
+    /// Corresponds to `iffff` when the number is notated as `i.ffff × 10^nn`.
+    #[inline]
+    pub fn significand_normalized(&self) -> i128 {
+        let unsigned = (self.number_hi as i128) << 64
+        | (self.number_mid as i128) << 32
+        | self.number_lo as i128;
+        if self.negative { -unsigned } else { unsigned }
+    }
+
+    /// Returns a tuple of the integer, fractional, and exponent parts of the significand _m_ of the
+    /// number when represented with normalized notation i.e. with 10 > _m_ >= 1.
+    /// 
+    /// Corresponds to `(i, ffff, nn)` when the number is notated as `i.ffff × 10^nn`.
+    #[inline]
+    pub fn significand_normalized_parts(&self) -> (i8, i128, i16) {
+        let significand = self.significand_integral();
+        let divisor = 10_i128.pow(self.number_scale as u32);
+        let int_part = significand / divisor;
+        let frac_part = significand % divisor;
+
+        (int_part as i8, frac_part, self.exponent_normalized())
+    }
+    
+    /// Returns the exponent _n_ of the number when represented with normalized notation
+    /// i.e. with 10 > _m_ >= 1.
+    /// 
+    /// Corresponds to `nn` when the number is notated as `i.ffff × 10^nn`.
+    #[inline]
+    pub fn exponent_normalized(&self) -> i16 {
+        todo!()
+    }
+
+    /// Returns the scale of the last significant place.
+    /// 
+    /// For example:
+    /// - 0.02 returns -2
+    /// - 0.020 returns -3
+    /// - 2 returns 0
+    /// - 200 returns 2 or 1 or 0, depending on the precision of the number
+    #[inline]
+    pub fn precision(&self) -> i32 {
+        // For now, the exponent is guaranteed to be zero, so equal to the scale of the decimal rep
+        -(i32::from(self.number_scale))
+    }
+
+    /// Returns the number of significant decimal digits in the significand
+    #[inline]
+    pub fn sigfigs(&self) -> u8 {
+        // This might not be the same thing
+        self.number_scale
+    }
+    
     #[inline]
     pub fn is_exact(&self) -> bool {
         self.uncertainty_lo | self.uncertainty_mid | self.uncertainty_hi == 0
-    }
-
-    #[inline]
-    pub fn exponent(&self) -> i16 {
-        self.exponent
     }
 
     #[inline(always)]
@@ -302,7 +378,7 @@ impl From<Decimal> for SciNum {
         let n = n.unpack();
         Self {
             negative: n.negative,
-            number_scale: n.scale as u16,
+            number_scale: n.scale as u8,
             number_lo: n.lo,
             number_mid: n.mid,
             number_hi: n.hi,
@@ -684,6 +760,14 @@ mod tests {
         let n2 = SciNum::new(500, 5);
         assert!(n1.is_exact());
         assert!(!n2.is_exact());
+    }
+
+    #[test]
+    fn precision() {
+        assert_eq!(SciNum::new_exact(dec!(0.02)).precision(), -2);
+        assert_eq!(SciNum::new_exact(dec!(0.020)).precision(), -3);
+        assert_eq!(SciNum::new_exact(dec!(2)).precision(), 0);
+        //assert_eq!(SciNum::new_exact(dec!(2e3)).precision(), 3); // Fails for now
     }
 
     #[test]

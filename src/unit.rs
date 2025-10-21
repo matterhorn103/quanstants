@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
-use crate::number::Number;
 use crate::prefix::Prefix;
+use crate::scinum::SciNum;
 use crate::unit128::Unit128;
 
 #[derive(Copy, Clone, Debug)]
@@ -28,7 +28,7 @@ pub(crate) struct LinearUnit {
     pub(crate) symbol: Option<String>, // Compound units have None for this
     pub(crate) name: Option<String>,   // Compound units have None for this
     pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
-    pub(crate) number: Number,         // 1 for everything except derived units
+    pub(crate) number: SciNum,         // 1 for everything except derived units
     pub(crate) factors: Vec<LinearFactor>, // Empty for base units and unitless
 }
 
@@ -61,7 +61,7 @@ impl LinearUnit {
         symbol: None,
         name: None,
         prefix: None,
-        number: Number::ONE,
+        number: SciNum::ONE,
         factors: vec![],
     };
 }
@@ -109,7 +109,7 @@ impl LinearFactor {
 }
 
 // This is the user-facing struct representing a linear unit
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Unit {
     pub id: Unit128,
     pub(crate) inner: Arc<LinearUnit>,
@@ -147,7 +147,7 @@ impl Unit {
         self.inner.name()
     }
 
-    pub fn number(&self) -> Number {
+    pub fn number(&self) -> SciNum {
         self.inner.number
     }
 
@@ -260,9 +260,20 @@ impl Div for Unit {
     }
 }
 
+impl Debug for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Unit {{ id: {:X}, inner: {} }}",
+            self.id.to_bits(),
+            self.inner.symbol(true)
+        )
+    }
+}
+
 impl fmt::Display for Unit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.symbol(false))
+        write!(f, "{}", self.symbol(true))
     }
 }
 
@@ -314,7 +325,7 @@ pub(crate) mod py {
                 }
                 RArithmeticEnum::Int(integer) => Quantity::new(integer, self.owned_inner()).into(),
                 RArithmeticEnum::Float(float) => {
-                    Quantity::new(Number::from_f64(float, 0.0).unwrap(), self.owned_inner()).into()
+                    Quantity::new(SciNum::from_f64(float, 0.0).unwrap(), self.owned_inner()).into()
                 }
                 RArithmeticEnum::Decimal(decimal) => {
                     Quantity::new(decimal, self.owned_inner()).into()
@@ -366,12 +377,48 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
         let s2 = s.clone();
         assert_eq!(s, s2);
+    }
+
+    #[test]
+    fn mul() {
+        let s = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: SciNum::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let m = Unit {
+            id: Unit128::METRE,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::LENGTH,
+                symbol: Some(String::from("m")),
+                name: Some(String::from("metre")),
+                prefix: None,
+                number: SciNum::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        let ms = m.clone() * s.clone();
+        let mm = m.clone() * m.clone();
+        assert_eq!(ms.symbol(false), "m s");
+        assert_eq!(ms.id, Unit128::from_bits(0x11110C));
+        assert_eq!(ms.dimensions(), Dimensions::new(1, 1, 0, 0, 0, 0, 0));
+        assert_eq!(mm.symbol(false), "m m");
+        assert_eq!(mm.id, Unit128::from_bits(0x12000C));
+        assert_eq!(mm.dimensions(), Dimensions::new(0, 2, 0, 0, 0, 0, 0));
     }
 
     #[test]
@@ -384,7 +431,7 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
@@ -402,12 +449,29 @@ mod tests {
                 symbol: Some(String::from("s")),
                 name: Some(String::from("second")),
                 prefix: None,
-                number: Number::ONE,
+                number: SciNum::ONE,
                 factors: Vec::new(),
             }),
         };
         let s2 = s.clone() * s.clone();
         dbg!(&s2.inner.symbol);
         assert_eq!(s2.symbol(false), "s2");
+    }
+
+    #[test]
+    fn debug() {
+        let s = Unit {
+            id: Unit128::SECOND,
+            inner: Arc::new(LinearUnit {
+                utype: LinearUnitType::Base,
+                dimensions: Dimensions::TIME,
+                symbol: Some(String::from("s")),
+                name: Some(String::from("second")),
+                prefix: None,
+                number: SciNum::ONE,
+                factors: Vec::new(),
+            }),
+        };
+        assert_eq!(format!("{:?}", s), "Unit { id: 1100, inner: s }");
     }
 }

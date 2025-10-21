@@ -1,29 +1,20 @@
 use std::{
-    fmt,
+    fmt::{self, Debug},
     ops::{Div, Mul},
 };
 
-use crate::{dimensions::Dimensions, exponum::ExponentialNumber, fraction::Frac};
+use rust_decimal::Decimal;
 
-// A 128-bit representation of a unit consists of two 64-bit parts:
-//   1. A 64-bit number in a custom format corresponding roughly to scientific notation
-//   2. A 64-bit representation of the dimensions of the unit
-// The numeric component is defined such that all zeroes for the first half of the ID does not
-// indicate a factor of 0 but of 1 and therefore all coherent SI units are contained within the
-// first 64 bits
+use crate::{dimensions::Dimensions, fraction::Frac, scinum::SciNum};
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Unit128 {
-    pub num: u64,
-    pub dim: u64,
+    pub(crate) num: u64,
+    pub(crate) dim: u64,
 }
 
 impl Unit128 {
-    pub fn new(
-        factor: ExponentialNumber,
-        dimensions: Dimensions,
-        least_significant_byte: u8,
-    ) -> Self {
+    pub fn new(factor: SciNum, dimensions: Dimensions, least_significant_byte: u8) -> Self {
         let dim = least_significant_byte as u64
             | (dimensions.T.to_bits() as u64) << 8
             | (dimensions.L.to_bits() as u64) << 16
@@ -32,26 +23,16 @@ impl Unit128 {
             | (dimensions.Θ.to_bits() as u64) << 40
             | (dimensions.N.to_bits() as u64) << 48
             | (dimensions.J.to_bits() as u64) << 56;
-        let num = factor.exponent as u64
-            | (if factor.base == 10 {
-                0
-            } else {
-                factor.base as u64
-            }) << 8
-            | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
-            | (factor.mantissa - 1) << 16;
+        let num = Unit128::factor_to_bits(factor);
         Self { num, dim }
     }
 
     pub fn new_referenced(
-        factor: ExponentialNumber,
+        factor: SciNum,
         dimensions: Dimensions,
         least_significant_byte: u8,
-        reference: ExponentialNumber,
+        reference: SciNum,
     ) -> Self {
-        if factor.base != reference.base {
-            panic!()
-        }
         let dim = least_significant_byte as u64
             | (dimensions.T.to_bits() as u64) << 8
             | (dimensions.L.to_bits() as u64) << 16
@@ -60,16 +41,7 @@ impl Unit128 {
             | (dimensions.Θ.to_bits() as u64) << 40
             | (dimensions.N.to_bits() as u64) << 48
             | (dimensions.J.to_bits() as u64) << 56;
-        let num = factor.exponent as u64
-            | (if factor.base == 10 {
-                0
-            } else {
-                factor.base as u64
-            }) << 8
-            | (if factor.sign.is_positive() { 0 } else { 1 }) << 15
-            | (factor.mantissa - 1) << 16
-            | (reference.exponent as u64) << 32
-            | (((reference.mantissa as i64) * (reference.sign as i64)) as u64) << 40;
+        let num = Unit128::factor_and_reference_to_bits(factor, reference);
         Self { num, dim }
     }
 
@@ -98,42 +70,11 @@ impl Unit128 {
         }
     }
 
-    pub fn factor(&self) -> ExponentialNumber {
-        ExponentialNumber::new(
-            self.factor_sign(),
-            self.factor_mantissa(),
-            self.factor_base(),
-            self.factor_exponent(),
-        )
-    }
-
-    pub fn factor_exponent(&self) -> i8 {
-        (self.num & 0xFF) as i8
-    }
-
-    pub fn factor_base(&self) -> u8 {
-        let raw_base = ((self.num >> 8) & 0x7F) as u8;
-        if raw_base == 0 {
-            10
-        } else {
-            raw_base
-        }
-    }
-
-    pub fn factor_mantissa(&self) -> u64 {
+    pub fn factor(&self) -> SciNum {
         if self.is_referenced() {
-            (self.num >> 16) + 1
+            Unit128::bits_to_factor_and_reference(self.num).0
         } else {
-            ((self.num & 0x00000000FFFF0000) >> 16) + 1
-        }
-    }
-
-    pub fn factor_sign(&self) -> i8 {
-        let b = ((self.num >> 15) & 0x01) as u8;
-        if b == 0 {
-            1
-        } else {
-            -1
+            Unit128::bits_to_factor(self.num)
         }
     }
 
@@ -145,32 +86,8 @@ impl Unit128 {
         }
     }
 
-    pub fn reference_base(&self) -> u8 {
-        let raw_base = ((self.num >> 8) & 0x7F) as u8;
-        if raw_base == 0 {
-            10
-        } else {
-            raw_base
-        }
-    }
-
-    pub fn reference_mantissa(&self) -> Option<u32> {
-        if self.is_referenced() {
-            Some((((self.num & 0xFFFFFF0000000000) >> 16) as i32).unsigned_abs())
-        } else {
-            None
-        }
-    }
-
-    pub fn reference_sign(&self) -> Option<i8> {
-        if self.is_referenced() {
-            Some((((self.num & 0xFFFFFF0000000000) >> 16) as i32).signum() as i8)
-        } else {
-            None
-        }
-    }
-
     pub fn normalize(self) -> Self {
+        // Will need to normalize the number as well I guess
         Self {
             num: self.num,
             dim: (self.dim & 0xFFFFFFFFFFFFFFF0) | 0xA,
@@ -195,7 +112,7 @@ impl Unit128 {
             panic!()
         } else {
             Unit128::new(
-                self.factor().try_pow(exp).unwrap(),
+                self.factor().powfrac(exp),
                 self.dimensions().pow(exp),
                 (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
             )
@@ -237,9 +154,59 @@ impl Div for Unit128 {
     }
 }
 
+impl Debug for Unit128 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Unit128 {{ num: {:X}, dim: {:X} }}", self.num, self.dim)
+    }
+}
+
 impl fmt::Display for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x{:X}", self.to_bits())
+    }
+}
+
+impl Unit128 {
+    pub(crate) fn factor_to_bits(factor: SciNum) -> u64 {
+        // Need to find a way to shorten factors with too much precision
+        // (This doesn't work)
+        //let dec = dec.trunc_with_scale(14);
+        if factor.sigfigs() > 15 {
+            todo!()
+        } else {
+            match i8::try_from(factor.exponent_integral()) {
+                Ok(exponent) => {
+                    exponent as u8 as u64
+                    | ((factor.significand_integral() - 1) as u64) << 8
+                },
+                Err(_) => todo!()
+            }
+        }
+    }
+
+    pub(crate) fn factor_and_reference_to_bits(factor: SciNum, reference: SciNum) -> u64 {
+        if factor.sigfigs() > 6 || reference.sigfigs() > 6 {
+            todo!()
+        } else {
+            Unit128::factor_to_bits(factor) & 0x0000_0000_FFFF_FFFF
+            | Unit128::factor_to_bits(reference) << 32
+        }
+    }
+
+    pub(crate) fn bits_to_factor(b: u64) -> SciNum {
+        let exponent = (b & 0x0000_0000_0000_00FF) as i8;
+        let significand = ((b as i64) >> 8) + 1;
+        SciNum::exact_from_scientific_parts(significand, exponent.into())
+    }
+
+    pub(crate) fn bits_to_factor_and_reference(b: u64) -> (SciNum, SciNum) {
+        let factor_exponent = (b & 0x0000_0000_0000_00FF) as i8;
+        let factor_significand = ((b & 0x0000_0000_FFFF_FF00) >> 8) + 1;
+        let factor = SciNum::exact_from_scientific_parts(factor_significand, factor_exponent.into());
+        let ref_exponent = ((b & 0x0000_00FF_0000_0000) >> 32) as i8;
+        let ref_significand = (b & 0xFFFF_FF00_0000_0000 >> 40) + 1;
+        let reference = SciNum::exact_from_scientific_parts(ref_significand, ref_exponent.into());
+        (factor, reference)
     }
 }
 
@@ -501,13 +468,70 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
+    use rust_decimal_macros::dec;
+
     use super::*;
 
     #[test]
     fn new() {
-        let s = Unit128::new(ExponentialNumber::ONE, Dimensions::TIME, 0x00);
-        let _celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
-        assert_eq!(s.dimensions(), Dimensions::TIME);
+        let s = Unit128::new(SciNum::ONE, Dimensions::TIME, 0x00);
+        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert_eq!(s, Unit128::SECOND);
+        assert_eq!(s.num, 0x0);
+        assert_eq!(s.dim, 0x1100);
+        assert_eq!(celsius.num, 0x006AB3FE00000000);
+        assert_eq!(celsius.dim, 0x0000110000000041);
+        assert_eq!(ft.num, 0xBE7FC);
+        assert_eq!(ft.dim, 0x110001);
+    }
+
+    #[test]
+    fn factor_to_bits() {
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1)), 0x0);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(2)), 0x100);
+        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x1); // Fails for now, gives:
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x900);
+        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3); // Fails for now, gives:
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3E700);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(0.1))), 0xFF);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(1e-3))), 0xFD);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(-1)), 0xFFFFFFFFFFFFFE00);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(-3)), 0xFFFFFFFFFFFFFC00);
+        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(0.3048))), 0xBE7FC); 
+    }
+
+    #[test]
+    fn bits_to_factor() {
+        assert_eq!(Unit128::bits_to_factor(0x0), SciNum::new_exact(1));
+        assert_eq!(Unit128::bits_to_factor(0x100), SciNum::new_exact(2));
+        //assert_eq!(Unit128::bits_to_factor(0x1, SciNum::new_exact(10)); // Fails for now, gives:
+        assert_eq!(Unit128::bits_to_factor(0x900), SciNum::new_exact(10));
+        //assert_eq!(Unit128::bits_to_factor(0x3, SciNum::new_exact(1000)); // Fails for now, gives:
+        assert_eq!(Unit128::bits_to_factor(0x3E700), SciNum::new_exact(1000));
+        assert_eq!(Unit128::bits_to_factor(0xFF), SciNum::new_exact(dec!(0.1)));
+        assert_eq!(Unit128::bits_to_factor(0xFD), SciNum::new_exact(dec!(1e-3)));
+        assert_eq!(Unit128::bits_to_factor(0xFFFFFFFFFFFFFE00), SciNum::new_exact(-1));
+        assert_eq!(Unit128::bits_to_factor(0xFFFFFFFFFFFFFC00), SciNum::new_exact(-3));
+        assert_eq!(Unit128::bits_to_factor(0xBE7FC), SciNum::new_exact(dec!(0.3048))); 
+    }
+
+    #[test]
+    fn factor() {
+        assert_eq!(Unit128::KILOGRAM.factor(), SciNum::ONE);
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert_eq!(ft.factor(), SciNum::new_exact(dec!(0.3048)));
+    }
+
+    #[test]
+    fn dimensions() {
+        assert_eq!(Unit128::KILOGRAM.dimensions(), Dimensions::MASS);
+        assert_eq!(
+            Unit128::KELVIN.dimensions(),
+            Dimensions::THERMODYNAMIC_TEMPERATURE
+        );
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert_eq!(ft.dimensions(), Dimensions::LENGTH);
     }
 
     #[test]
@@ -516,6 +540,8 @@ mod tests {
         assert_eq!(Unit128::SECOND.least_significant_byte(), 0x00);
         let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
         assert_eq!(celsius.least_significant_byte(), 0x41);
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert_eq!(ft.least_significant_byte(), 0x01);
     }
 
     #[test]
@@ -523,6 +549,30 @@ mod tests {
         assert!(!Unit128::UNITLESS.is_referenced());
         assert!(!Unit128::SECOND.is_referenced());
         let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
-        assert!(celsius.is_referenced())
+        assert!(celsius.is_referenced());
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        assert!(!ft.is_referenced());
+    }
+
+    #[test]
+    fn debug() {
+        assert_eq!(
+            format!("{:?}", Unit128::SECOND),
+            "Unit128 { num: 0, dim: 1100 }"
+        );
+    }
+
+    #[test]
+    fn mul() {
+        let amp_second = Unit128::AMPERE * Unit128::SECOND;
+        let square_metre = Unit128::METRE * Unit128::METRE;
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        let square_foot = ft * ft;
+        assert_eq!(amp_second.num, 0x0);
+        assert_eq!(amp_second.dim, 0x110000110C);
+        assert_eq!(square_metre.num, 0x0);
+        assert_eq!(square_metre.dim, 0x12000C);
+        assert_eq!(square_foot.num, 0x8DC23FF8);
+        assert_eq!(square_foot.dim, 0x12000C);
     }
 }

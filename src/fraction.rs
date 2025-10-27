@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
+// SPDX-License-Identifier: MIT
+
 use num_rational::Ratio;
 use num_traits::ToPrimitive;
 use std::{

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
+// SPDX-License-Identifier: MIT
+
 use std::cmp::Ordering;
 use std::fmt::{self, Debug};
 use std::ops::{Div, Mul, Neg};

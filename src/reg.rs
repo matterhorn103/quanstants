@@ -19,10 +19,12 @@ pub struct UnitRegistry {
 
 impl UnitRegistry {
     pub fn new() -> Self {
-        Self {
+        let mut reg = Self {
             units: HashMap::new(),
             string_map: HashMap::new(),
-        }
+        };
+        reg.add_unitless();
+        reg
     }
 
     pub fn add(
@@ -46,7 +48,11 @@ impl UnitRegistry {
         //self.string_map.insert(name, id);
     }
 
-    pub(crate) fn add_base(
+    fn add_unitless(&mut self) {
+        self.units.insert(Unit128::UNITLESS, Unit::unitless());
+    }
+
+    pub fn add_base(
         &mut self,
         dimensions: Dimensions,
         symbol: String,
@@ -71,7 +77,7 @@ impl UnitRegistry {
         self.string_map.insert(name, unit);
     }
 
-    pub(crate) fn add_base_with_alt_spellings(
+    pub fn add_base_with_alt_spellings(
         &mut self,
         dimensions: Dimensions,
         symbol: String,

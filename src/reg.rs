@@ -102,16 +102,20 @@ impl UnitRegistry {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
         self.add_base(dimensions, symbol.clone(), name, prefix);
         for alias in aliases {
-            self.string_map.insert(alias, self.get_by_id(&id).clone());
+            self.string_map.insert(alias, self.get_by_id(&id).unwrap());
         }
     }
 
-    pub fn get_by_name(&self, name: &str) -> Unit {
-        self.string_map.get(name).unwrap().clone()
+    pub fn unitless(&self) -> Unit {
+        self.units.get(&Unit128::UNITLESS).unwrap().clone()
     }
 
-    pub fn get_by_id(&self, id: &Unit128) -> Unit {
-        self.units.get(id).unwrap().clone()
+    pub fn get_by_name(&self, name: &str) -> Option<Unit> {
+        self.string_map.get(name).cloned()
+    }
+
+    pub fn get_by_id(&self, id: &Unit128) -> Option<Unit> {
+        self.units.get(id).cloned()
     }
 }
 

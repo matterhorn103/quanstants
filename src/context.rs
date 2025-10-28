@@ -13,15 +13,21 @@ pub struct Context {
 impl Context {
     pub fn new() -> Self {
         Self {
+            units: UnitRegistry::default(), // Always pre-populate with SI units
+        }
+    }
+
+    pub fn new_empty() -> Self {
+        Self {
             units: UnitRegistry::new(),
         }
     }
 
-    pub fn unit_by_name(&self, name: &str) -> Unit {
+    pub fn unit_by_name(&self, name: &str) -> Option<Unit> {
         self.units.get_by_name(name)
     }
 
-    pub fn unit_by_id(&self, id: &Unit128) -> Unit {
+    pub fn unit_by_id(&self, id: &Unit128) -> Option<Unit> {
         self.units.get_by_id(id)
     }
 
@@ -33,32 +39,36 @@ impl Context {
 // Convenience functions for pre-populated units
 #[allow(dead_code)]
 impl Context {
-    fn second(&self) -> Unit {
-        self.units.get_by_name("second")
+    pub fn unitless(&self) -> Unit {
+        self.units.unitless()
     }
 
-    fn metre(&self) -> Unit {
-        self.units.get_by_name("metre")
+    pub fn second(&self) -> Unit {
+        self.units.get_by_name("second").expect("Should not be called if unit known to be absent")
     }
 
-    fn kilogram(&self) -> Unit {
-        self.units.get_by_name("kilogram")
+    pub fn metre(&self) -> Unit {
+        self.units.get_by_name("metre").expect("Should not be called if unit known to be absent")
     }
 
-    fn ampere(&self) -> Unit {
-        self.units.get_by_name("ampere")
+    pub fn kilogram(&self) -> Unit {
+        self.units.get_by_name("kilogram").expect("Should not be called if unit known to be absent")
     }
 
-    fn kelvin(&self) -> Unit {
-        self.units.get_by_name("kelvin")
+    pub fn ampere(&self) -> Unit {
+        self.units.get_by_name("ampere").expect("Should not be called if unit known to be absent")
     }
 
-    fn mole(&self) -> Unit {
-        self.units.get_by_name("mole")
+    pub fn kelvin(&self) -> Unit {
+        self.units.get_by_name("kelvin").expect("Should not be called if unit known to be absent")
     }
 
-    fn candela(&self) -> Unit {
-        self.units.get_by_name("candela")
+    pub fn mole(&self) -> Unit {
+        self.units.get_by_name("mole").expect("Should not be called if unit known to be absent")
+    }
+
+    pub fn candela(&self) -> Unit {
+        self.units.get_by_name("candela").expect("Should not be called if unit known to be absent")
     }
 }
 
@@ -87,11 +97,11 @@ pub(crate) mod py {
         }
 
         fn unit_by_name(&self, name: &str) -> PyUnit {
-            self.0.unit_by_name(name).into()
+            self.0.unit_by_name(name).unwrap().into()
         }
 
         fn unit_by_id(&self, id: u128) -> PyUnit {
-            self.0.unit_by_id(&Unit128::from_bits(id)).into()
+            self.0.unit_by_id(&Unit128::from_bits(id)).unwrap().into()
         }
 
         // Square bracket notation lookup for units
@@ -106,6 +116,11 @@ pub(crate) mod py {
 
         fn prefix_by_name(&self, name: &str) -> PyPrefix {
             self.0.prefix_by_name(name).unwrap().into()
+        }
+
+        #[getter]
+        fn unitless(&self) -> PyUnit {
+            self.0.unitless().into()
         }
 
         #[getter]

@@ -759,6 +759,16 @@ mod tests {
     }
 
     #[test]
+    fn exact_from_scientific_parts_large() {
+        let n = SciNum::exact_from_scientific_parts(236, 40);
+    }
+
+    #[test]
+    fn exact_from_scientific_parts_small() {
+        let n = SciNum::exact_from_scientific_parts(49, -76);
+    }
+
+    #[test]
     fn num_dec() {
         let n = SciNum::new(20, 2);
         assert_eq!(n.number_dec(), dec!(20));

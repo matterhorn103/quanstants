@@ -7,22 +7,22 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct Context {
-    unit_reg: UnitRegistry,
+    pub units: UnitRegistry,
 }
 
 impl Context {
     pub fn new() -> Self {
         Self {
-            unit_reg: UnitRegistry::new(),
+            units: UnitRegistry::new(),
         }
     }
 
     pub fn unit_by_name(&self, name: &str) -> Unit {
-        self.unit_reg.get_by_name(name)
+        self.units.get_by_name(name)
     }
 
     pub fn unit_by_id(&self, id: &Unit128) -> Unit {
-        self.unit_reg.get_by_id(id)
+        self.units.get_by_id(id)
     }
 
     pub fn prefix_by_name(&self, name: &str) -> Result<Prefix, QuanstantsError> {
@@ -34,31 +34,31 @@ impl Context {
 #[allow(dead_code)]
 impl Context {
     fn second(&self) -> Unit {
-        self.unit_reg.get_by_name("second")
+        self.units.get_by_name("second")
     }
 
     fn metre(&self) -> Unit {
-        self.unit_reg.get_by_name("metre")
+        self.units.get_by_name("metre")
     }
 
     fn kilogram(&self) -> Unit {
-        self.unit_reg.get_by_name("kilogram")
+        self.units.get_by_name("kilogram")
     }
 
     fn ampere(&self) -> Unit {
-        self.unit_reg.get_by_name("ampere")
+        self.units.get_by_name("ampere")
     }
 
     fn kelvin(&self) -> Unit {
-        self.unit_reg.get_by_name("kelvin")
+        self.units.get_by_name("kelvin")
     }
 
     fn mole(&self) -> Unit {
-        self.unit_reg.get_by_name("mole")
+        self.units.get_by_name("mole")
     }
 
     fn candela(&self) -> Unit {
-        self.unit_reg.get_by_name("candela")
+        self.units.get_by_name("candela")
     }
 }
 

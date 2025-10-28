@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-use crate::error::QuanstantsError;
+use crate::{error::QuanstantsError, scinum::SciNum};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Prefix {
@@ -121,9 +121,7 @@ impl Prefix {
             _ => Err(QuanstantsError::Parse),
         }
     }
-}
 
-impl Prefix {
     pub fn symbol(&self) -> String {
         match self {
             Self::quecto => String::from("q"),
@@ -198,40 +196,54 @@ impl Prefix {
         }
     }
 
-    pub fn value(&self) -> f64 {
+    pub fn value(&self) -> SciNum {
         match self {
-            Self::quecto => 1e-30,
-            Self::ronto => 1e-27,
-            Self::yocto => 1e-24,
-            Self::zepto => 1e-21,
-            Self::atto => 1e-18,
-            Self::femto => 1e-15,
-            Self::pico => 1e-12,
-            Self::nano => 1e-9,
-            Self::micro => 1e-6,
-            Self::milli => 1e-3,
-            Self::centi => 1e-2,
-            Self::deci => 1e-1,
-            Self::deca => 1e+1,
-            Self::hecto => 1e+2,
-            Self::kilo => 1e+3,
-            Self::mega => 1e+6,
-            Self::giga => 1e+9,
-            Self::tera => 1e+12,
-            Self::peta => 1e+15,
-            Self::exa => 1e+18,
-            Self::zetta => 1e+21,
-            Self::yotta => 1e+24,
-            Self::ronna => 1e+27,
-            Self::quetta => 1e+30,
-            Self::kibi => 1024_f64.powf(1.0),
-            Self::mebi => 1024_f64.powf(2.0),
-            Self::gibi => 1024_f64.powf(3.0),
-            Self::tebi => 1024_f64.powf(4.0),
-            Self::pebi => 1024_f64.powf(5.0),
-            Self::exbi => 1024_f64.powf(6.0),
-            Self::zebi => 1024_f64.powf(7.0),
-            Self::yobi => 1024_f64.powf(8.0),
+            Self::quecto => SciNum::exact_from_scientific_parts(1, -30),
+            Self::ronto => SciNum::exact_from_scientific_parts(1, -27),
+            Self::yocto => SciNum::exact_from_scientific_parts(1, -24),
+            Self::zepto => SciNum::exact_from_scientific_parts(1, -21),
+            Self::atto => SciNum::exact_from_scientific_parts(1, -18),
+            Self::femto => SciNum::exact_from_scientific_parts(1, -15),
+            Self::pico => SciNum::exact_from_scientific_parts(1, -12),
+            Self::nano => SciNum::exact_from_scientific_parts(1, -9),
+            Self::micro => SciNum::exact_from_scientific_parts(1, -6),
+            Self::milli => SciNum::exact_from_scientific_parts(1, -3),
+            Self::centi => SciNum::exact_from_scientific_parts(1, -2),
+            Self::deci => SciNum::exact_from_scientific_parts(1, -1),
+            Self::deca => SciNum::exact_from_scientific_parts(1, 1),
+            Self::hecto => SciNum::exact_from_scientific_parts(1, 2),
+            Self::kilo => SciNum::exact_from_scientific_parts(1, 3),
+            Self::mega => SciNum::exact_from_scientific_parts(1, 6),
+            Self::giga => SciNum::exact_from_scientific_parts(1, 9),
+            Self::tera => SciNum::exact_from_scientific_parts(1, 12),
+            Self::peta => SciNum::exact_from_scientific_parts(1, 15),
+            Self::exa => SciNum::exact_from_scientific_parts(1, 18),
+            Self::zetta => SciNum::exact_from_scientific_parts(1, 21),
+            Self::yotta => SciNum::exact_from_scientific_parts(1, 24),
+            Self::ronna => SciNum::exact_from_scientific_parts(1, 27),
+            Self::quetta => SciNum::exact_from_scientific_parts(1, 30),
+            Self::kibi => SciNum::new_exact(1).powi(1),
+            Self::mebi => SciNum::new_exact(1).powi(2),
+            Self::gibi => SciNum::new_exact(1).powi(3),
+            Self::tebi => SciNum::new_exact(1).powi(4),
+            Self::pebi => SciNum::new_exact(1).powi(5),
+            Self::exbi => SciNum::new_exact(1).powi(6),
+            Self::zebi => SciNum::new_exact(1).powi(7),
+            Self::yobi => SciNum::new_exact(1).powi(8),
+        }
+    }
+
+    pub fn is_binary(&self) -> bool {
+        match self {
+            Prefix::kibi
+            | Prefix::mebi
+            | Prefix::gibi
+            | Prefix::tebi
+            | Prefix::pebi
+            | Prefix::exbi
+            | Prefix::zebi
+            | Prefix::yobi => true,
+            _ => false,
         }
     }
 }

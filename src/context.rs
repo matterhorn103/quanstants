@@ -44,31 +44,45 @@ impl Context {
     }
 
     pub fn second(&self) -> Unit {
-        self.units.get_by_name("second").expect("Should not be called if unit known to be absent")
+        self.units
+            .get_by_name("second")
+            .expect("Should not be called if unit known to be absent")
     }
 
     pub fn metre(&self) -> Unit {
-        self.units.get_by_name("metre").expect("Should not be called if unit known to be absent")
+        self.units
+            .get_by_name("metre")
+            .expect("Should not be called if unit known to be absent")
     }
 
     pub fn kilogram(&self) -> Unit {
-        self.units.get_by_name("kilogram").expect("Should not be called if unit known to be absent")
+        self.units
+            .get_by_name("kilogram")
+            .expect("Should not be called if unit known to be absent")
     }
 
     pub fn ampere(&self) -> Unit {
-        self.units.get_by_name("ampere").expect("Should not be called if unit known to be absent")
+        self.units
+            .get_by_name("ampere")
+            .expect("Should not be called if unit known to be absent")
     }
 
     pub fn kelvin(&self) -> Unit {
-        self.units.get_by_name("kelvin").expect("Should not be called if unit known to be absent")
+        self.units
+            .get_by_name("kelvin")
+            .expect("Should not be called if unit known to be absent")
     }
 
     pub fn mole(&self) -> Unit {
-        self.units.get_by_name("mole").expect("Should not be called if unit known to be absent")
+        self.units
+            .get_by_name("mole")
+            .expect("Should not be called if unit known to be absent")
     }
 
     pub fn candela(&self) -> Unit {
-        self.units.get_by_name("candela").expect("Should not be called if unit known to be absent")
+        self.units
+            .get_by_name("candela")
+            .expect("Should not be called if unit known to be absent")
     }
 }
 

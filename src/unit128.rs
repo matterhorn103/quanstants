@@ -6,9 +6,107 @@ use std::{
     ops::{Div, Mul},
 };
 
-use rust_decimal::Decimal;
-
 use crate::{dimensions::Dimensions, fraction::Frac, scinum::SciNum};
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[repr(u8)]
+pub enum Nibble {
+    X0 = 0x0,
+    X1 = 0x1,
+    X2 = 0x2,
+    X3 = 0x3,
+    X4 = 0x4,
+    X5 = 0x5,
+    X6 = 0x6,
+    X7 = 0x7,
+    X8 = 0x8,
+    X9 = 0x9,
+    XA = 0xA,
+    XB = 0xB,
+    XC = 0xC,
+    XD = 0xD,
+    XE = 0xE,
+    XF = 0xF,
+}
+
+impl TryFrom<u8> for Nibble {
+    type Error = &'static str;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        if value > 0xF {
+            Err("Maximum value of a nibble is 15!")
+        } else {
+            Ok(unsafe { std::mem::transmute(value) })
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+pub enum CGSSystem {
+    Unspecified,
+    Electrostatic,
+    Electromagnetic,
+    Gaussian,
+    HeavisideLorentz,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[repr(u8)]
+pub enum UnitSystem {
+    Linear = 0x0,
+    Base10Log = 0x1,
+    Base2Log = 0x2,
+    NaturalLog = 0x3,
+    Temperature = 0x4,
+    UnknownSICompatible(u8), // 5-9 not yet assigned
+    CentimetreGramSecond(CGSSystem) = 0xC,
+    UnknownSIIncompatible(u8), // A, B, D not yet assigned
+    Private(u8),               // E and F
+}
+
+impl UnitSystem {
+    pub fn from_nibble(nibble: Nibble) -> Self {
+        match nibble {
+            Nibble::X0 => Self::Linear,
+            Nibble::X1 => Self::Base10Log,
+            Nibble::X2 => Self::Base2Log,
+            Nibble::X3 => Self::NaturalLog,
+            Nibble::X4 => Self::Temperature,
+            Nibble::X5 | Nibble::X6 | Nibble::X7 | Nibble::X8 | Nibble::X9 => {
+                Self::UnknownSICompatible(nibble as u8)
+            }
+            Nibble::XA | Nibble::XB | Nibble::XD => Self::UnknownSIIncompatible(nibble as u8),
+            Nibble::XC => Self::CentimetreGramSecond(CGSSystem::Unspecified),
+            Nibble::XE | Nibble::XF => Self::Private(nibble as u8),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[repr(u8)]
+pub enum UnitType {
+    Base = 0x0,
+    CataloguedDerived(u8), // 1-9
+    Normalized = 0xA,
+    BinaryDerived = 0xB,
+    GenericCompound = 0xC,
+    UnknownDerived = 0xD,
+    Private(u8), // E and F
+}
+
+impl UnitType {
+    pub fn from_nibble(nibble: Nibble) -> Self {
+        match nibble {
+            Nibble::X0 => Self::Base,
+            Nibble::XA => Self::Normalized,
+            Nibble::XB => Self::BinaryDerived,
+            Nibble::XC => Self::GenericCompound,
+            Nibble::XD => Self::UnknownDerived,
+            Nibble::XE | Nibble::XF => Self::Private(nibble as u8),
+            _ => Self::CataloguedDerived(nibble as u8),
+        }
+    }
+}
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Unit128 {
@@ -48,6 +146,57 @@ impl Unit128 {
         Self { num, dim }
     }
 
+    pub fn new_compound(factors: Vec<(Unit128, Frac)>) -> Self {
+        // Panics if any of the units are referenced or not compatible with the SI
+        if factors
+            .iter()
+            .any(|x| x.0.is_referenced() || !x.0.is_si_compatible())
+        {
+            panic!()
+        } else {
+            let dimensions = factors
+                .iter()
+                .map(|x| x.0.dimensions().pow(x.1))
+                .fold(Dimensions::DIMENSIONLESS, |acc, x| acc * x);
+            // Do this way, rather than by multiplying successive Unit128s, in order to
+            // avoid introducing rounding error in the proportionality factor
+            let proportionality_factor = factors
+                .iter()
+                .map(|x| x.0.factor().powfrac(x.1))
+                .fold(SciNum::ONE, |acc, x| acc * x);
+            Self::new(proportionality_factor, dimensions, 0x0C)
+        }
+    }
+
+    #[inline]
+    pub fn least_significant_byte(&self) -> u8 {
+        (self.dim & 0xFF) as u8
+    }
+
+    #[inline]
+    pub fn utype(&self) -> UnitType {
+        UnitType::from_nibble(
+            ((self.dim & 0xF) as u8)
+                .try_into()
+                .expect("Will always fit"),
+        )
+    }
+
+    #[inline]
+    pub fn system(&self) -> UnitSystem {
+        UnitSystem::from_nibble(
+            ((self.dim & 0xF0) as u8 >> 4)
+                .try_into()
+                .expect("Will always fit"),
+        )
+    }
+
+    #[inline]
+    pub fn is_si_compatible(&self) -> bool {
+        (0x00..=0x9F).contains(&self.least_significant_byte())
+    }
+
+    #[inline]
     pub fn is_referenced(&self) -> bool {
         // Tried to be efficient but logic is incorrect
         //((self.dim & 0b10000000) == 0b10000000) // 0xA* to 0xF* are for other systems entirely
@@ -57,10 +206,7 @@ impl Unit128 {
         (0x10..=0x9F).contains(&self.least_significant_byte())
     }
 
-    pub fn least_significant_byte(&self) -> u8 {
-        (self.dim & 0xFF) as u8
-    }
-
+    #[inline]
     pub fn dimensions(&self) -> Dimensions {
         Dimensions {
             T: Frac::from_bits(((self.dim >> 8) & 0xFF) as u8),
@@ -73,6 +219,7 @@ impl Unit128 {
         }
     }
 
+    #[inline]
     pub fn factor(&self) -> SciNum {
         if self.is_referenced() {
             Unit128::bits_to_factor_and_reference(self.num).0
@@ -179,10 +326,9 @@ impl Unit128 {
         } else {
             match i8::try_from(factor.exponent_integral()) {
                 Ok(exponent) => {
-                    exponent as u8 as u64
-                    | ((factor.significand_integral() - 1) as u64) << 8
-                },
-                Err(_) => todo!()
+                    exponent as u8 as u64 | ((factor.significand_integral() - 1) as u64) << 8
+                }
+                Err(_) => todo!(),
             }
         }
     }
@@ -192,7 +338,7 @@ impl Unit128 {
             todo!()
         } else {
             Unit128::factor_to_bits(factor) & 0x0000_0000_FFFF_FFFF
-            | Unit128::factor_to_bits(reference) << 32
+                | Unit128::factor_to_bits(reference) << 32
         }
     }
 
@@ -205,7 +351,8 @@ impl Unit128 {
     pub(crate) fn bits_to_factor_and_reference(b: u64) -> (SciNum, SciNum) {
         let factor_exponent = (b & 0x0000_0000_0000_00FF) as i8;
         let factor_significand = ((b & 0x0000_0000_FFFF_FF00) >> 8) + 1;
-        let factor = SciNum::exact_from_scientific_parts(factor_significand, factor_exponent.into());
+        let factor =
+            SciNum::exact_from_scientific_parts(factor_significand, factor_exponent.into());
         let ref_exponent = ((b & 0x0000_00FF_0000_0000) >> 32) as i8;
         let ref_significand = (b & 0xFFFF_FF00_0000_0000 >> 40) + 1;
         let reference = SciNum::exact_from_scientific_parts(ref_significand, ref_exponent.into());
@@ -499,9 +646,18 @@ mod tests {
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3E700);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(0.1))), 0xFF);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(1e-3))), 0xFD);
-        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(-1)), 0xFFFFFFFFFFFFFE00);
-        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(-3)), 0xFFFFFFFFFFFFFC00);
-        assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(0.3048))), 0xBE7FC); 
+        assert_eq!(
+            Unit128::factor_to_bits(SciNum::new_exact(-1)),
+            0xFFFFFFFFFFFFFE00
+        );
+        assert_eq!(
+            Unit128::factor_to_bits(SciNum::new_exact(-3)),
+            0xFFFFFFFFFFFFFC00
+        );
+        assert_eq!(
+            Unit128::factor_to_bits(SciNum::new_exact(dec!(0.3048))),
+            0xBE7FC
+        );
     }
 
     #[test]
@@ -514,9 +670,18 @@ mod tests {
         assert_eq!(Unit128::bits_to_factor(0x3E700), SciNum::new_exact(1000));
         assert_eq!(Unit128::bits_to_factor(0xFF), SciNum::new_exact(dec!(0.1)));
         assert_eq!(Unit128::bits_to_factor(0xFD), SciNum::new_exact(dec!(1e-3)));
-        assert_eq!(Unit128::bits_to_factor(0xFFFFFFFFFFFFFE00), SciNum::new_exact(-1));
-        assert_eq!(Unit128::bits_to_factor(0xFFFFFFFFFFFFFC00), SciNum::new_exact(-3));
-        assert_eq!(Unit128::bits_to_factor(0xBE7FC), SciNum::new_exact(dec!(0.3048))); 
+        assert_eq!(
+            Unit128::bits_to_factor(0xFFFFFFFFFFFFFE00),
+            SciNum::new_exact(-1)
+        );
+        assert_eq!(
+            Unit128::bits_to_factor(0xFFFFFFFFFFFFFC00),
+            SciNum::new_exact(-3)
+        );
+        assert_eq!(
+            Unit128::bits_to_factor(0xBE7FC),
+            SciNum::new_exact(dec!(0.3048))
+        );
     }
 
     #[test]

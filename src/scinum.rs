@@ -13,11 +13,11 @@ use rust_decimal_macros::dec;
 use crate::fraction::Frac;
 
 /// A decimal float in scientific notation with an associated uncertainty.
-/// 
+///
 /// Represents a number of the form _m_ × 10<sup><i>n</i></sup>
 ///
 /// Essentially a Decimal from rust_decimal extended to have an uncertainty.
-/// 
+///
 /// A SciNum also contains an associated exponent, which is the exponent for an
 /// additional scaling factor of 10<sup><i>exponent</i></sup>, which applies to both the number
 /// and uncertainty.
@@ -156,18 +156,22 @@ impl SciNum {
     }
 
     /// Returns the significand _m_ of the number when represented with _m_ as an integer.
-    /// 
+    ///
     /// Corresponds to representation of the number as `mmmmm × 10^nn`.
     #[inline]
     pub fn significand_integral(&self) -> i128 {
         let unsigned = (self.number_hi as u128) << 64
-        | (self.number_mid as u128) << 32
-        | self.number_lo as u128;
-        if self.negative { -(unsigned as i128) } else { unsigned as i128 }
+            | (self.number_mid as u128) << 32
+            | self.number_lo as u128;
+        if self.negative {
+            -(unsigned as i128)
+        } else {
+            unsigned as i128
+        }
     }
-    
+
     /// Returns the exponent _n_ of the number when represented with _m_ as an integer.
-    /// 
+    ///
     /// Corresponds to representation of the number as `mmmmm × 10^nn`.
     #[inline]
     pub fn exponent_integral(&self) -> i16 {
@@ -176,19 +180,23 @@ impl SciNum {
 
     /// Returns the significand _m_ of the number when represented with normalized notation
     /// i.e. with 10 > _m_ >= 1.
-    /// 
+    ///
     /// Corresponds to `iffff` when the number is notated as `i.ffff × 10^nn`.
     #[inline]
     pub fn significand_normalized(&self) -> i128 {
         let unsigned = (self.number_hi as i128) << 64
-        | (self.number_mid as i128) << 32
-        | self.number_lo as i128;
-        if self.negative { -unsigned } else { unsigned }
+            | (self.number_mid as i128) << 32
+            | self.number_lo as i128;
+        if self.negative {
+            -unsigned
+        } else {
+            unsigned
+        }
     }
 
     /// Returns a tuple of the integer, fractional, and exponent parts of the significand _m_ of the
     /// number when represented with normalized notation i.e. with 10 > _m_ >= 1.
-    /// 
+    ///
     /// Corresponds to `(i, ffff, nn)` when the number is notated as `i.ffff × 10^nn`.
     #[inline]
     pub fn significand_normalized_parts(&self) -> (i8, i128, i16) {
@@ -199,26 +207,30 @@ impl SciNum {
 
         (int_part as i8, frac_part, self.exponent_normalized())
     }
-    
+
     /// Returns the exponent _n_ of the number when represented with normalized notation
     /// i.e. with 10 > _m_ >= 1.
-    /// 
+    ///
     /// Corresponds to `nn` when the number is notated as `i.ffff × 10^nn`.
     #[inline]
     pub fn exponent_normalized(&self) -> i16 {
         todo!()
     }
-    
+
     /// Returns the number of significant decimal digits in the significand.
     #[inline]
     pub fn sigfigs(&self) -> u32 {
         // This might not be the same thing
         let significand = self.significand_integral();
-        if significand == 0 { 0 } else { significand.abs().ilog10() + 1 }
+        if significand == 0 {
+            0
+        } else {
+            significand.abs().ilog10() + 1
+        }
     }
 
     /// Returns the scale of the last significant place.
-    /// 
+    ///
     /// For example:
     /// - 0.02 returns -2
     /// - 0.020 returns -3
@@ -229,7 +241,7 @@ impl SciNum {
         // For now, the exponent is guaranteed to be zero, so equal to the scale of the decimal rep
         -(i32::from(self.number_scale))
     }
-    
+
     #[inline]
     pub fn is_exact(&self) -> bool {
         self.uncertainty_lo | self.uncertainty_mid | self.uncertainty_hi == 0
@@ -796,7 +808,7 @@ mod tests {
     fn sigfigs() {
         let n = SciNum::new_exact(dec!(123.45));
         assert_eq!(n.sigfigs(), 5);
-        
+
         let n2 = SciNum::new_exact(dec!(0.00123));
         assert_eq!(n2.sigfigs(), 3);
 
@@ -808,10 +820,10 @@ mod tests {
     fn sigfigs_trailing_zeros() {
         let n = SciNum::new_exact(dec!(123.4500));
         assert_eq!(n.sigfigs(), 7);
-        
+
         let n2 = SciNum::new_exact(dec!(0.001230));
         assert_eq!(n2.sigfigs(), 4);
-        
+
         let n3 = SciNum::new_exact(dec!(1230));
         assert_eq!(n3.sigfigs(), 4);
     }

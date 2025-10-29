@@ -55,6 +55,7 @@ impl Context {
 
     unit_getter!(second);
     unit_getter!(metre);
+    unit_getter!(meter);
     unit_getter!(kilogram);
     unit_getter!(ampere);
     unit_getter!(kelvin);

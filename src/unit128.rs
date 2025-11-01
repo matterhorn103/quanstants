@@ -3,10 +3,12 @@
 
 use std::{
     fmt::{self, Debug},
-    ops::{Div, Mul},
+    ops::{Div, Mul}, str::FromStr,
 };
 
-use crate::{dimensions::Dimensions, fraction::Frac, scinum::SciNum, unit::Unit};
+use serde::{Deserialize, Serialize};
+
+use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, scinum::SciNum, unit::Unit};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[repr(u8)]
@@ -108,7 +110,7 @@ impl UnitType {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct Unit128 {
     pub(crate) num: u64,
     pub(crate) dim: u64,
@@ -251,10 +253,9 @@ impl Unit128 {
         }
     }
 
-    pub fn to_bits(self: Unit128) -> u128 {
+    pub fn to_bits(self) -> u128 {
         (self.num as u128) << 64 | self.dim as u128
     }
-
     pub fn pow<T: Into<Frac>>(self, exponent: T) -> Unit128 {
         // Panics for referenced units
         let exp: Frac = exponent.into();
@@ -315,6 +316,32 @@ impl fmt::Display for Unit128 {
         write!(f, "0x{:X}", self.to_bits())
     }
 }
+
+impl FromStr for Unit128 {
+    type Err = QuanstantsError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let hex = s.strip_prefix("0x").unwrap_or(s);
+        let bits = u128::from_str_radix(hex, 16).map_err(|_e| QuanstantsError::Parse)?;
+        Ok(Self::from_bits(bits))
+    }
+}
+
+//impl Serialize for Unit128 {
+//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//    where
+//        S: serde::Serializer {
+//        serializer.serialize_str(&self.to_string())
+//    }
+//}
+//
+//impl Deserialize for Unit128 {
+//    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//    where
+//        D: serde::Deserializer<'de> {
+//        deserializer.deserialize_string(StringVisitor)
+//    }
+//}
 
 impl Unit128 {
     pub(crate) fn factor_to_bits(factor: SciNum) -> u64 {

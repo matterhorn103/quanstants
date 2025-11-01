@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #![allow(mixed_script_confusables)]
+#![allow(non_ascii_idents)]
 
 pub mod context;
 pub mod dimensions;
@@ -11,6 +12,7 @@ pub mod prefix;
 pub mod quantity;
 pub mod reg;
 pub mod scinum;
+//pub mod serde;
 pub mod unit;
 pub mod unit128;
 

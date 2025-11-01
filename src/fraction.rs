@@ -5,8 +5,10 @@ use num_rational::Ratio;
 use num_traits::ToPrimitive;
 use std::{
     fmt,
-    ops::{Add, Deref, Div, Mul, Neg, Sub},
+    ops::{Add, Deref, Div, Mul, Neg, Sub}, str::FromStr,
 };
+
+use crate::error::QuanstantsError;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct Frac(Ratio<i8>);
@@ -164,6 +166,21 @@ impl fmt::Display for Frac {
         } else {
             write!(f, "{}⁄{}", self.numer(), self.denom())
         }
+    }
+}
+
+impl FromStr for Frac {
+    type Err = QuanstantsError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(&['/', '⁄']).collect();
+        let den: i8 = match parts.len() {
+            1 => Ok(1),
+            2 => i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse),
+            _ => Err(QuanstantsError::Parse),
+        }?;
+        let num: i8 = i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse)?;
+        Ok(Self::new(num, den))
     }
 }
 

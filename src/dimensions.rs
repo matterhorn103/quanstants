@@ -3,7 +3,9 @@
 
 use std::fmt;
 use std::ops::{Div, Mul};
+use std::str::FromStr;
 
+use crate::error::QuanstantsError;
 use crate::fraction::Frac;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
@@ -89,22 +91,49 @@ impl Div for Dimensions {
 impl fmt::Display for Dimensions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let exponents = self.exponents();
-        let symbols = ["T", "L", "M", "I", "Θ", "N", "J"];
+        let symbols = ['T', 'L', 'M', 'I', 'Θ', 'N', 'J'];
         let output = if self.is_dimensionless() {
             String::from("(dimensionless)")
         } else {
             let mut string = String::new();
             for i in 0..7 {
                 if !exponents[i].is_zero() {
-                    string.push_str(symbols[i]);
+                    // Add spaces between dimension terms like for units
+                    if i != 0 { string.push(' ') }
+                    string.push(symbols[i]);
                     if exponents[i] != 1 {
-                        string.push_str(&exponents[i].to_superscript());
+                        // Stick to non-superscript for now
+                        //string.push_str(&exponents[i].to_superscript());
+                        string.push_str(&exponents[i].to_string());
                     }
                 }
             }
             string
         };
         write!(f, "{output}")
+    }
+}
+
+impl FromStr for Dimensions {
+    type Err = QuanstantsError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let symbols = ['T', 'L', 'M', 'I', 'Θ', 'N', 'J'];
+        let mut exponents: [Frac; 7] = [Frac::ZERO; 7];
+        let split = s.split_whitespace();
+        for term in split {
+            let mut chars = term.chars();
+            let symbol = chars.next().ok_or(QuanstantsError::Parse)?;
+            let exponent = if term.len() == 1 {
+                Frac::ONE
+            } else {
+                Frac::from_str(chars.as_str())?
+            };
+            let i = symbols.binary_search(&symbol).map_err(|_e| QuanstantsError::Parse)?;
+            exponents[i] = exponent;
+        };
+        let [t, l, m, i, θ, n, j] = exponents;
+        Ok(Self::new(t, l, m, i, θ, n, j))
     }
 }
 
@@ -328,7 +357,7 @@ mod tests {
     #[test]
     fn display() {
         let dim = Dimensions::new(1, -1, 0, 2, 0, -3, 0);
-        assert_eq!(dim.to_string(), "TL⁻¹I²N⁻³");
+        assert_eq!(dim.to_string(), "T L-1 I2 N-3");
         assert_eq!(Dimensions::DIMENSIONLESS.to_string(), "(dimensionless)");
     }
 }

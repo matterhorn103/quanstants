@@ -467,9 +467,9 @@ pub(crate) mod py {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
-    fn test_unit_getters() {
+    fn unit_getters() {
         // Just make sure that a default context has all the SI units in it and their getters work
         let context = Context::new();
         context.second();

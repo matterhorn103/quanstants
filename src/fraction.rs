@@ -167,7 +167,10 @@ impl fmt::Display for Frac {
     }
 }
 
-// We should only use super/subscripts like these in the terminal, it's Unicode abuse
+// We should only use super/subscripts like these in the terminal!
+// Formatting of superscripts and subscripts, like other rich text formatting,
+// should not be handled by changing the encoded characters but in other ways
+// e.g. OpenType font features
 fn char_to_superscript(character: char) -> char {
     match character {
         '1' => '¹',

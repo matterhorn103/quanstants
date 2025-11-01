@@ -1,0 +1,45 @@
+[units.metre]
+id = "0x110000"
+base = true
+dimensions = "L"
+symbol = "m"
+name = "metre"
+alt_spellings = [ "meter" ]
+
+[units.kilogram]
+id = "0x11000000"
+base = true
+dimensions = "M"
+symbol = "kg"
+name = "kilogram"
+
+[units.ampere]
+id = "0x1100000000"
+base = true
+dimensions = "I"
+symbol = "A"
+name = "ampere"
+aliases = [ "amp" ]
+
+[units.twip]
+id = "0xfdsfs" # Not decided yet
+symbol = "twip"
+name = "twip"
+value.number = "0.0000176389"
+value.unit = [["m", 1]]
+
+[units.angstrom]
+id = "0x" # Need to work out
+symbol = "Å"
+name = "angstrom"
+alt_spellings = [ "ångström" ]
+value.number = 1e-10
+value.unit = [["m", 1]]
+
+[units.reciprocal_centimetre]
+id = "0x" # Need to work out
+name = "reciprocal centimetre"
+alt_spellings = [ "reciprocal centimeter" ]
+aliases = [ "inverse centimetre", "wavenumber" ]
+value.number = 1
+value.unit = [["centimetre", -1]]

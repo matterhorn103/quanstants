@@ -29,6 +29,13 @@ impl UnitRegistry {
         reg
     }
 
+    /// Adds the unit to string_map under the normalized lowercase form of the provided name.
+    #[inline]
+    fn insert_under_string(&mut self, name: String, unit: Unit) {
+        let normalized = name.to_lowercase();
+        self.string_map.insert(normalized, unit);
+    }
+
     fn new_base(
         &mut self,
         id: Unit128,
@@ -61,7 +68,7 @@ impl UnitRegistry {
     ) {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol, name.clone(), prefix);
-        self.string_map.insert(name, unit.clone());
+        self.insert_under_string(name, unit.clone());
         self.units.insert(id, unit);
     }
 
@@ -75,10 +82,10 @@ impl UnitRegistry {
     ) {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
-        self.string_map.insert(name, unit.clone());
+        self.insert_under_string(name, unit.clone());
         for spelling in alt_spellings {
             let alt_unit = self.new_base(id, dimensions, symbol.clone(), spelling.clone(), prefix);
-            self.string_map.insert(spelling, alt_unit);
+            self.insert_under_string(spelling, alt_unit);
         }
         // Getting the unit by ID should return the canonical form
         self.units.insert(id, unit);
@@ -94,9 +101,9 @@ impl UnitRegistry {
     ) {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol, name.clone(), prefix);
-        self.string_map.insert(name, unit.clone());
+        self.insert_under_string(name, unit.clone());
         for alias in aliases {
-            self.string_map.insert(alias, unit.clone());
+            self.insert_under_string(alias, unit.clone());
         }
         self.units.insert(id, unit);
     }
@@ -187,7 +194,7 @@ impl UnitRegistry {
             proportionality_factor,
             unit_factors,
         );
-        self.string_map.insert(name, unit.clone());
+        self.insert_under_string(name, unit.clone());
         self.units.insert(id, unit);
     }
 
@@ -214,7 +221,7 @@ impl UnitRegistry {
             proportionality_factor,
             unit_factors.clone(),
         );
-        self.string_map.insert(name, unit.clone());
+        self.insert_under_string(name, unit.clone());
         for spelling in alt_spellings {
             let alt_unit = self.new_derived(
                 id,
@@ -224,7 +231,7 @@ impl UnitRegistry {
                 proportionality_factor,
                 unit_factors.clone(),
             );
-            self.string_map.insert(spelling, alt_unit);
+            self.insert_under_string(spelling, alt_unit);
         }
         // Getting the unit by ID should return the canonical form
         self.units.insert(id, unit);
@@ -253,23 +260,26 @@ impl UnitRegistry {
             proportionality_factor,
             unit_factors.clone(),
         );
-        self.string_map.insert(name, unit.clone());
+        self.insert_under_string(name, unit.clone());
         for alias in aliases {
-            self.string_map.insert(alias, unit.clone());
+            self.insert_under_string(alias, unit.clone());
         }
         self.units.insert(id, unit);
     }
 
+    #[inline]
     pub fn unitless(&self) -> Unit {
         self.units.get(&Unit128::UNITLESS).unwrap().clone()
     }
 
+    #[inline]
     pub fn get_by_name(&self, name: &str) -> Option<Unit> {
-        self.string_map.get(name).cloned()
+        self.string_map.get(&name.to_lowercase()).cloned()
     }
 
-    pub fn get_by_id(&self, id: &Unit128) -> Option<Unit> {
-        self.units.get(id).cloned()
+    #[inline]
+    pub fn get_by_id(&self, id: Unit128) -> Option<Unit> {
+        self.units.get(&id).cloned()
     }
 }
 

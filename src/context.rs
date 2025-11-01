@@ -23,24 +23,28 @@ impl Context {
         }
     }
 
+    #[inline]
     pub fn unit_by_name(&self, name: &str) -> Option<Unit> {
         self.units.get_by_name(name)
     }
 
-    pub fn unit_by_id(&self, id: &Unit128) -> Option<Unit> {
+    #[inline]
+    pub fn unit_by_id(&self, id: Unit128) -> Option<Unit> {
         self.units.get_by_id(id)
     }
 
+    #[inline]
     pub fn prefix_by_name(&self, name: &str) -> Result<Prefix, QuanstantsError> {
         Prefix::from_name(name)
     }
 }
 
 macro_rules! unit_getter {
-    ($name:ident) => {
+    ($name:ident, $id:expr) => {
+        #[inline]
         pub fn $name(&self) -> Unit {
             self.units
-                .get_by_name(stringify!($name))
+                .get_by_id($id)
                 .expect("Should not be called if unit known to be absent")
         }
     };
@@ -49,40 +53,41 @@ macro_rules! unit_getter {
 // Convenience functions for pre-populated units
 #[allow(dead_code)]
 impl Context {
+    #[inline]
     pub fn unitless(&self) -> Unit {
         self.units.unitless()
     }
 
-    unit_getter!(second);
-    unit_getter!(metre);
-    unit_getter!(meter);
-    unit_getter!(kilogram);
-    unit_getter!(ampere);
-    unit_getter!(kelvin);
-    unit_getter!(mole);
-    unit_getter!(candela);
-    unit_getter!(radian);
-    unit_getter!(steradian);
-    unit_getter!(hertz);
-    unit_getter!(newton);
-    unit_getter!(pascal);
-    unit_getter!(joule);
-    unit_getter!(watt);
-    unit_getter!(coulomb);
-    unit_getter!(volt);
-    unit_getter!(farad);
-    unit_getter!(ohm);
-    unit_getter!(siemens);
-    unit_getter!(weber);
-    unit_getter!(tesla);
-    unit_getter!(henry);
-    unit_getter!(celsius_degree);
-    unit_getter!(lumen);
-    unit_getter!(lux);
-    unit_getter!(becquerel);
-    unit_getter!(gray);
-    unit_getter!(sievert);
-    unit_getter!(katal);
+    unit_getter!(second, Unit128::SECOND);
+    unit_getter!(metre, Unit128::METRE);
+    unit_getter!(meter, Unit128::METRE);
+    unit_getter!(kilogram, Unit128::KILOGRAM);
+    unit_getter!(ampere, Unit128::AMPERE);
+    unit_getter!(kelvin, Unit128::KELVIN);
+    unit_getter!(mole, Unit128::MOLE);
+    unit_getter!(candela, Unit128::CANDELA);
+    unit_getter!(radian, Unit128::RADIAN);
+    unit_getter!(steradian, Unit128::STERADIAN);
+    unit_getter!(hertz, Unit128::HERTZ);
+    unit_getter!(newton, Unit128::NEWTON);
+    unit_getter!(pascal, Unit128::PASCAL);
+    unit_getter!(joule, Unit128::JOULE);
+    unit_getter!(watt, Unit128::WATT);
+    unit_getter!(coulomb, Unit128::COULOMB);
+    unit_getter!(volt, Unit128::VOLT);
+    unit_getter!(farad, Unit128::FARAD);
+    unit_getter!(ohm, Unit128::OHM);
+    unit_getter!(siemens, Unit128::SIEMENS);
+    unit_getter!(weber, Unit128::WEBER);
+    unit_getter!(tesla, Unit128::TESLA);
+    unit_getter!(henry, Unit128::HENRY);
+    unit_getter!(celsius_degree, Unit128::CELSIUS_DEGREE);
+    unit_getter!(lumen, Unit128::LUMEN);
+    unit_getter!(lux, Unit128::LUX);
+    unit_getter!(becquerel, Unit128::BECQUEREL);
+    unit_getter!(gray, Unit128::GRAY);
+    unit_getter!(sievert, Unit128::SIEVERT);
+    unit_getter!(katal, Unit128::KATAL);
 }
 
 #[cfg(feature = "python")]
@@ -114,7 +119,7 @@ pub(crate) mod py {
         }
 
         fn unit_by_id(&self, id: u128) -> PyUnit {
-            self.0.unit_by_id(&Unit128::from_bits(id)).unwrap().into()
+            self.0.unit_by_id(Unit128::from_bits(id)).unwrap().into()
         }
 
         // Square bracket notation lookup for units
@@ -456,5 +461,46 @@ pub(crate) mod py {
         fn __getitem__(&self, py: Python, name: &str) -> PyPrefix {
             self.parent.borrow(py).prefix_by_name(name)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_unit_getters() {
+        // Just make sure that a default context has all the SI units in it and their getters work
+        let context = Context::new();
+        context.second();
+        context.metre();
+        context.meter();
+        context.kilogram();
+        context.ampere();
+        context.kelvin();
+        context.mole();
+        context.candela();
+        context.radian();
+        context.steradian();
+        context.hertz();
+        context.newton();
+        context.pascal();
+        context.joule();
+        context.watt();
+        context.coulomb();
+        context.volt();
+        context.farad();
+        context.ohm();
+        context.siemens();
+        context.weber();
+        context.tesla();
+        context.henry();
+        context.celsius_degree();
+        context.lumen();
+        context.lux();
+        context.becquerel();
+        context.gray();
+        context.sievert();
+        context.katal();
     }
 }

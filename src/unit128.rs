@@ -6,7 +6,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{dimensions::Dimensions, fraction::Frac, scinum::SciNum};
+use crate::{dimensions::Dimensions, fraction::Frac, scinum::SciNum, unit::Unit};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[repr(u8)]
@@ -379,6 +379,8 @@ impl Unit128 {
             dim: 0x110000,
         }
     };
+
+    pub const METER: Unit128 = Unit128::METRE;
 
     pub const KILOGRAM: Unit128 = {
         Unit128 {

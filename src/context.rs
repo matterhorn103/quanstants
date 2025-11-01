@@ -19,7 +19,7 @@ impl Context {
 
     pub fn new_empty() -> Self {
         Self {
-            units: UnitRegistry::new(),
+            units: UnitRegistry::new(), // Currently just adds unitless and SI base units
         }
     }
 
@@ -61,6 +61,28 @@ impl Context {
     unit_getter!(kelvin);
     unit_getter!(mole);
     unit_getter!(candela);
+    unit_getter!(radian);
+    unit_getter!(steradian);
+    unit_getter!(hertz);
+    unit_getter!(newton);
+    unit_getter!(pascal);
+    unit_getter!(joule);
+    unit_getter!(watt);
+    unit_getter!(coulomb);
+    unit_getter!(volt);
+    unit_getter!(farad);
+    unit_getter!(ohm);
+    unit_getter!(siemens);
+    unit_getter!(weber);
+    unit_getter!(tesla);
+    unit_getter!(henry);
+    unit_getter!(celsius_degree);
+    unit_getter!(lumen);
+    unit_getter!(lux);
+    unit_getter!(becquerel);
+    unit_getter!(gray);
+    unit_getter!(sievert);
+    unit_getter!(katal);
 }
 
 #[cfg(feature = "python")]
@@ -192,6 +214,221 @@ pub(crate) mod py {
         #[getter]
         fn cd(&self) -> PyUnit {
             self.0.candela().into()
+        }
+
+        #[getter]
+        fn radian(&self) -> PyUnit {
+            self.0.radian().into()
+        }
+
+        #[getter]
+        fn rad(&self) -> PyUnit {
+            self.0.radian().into()
+        }
+
+        #[getter]
+        fn steradian(&self) -> PyUnit {
+            self.0.steradian().into()
+        }
+
+        #[getter]
+        fn sr(&self) -> PyUnit {
+            self.0.steradian().into()
+        }
+
+        #[getter]
+        fn hertz(&self) -> PyUnit {
+            self.0.hertz().into()
+        }
+
+        #[getter]
+        fn Hz(&self) -> PyUnit {
+            self.0.hertz().into()
+        }
+
+        #[getter]
+        fn newton(&self) -> PyUnit {
+            self.0.newton().into()
+        }
+
+        #[getter]
+        fn N(&self) -> PyUnit {
+            self.0.newton().into()
+        }
+
+        #[getter]
+        fn pascal(&self) -> PyUnit {
+            self.0.pascal().into()
+        }
+
+        #[getter]
+        fn Pa(&self) -> PyUnit {
+            self.0.pascal().into()
+        }
+
+        #[getter]
+        fn joule(&self) -> PyUnit {
+            self.0.joule().into()
+        }
+
+        #[getter]
+        fn J(&self) -> PyUnit {
+            self.0.joule().into()
+        }
+
+        #[getter]
+        fn watt(&self) -> PyUnit {
+            self.0.watt().into()
+        }
+
+        #[getter]
+        fn W(&self) -> PyUnit {
+            self.0.watt().into()
+        }
+
+        #[getter]
+        fn coulomb(&self) -> PyUnit {
+            self.0.coulomb().into()
+        }
+
+        #[getter]
+        fn C(&self) -> PyUnit {
+            self.0.coulomb().into()
+        }
+
+        #[getter]
+        fn volt(&self) -> PyUnit {
+            self.0.volt().into()
+        }
+
+        #[getter]
+        fn V(&self) -> PyUnit {
+            self.0.volt().into()
+        }
+
+        #[getter]
+        fn farad(&self) -> PyUnit {
+            self.0.farad().into()
+        }
+
+        #[getter]
+        fn F(&self) -> PyUnit {
+            self.0.farad().into()
+        }
+
+        #[getter]
+        fn ohm(&self) -> PyUnit {
+            self.0.ohm().into()
+        }
+
+        #[getter]
+        fn Ω(&self) -> PyUnit {
+            self.0.ohm().into()
+        }
+
+        #[getter]
+        fn siemens(&self) -> PyUnit {
+            self.0.siemens().into()
+        }
+
+        #[getter]
+        fn S(&self) -> PyUnit {
+            self.0.siemens().into()
+        }
+
+        #[getter]
+        fn weber(&self) -> PyUnit {
+            self.0.weber().into()
+        }
+
+        #[getter]
+        fn Wb(&self) -> PyUnit {
+            self.0.weber().into()
+        }
+
+        #[getter]
+        fn tesla(&self) -> PyUnit {
+            self.0.tesla().into()
+        }
+
+        #[getter]
+        fn T(&self) -> PyUnit {
+            self.0.tesla().into()
+        }
+
+        #[getter]
+        fn henry(&self) -> PyUnit {
+            self.0.henry().into()
+        }
+
+        #[getter]
+        fn H(&self) -> PyUnit {
+            self.0.henry().into()
+        }
+
+        #[getter]
+        fn celsius_degree(&self) -> PyUnit {
+            self.0.celsius_degree().into()
+        }
+
+        #[getter]
+        fn lumen(&self) -> PyUnit {
+            self.0.lumen().into()
+        }
+
+        #[getter]
+        fn lm(&self) -> PyUnit {
+            self.0.lumen().into()
+        }
+
+        #[getter]
+        fn lux(&self) -> PyUnit {
+            self.0.lux().into()
+        }
+
+        #[getter]
+        fn lx(&self) -> PyUnit {
+            self.0.lux().into()
+        }
+
+        #[getter]
+        fn becquerel(&self) -> PyUnit {
+            self.0.becquerel().into()
+        }
+
+        #[getter]
+        fn Bq(&self) -> PyUnit {
+            self.0.becquerel().into()
+        }
+
+        #[getter]
+        fn gray(&self) -> PyUnit {
+            self.0.gray().into()
+        }
+
+        #[getter]
+        fn Gy(&self) -> PyUnit {
+            self.0.gray().into()
+        }
+
+        #[getter]
+        fn sievert(&self) -> PyUnit {
+            self.0.sievert().into()
+        }
+
+        #[getter]
+        fn Sv(&self) -> PyUnit {
+            self.0.sievert().into()
+        }
+
+        #[getter]
+        fn katal(&self) -> PyUnit {
+            self.0.katal().into()
+        }
+
+        #[getter]
+        fn kat(&self) -> PyUnit {
+            self.0.katal().into()
         }
     }
 

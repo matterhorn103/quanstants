@@ -12,7 +12,7 @@ pub(crate) struct UnitDef {
     dimensions: Option<Dimensions>,
     symbol: Option<String>,
     name: Option<String>,
-    alt_spellings: Vec<String>,
+    alt_names: Vec<String>,
     aliases: Vec<String>,
     value: Option<QuantityDef>,
 }

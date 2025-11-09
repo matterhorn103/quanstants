@@ -72,20 +72,20 @@ impl UnitRegistry {
         self.units.insert(id, unit);
     }
 
-    pub fn add_base_with_alt_spellings(
+    pub fn add_base_with_alt_names(
         &mut self,
         dimensions: Dimensions,
         symbol: String,
         name: String,
         prefix: Option<Prefix>,
-        alt_spellings: Vec<String>,
+        alt_names: Vec<String>,
     ) {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
-        for spelling in alt_spellings {
-            let alt_unit = self.new_base(id, dimensions, symbol.clone(), spelling.clone(), prefix);
-            self.insert_under_string(spelling, alt_unit);
+        for n in alt_names {
+            let alt_unit = self.new_base(id, dimensions, symbol.clone(), n.clone(), prefix);
+            self.insert_under_string(n, alt_unit);
         }
         // Getting the unit by ID should return the canonical form
         self.units.insert(id, unit);
@@ -199,7 +199,7 @@ impl UnitRegistry {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn add_derived_with_alt_spellings(
+    pub fn add_derived_with_alt_names(
         &mut self,
         id: Option<Unit128>,
         symbol: String,
@@ -207,7 +207,7 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
         proportionality_factor: SciNum,
         unit_factors: Vec<(Unit, Frac)>,
-        alt_spellings: Vec<String>,
+        alt_names: Vec<String>,
     ) {
         let id = match id {
             Some(id) => id, // If it's a catalogued derived unit it'll have had the ID provided
@@ -222,16 +222,16 @@ impl UnitRegistry {
             unit_factors.clone(),
         );
         self.insert_under_string(name, unit.clone());
-        for spelling in alt_spellings {
+        for n in alt_names {
             let alt_unit = self.new_derived(
                 id,
                 symbol.clone(),
-                spelling.clone(),
+                n.clone(),
                 prefix,
                 proportionality_factor,
                 unit_factors.clone(),
             );
-            self.insert_under_string(spelling, alt_unit);
+            self.insert_under_string(n, alt_unit);
         }
         // Getting the unit by ID should return the canonical form
         self.units.insert(id, unit);
@@ -303,7 +303,7 @@ impl UnitRegistry {
             String::from("second"),
             None,
         );
-        self.add_base_with_alt_spellings(
+        self.add_base_with_alt_names(
             Dimensions::new(0, 1, 0, 0, 0, 0, 0),
             String::from("m"),
             String::from("metre"),

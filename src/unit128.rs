@@ -760,6 +760,21 @@ mod tests {
     }
 
     #[test]
+    fn to_from_str() {
+        let s = Unit128::SECOND;
+        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+        let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
+        // Test these known examples
+        assert_eq!(s.to_string(), "0x1100");
+        assert_eq!(celsius.to_string(), "0x6AB3FE000000000000110000000041");
+        assert_eq!(ft.to_string(), "0xBE7FC0000000000110001");
+        // Test round trip
+        assert_eq!(Unit128::from_str(&s.to_string()).unwrap(), s);
+        assert_eq!(Unit128::from_str(&celsius.to_string()).unwrap(), celsius);
+        assert_eq!(Unit128::from_str(&ft.to_string()).unwrap(), ft);
+    }
+
+    #[test]
     fn debug() {
         assert_eq!(
             format!("{:?}", Unit128::SECOND),

@@ -99,7 +99,7 @@ impl fmt::Display for Dimensions {
             for i in 0..7 {
                 if !exponents[i].is_zero() {
                     // Add spaces between dimension terms like for units
-                    if i != 0 { string.push(' ') }
+                    if !string.is_empty() { string.push(' ') }
                     string.push(symbols[i]);
                     if exponents[i] != 1 {
                         // Stick to non-superscript for now
@@ -118,20 +118,35 @@ impl FromStr for Dimensions {
     type Err = QuanstantsError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        dbg!(s);
+        if s == "(dimensionless)" { return Ok(Self::DIMENSIONLESS) };
         let symbols = ['T', 'L', 'M', 'I', 'Θ', 'N', 'J'];
         let mut exponents: [Frac; 7] = [Frac::ZERO; 7];
         let split = s.split_whitespace();
         for term in split {
+            dbg!(&term);
             let mut chars = term.chars();
+            dbg!(&chars);
             let symbol = chars.next().ok_or(QuanstantsError::Parse)?;
-            let exponent = if term.len() == 1 {
-                Frac::ONE
-            } else {
-                Frac::from_str(chars.as_str())?
+            let exponent = match chars.as_str() {
+                "" => Frac::ONE,
+                exp => Frac::from_str(exp)?
             };
-            let i = symbols.binary_search(&symbol).map_err(|_e| QuanstantsError::Parse)?;
+            dbg!(exponent);
+            dbg!(symbol);
+            let i = match symbol {
+                'T' => Ok(0),
+                'L' => Ok(1),
+                'M' => Ok(2),
+                'I' => Ok(3),
+                'Θ' => Ok(4),
+                'N' => Ok(5),
+                'J' => Ok(6),
+                _ => Err(QuanstantsError::Parse),
+            }?;
             exponents[i] = exponent;
         };
+        dbg!(&exponents);
         let [t, l, m, i, θ, n, j] = exponents;
         Ok(Self::new(t, l, m, i, θ, n, j))
     }
@@ -357,7 +372,17 @@ mod tests {
     #[test]
     fn display() {
         let dim = Dimensions::new(1, -1, 0, 2, 0, -3, 0);
+        let dim2 = Dimensions::new(0, -2, 1, 0, 2, 0, -1);
         assert_eq!(dim.to_string(), "T L-1 I2 N-3");
-        assert_eq!(Dimensions::DIMENSIONLESS.to_string(), "(dimensionless)");
+        assert_eq!(dim2.to_string(), "L-2 M Θ2 J-1");
+    }
+
+    #[test]
+    fn from_str() {
+        let dim = Dimensions::new(1, -1, 0, 2, 0, -3, 0);
+        let dim2 = Dimensions::new(0, -2, 1, 0, 2, 0, -1);
+        assert_eq!(Dimensions::from_str("T L-1 I2 N-3").unwrap(), dim);
+        assert_eq!(Dimensions::from_str("L-2 M Θ2 J-1").unwrap(), dim2);
+        assert_eq!(Dimensions::from_str("(dimensionless)").unwrap(), Dimensions::DIMENSIONLESS);
     }
 }

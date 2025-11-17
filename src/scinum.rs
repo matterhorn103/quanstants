@@ -16,13 +16,13 @@ use crate::fraction::Frac;
 ///
 /// Represents a number of the form _m_ × 10<sup><i>n</i></sup>
 ///
-/// Essentially a Decimal from rust_decimal extended to have an uncertainty.
+/// Essentially a `Decimal` from `rust_decimal` extended to have an uncertainty.
 ///
-/// A SciNum also contains an associated exponent, which is the exponent for an
+/// A `SciNum` also contains an associated exponent, which is the exponent for an
 /// additional scaling factor of 10<sup><i>exponent</i></sup>, which applies to both the number
 /// and uncertainty.
 /// For now, the scaling factor exponent must always be 0, so the range of representable values is
-/// exactly the same as rust_decimal::Decimal.
+/// exactly the same as `rust_decimal::Decimal`.
 #[derive(Copy, Clone)]
 pub struct SciNum {
     negative: bool,
@@ -38,6 +38,7 @@ pub struct SciNum {
 }
 
 impl SciNum {
+    /// Creates a `SciNum` from any `Decimal`-compatible type.
     pub fn new<T>(number: T, uncertainty: T) -> Self
     where
         T: Into<Decimal>,
@@ -62,6 +63,7 @@ impl SciNum {
         }
     }
 
+    /// Creates a `SciNum` with an uncertainty of zero from any `Decimal`-compatible type.
     pub fn new_exact<T>(number: T) -> Self
     where
         T: Into<Decimal>,
@@ -82,6 +84,10 @@ impl SciNum {
         }
     }
 
+    /// Creates an exact `SciNum` from parts corresponding to _m_ × 10<sup><i>n</i></sup>.
+    /// 
+    /// Currently, this will panic if the exponent is large or small enough to cause the overall
+    /// number to exceed `Decimal::MAX`.
     pub fn exact_from_scientific_parts<T>(significand: T, exponent: i16) -> Self
     where
         T: Into<Decimal>,
@@ -96,6 +102,7 @@ impl SciNum {
         }
     }
 
+    /// Returns the number as an exact `SciNum` without its uncertainty.
     #[inline]
     pub fn number(&self) -> Self {
         Self {
@@ -112,6 +119,7 @@ impl SciNum {
         }
     }
 
+    /// Returns the number as a `Decimal` without its uncertainty.
     #[inline]
     pub(crate) fn number_dec(&self) -> Decimal {
         Decimal::from_parts(
@@ -123,6 +131,8 @@ impl SciNum {
         )
     }
 
+    /// Returns the absolute uncertainty as an exact `SciNum`.
+    /// The uncertainty is always positive.
     #[inline]
     pub fn uncertainty(&self) -> Self {
         Self {
@@ -139,6 +149,8 @@ impl SciNum {
         }
     }
 
+    /// Returns the uncertainty as a `Decimal`.
+    /// The uncertainty is always positive.
     #[inline]
     pub(crate) fn uncertainty_dec(&self) -> Decimal {
         Decimal::from_parts(
@@ -150,6 +162,9 @@ impl SciNum {
         )
     }
 
+    /// Returns the relative uncertainty as a `Decimal`.
+    /// 
+    /// The relative uncertainty is always positive.
     #[inline]
     pub(crate) fn relative_uncertainty_dec(&self) -> Decimal {
         self.uncertainty_dec() / self.number_dec().abs()
@@ -242,23 +257,29 @@ impl SciNum {
         -(i32::from(self.number_scale))
     }
 
+    /// Returns true if the `SciNum` has an uncertainty of zero.
     #[inline]
     pub fn is_exact(&self) -> bool {
         self.uncertainty_lo | self.uncertainty_mid | self.uncertainty_hi == 0
     }
 
+    /// Returns true if the sign bit is negative.
+    /// Zero is considered positive.
     #[inline(always)]
     //#[must_use]
     pub const fn is_sign_negative(&self) -> bool {
         self.negative
     }
 
+    /// Returns true if the sign bit is positive.
+    /// Zero is also considered positive.
     #[inline(always)]
     //#[must_use]
     pub const fn is_sign_positive(&self) -> bool {
         !self.negative
     }
 
+    /// Creates a `SciNum` from floats via `Decimal::from_f64()`.
     pub fn from_f64(number: f64, uncertainty: f64) -> Option<Self> {
         Some(Self::new(
             Decimal::from_f64(number)?,
@@ -678,6 +699,7 @@ impl fmt::Display for SciNum {
 }
 
 impl SciNum {
+    /// A constant representing 0.
     pub const ZERO: SciNum = SciNum {
         negative: false,
         number_scale: 0,
@@ -691,12 +713,45 @@ impl SciNum {
         uncertainty_hi: 0,
     };
 
+    /// A constant representing 1.
     pub const ONE: SciNum = SciNum {
         negative: false,
         number_scale: 0,
         number_lo: 1,
         number_mid: 0,
         number_hi: 0,
+        exponent: 0,
+        uncertainty_scale: 0,
+        uncertainty_lo: 0,
+        uncertainty_mid: 0,
+        uncertainty_hi: 0,
+    };
+
+    /// The largest supported number.
+    /// 
+    /// Identical to Decimal::MAX for the time being, until SciNum supports non-zero exponents.
+    pub const MAX: SciNum = SciNum {
+        negative: false,
+        number_scale: 0,
+        number_lo: 4_294_967_295,
+        number_mid: 4_294_967_295,
+        number_hi: 4_294_967_295,
+        exponent: 0,
+        uncertainty_scale: 0,
+        uncertainty_lo: 0,
+        uncertainty_mid: 0,
+        uncertainty_hi: 0,
+    };
+
+    /// The smallest supported number.
+    /// 
+    /// Identical to Decimal::MIN for the time being, until SciNum supports non-zero exponents.
+    pub const MIN: SciNum = SciNum {
+        negative: true,
+        number_scale: 0,
+        number_lo: 4_294_967_295,
+        number_mid: 4_294_967_295,
+        number_hi: 4_294_967_295,
         exponent: 0,
         uncertainty_scale: 0,
         uncertainty_lo: 0,

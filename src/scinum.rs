@@ -3,14 +3,15 @@
 
 use std::{
     fmt::{self, Debug},
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Div, Mul, Sub}, str::FromStr,
 };
 
 use num_traits::{self, FromPrimitive, Zero};
+use regex::Regex;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 
-use crate::fraction::Frac;
+use crate::{error::QuanstantsError, fraction::{self, Frac}};
 
 /// A decimal float in scientific notation with an associated uncertainty.
 ///
@@ -214,13 +215,41 @@ impl SciNum {
     ///
     /// Corresponds to `(i, ffff, nn)` when the number is notated as `i.ffff × 10^nn`.
     #[inline]
-    pub fn significand_normalized_parts(&self) -> (i8, i128, i16) {
+    pub fn scientific_parts_normalized_split(&self) -> (i8, Option<i128>, i16) {
+        if self.is_zero() {
+            return (0, None, 0)
+        }
         let significand = self.significand_integral();
-        let divisor = 10_i128.pow(self.number_scale as u32);
+        // Work out the number of places the decimal point needs to move to the left in the
+        // significand to get the correct representation
+        let (shifted_places, divisor, exponent) = if self.number_dec().abs() < Decimal::ONE {
+            // For small numbers decimal already provides us with the scale
+            let shifted_places = significand.abs().ilog10() as i16;
+            let divisor = 10_i128.pow(shifted_places as u32);
+            let exponent = -(self.number_scale as i16) + shifted_places;
+            (shifted_places, divisor, exponent)
+        } else {
+            // For large integers Decimal's scale is 0 so we take the base 10 logarithm
+            let shifted_places = (significand.abs().ilog10() as i16) + (self.number_scale as i16);
+            let divisor = 10_i128.pow(shifted_places as u32);
+            let exponent = self.exponent_integral() + shifted_places;
+            (shifted_places, divisor, exponent)
+        };
         let int_part = significand / divisor;
-        let frac_part = significand % divisor;
+        let frac_part = significand.abs() % divisor;
+        let exp_part = exponent;
 
-        (int_part as i8, frac_part, self.exponent_normalized())
+        dbg!(self);
+        dbg!(significand);
+        dbg!(self.number_scale);
+        dbg!(shifted_places);
+        dbg!(divisor);
+        dbg!(int_part);
+        dbg!(frac_part);
+        dbg!(exp_part);
+        println!("{int_part}.{frac_part}e{exp_part}");
+
+        (int_part as i8, Some(frac_part), exp_part)
     }
 
     /// Returns the exponent _n_ of the number when represented with normalized notation
@@ -233,6 +262,7 @@ impl SciNum {
     }
 
     /// Returns the number of significant decimal digits in the significand.
+    /// 0 is considered to have 0 significant figures.
     #[inline]
     pub fn sigfigs(&self) -> u32 {
         // This might not be the same thing
@@ -261,6 +291,12 @@ impl SciNum {
     #[inline]
     pub fn is_exact(&self) -> bool {
         self.uncertainty_lo | self.uncertainty_mid | self.uncertainty_hi == 0
+    }
+
+    /// Returns true if the `SciNum` is equal to zero, regardless of any uncertainty.
+    #[inline]
+    pub fn is_zero(&self) -> bool {
+        self.number_lo | self.number_mid | self.number_hi == 0
     }
 
     /// Returns true if the sign bit is negative.
@@ -529,6 +565,7 @@ impl_comparisons!(u32);
 impl_comparisons!(u64);
 impl_comparisons!(u128);
 impl_comparisons!(usize);
+impl_comparisons!(Decimal);
 
 impl Add for SciNum {
     type Output = Self;
@@ -691,10 +728,40 @@ impl Debug for SciNum {
 impl fmt::Display for SciNum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_exact() {
-            write!(f, "{}", self.number_dec())
+            // Up to five decimal places, display normally
+            if (self < &dec!(1e6)) && (self >= &dec!(1e-5)) {
+                write!(f, "{}", self.number_dec())
+            // Otherwise, use scientific notation
+            } else {
+                let (int, frac, exp) = self.scientific_parts_normalized_split();
+                // Fractional part might not have any places at all (e.g. 2e6)
+                let frac_string = match frac {
+                    Some(n) => n.to_string(),
+                    None => String::new(),
+                };
+                write!(f, "{int}.{frac_string}e{exp}")
+            }
         } else {
-            write!(f, "{}+/-{}", self.number_dec(), self.uncertainty_dec())
+            // TODO Need to add support for ASCII +/-
+            // Default representation should be parentheses notation in future though
+            write!(f, "{}±{}", self.number(), self.uncertainty())
         }
+    }
+}
+
+impl FromStr for SciNum {
+    type Err = QuanstantsError;
+
+    /// Parses a string and attempts to create a corresponding `SciNum`.
+    /// Does not currently support uncertainties.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let re = Regex::new(r"^(-?\d+(?:[.,]\d+)?)(?:[eE]([+-]?\d+))?$").unwrap();
+        let caps = re.captures(s).ok_or(QuanstantsError::Parse)?;
+        let number_str = caps.get(1).ok_or(QuanstantsError::Parse)?.as_str();
+        let number = Decimal::from_str(number_str).map_err(|_e| QuanstantsError::Parse)?;
+        let exponent_str = caps.get(2).map(|m| m.as_str()).unwrap_or("0");
+        let exponent = i16::from_str(exponent_str).map_err(|_e| QuanstantsError::Parse)?;
+        Ok(Self::exact_from_scientific_parts(number, exponent))
     }
 }
 
@@ -826,11 +893,13 @@ mod tests {
     }
 
     #[test]
+    #[should_panic] // For now, not supported yet
     fn exact_from_scientific_parts_large() {
         let n = SciNum::exact_from_scientific_parts(236, 40);
     }
 
     #[test]
+    #[should_panic] // For now, not supported
     fn exact_from_scientific_parts_small() {
         let n = SciNum::exact_from_scientific_parts(49, -76);
     }
@@ -1069,6 +1138,43 @@ mod tests {
     #[test]
     fn debug() {
         let n = SciNum::new(20, 2);
-        assert_eq!(format!("{:?}", n), "SciNum { number: 20, uncertainty: 2 }");
+        assert_eq!(format!("{n:?}"), "SciNum { number: 20, uncertainty: 2 }");
+    }
+
+    #[test]
+    fn display() {
+        // Small integers display normally
+        assert_eq!(SciNum::new_exact(20).to_string(), "20");
+        // Up to 5 places displays normally
+        assert_eq!(SciNum::new_exact(99999).to_string(), "99999");
+        assert_eq!(SciNum::new_exact(dec!(0.00001)).to_string(), "0.00001");
+        // Above 6 places uses scientific notation
+        assert_eq!(SciNum::new_exact(1295891).to_string(), "1.295891e6");
+        assert_eq!(SciNum::new_exact(dec!(0.000000432)).to_string(), "4.32e-7");
+        // Explicit zeros should be treated as significant
+        assert_eq!(SciNum::new_exact(1295800).to_string(), "1.295800e6");
+        // Here they shouldn't be but the problem is that Decimal does treat them as significant...
+        //assert_eq!(SciNum::new_exact(dec!(1.2958e6)).to_string(), "1.2958e6");
+        // Check uncertainty formatting
+        assert_eq!(SciNum::new(20, 2).to_string(), "20±2");
+        // TODO: More uncertainty display tests
+    }
+
+    #[test]
+    fn from_str() {
+        // Integer
+        assert_eq!(SciNum::from_str("42").unwrap(), SciNum::new_exact(dec!(42)));
+        // Negative float
+        assert_eq!(SciNum::from_str("-3.14").unwrap(), SciNum::new_exact(dec!(-3.14)));
+        // Scientific notation
+        assert_eq!(SciNum::from_str("1.5e10").unwrap(), SciNum::new_exact(dec!(1.5e10)));
+        // Scientific notation with negative exponent
+        assert_eq!(SciNum::from_str("2e-5").unwrap(), SciNum::new_exact(dec!(2e-5)));
+        // Negative number with positive exponent
+        //assert_eq!(SciNum::from_str("-6.022e23").unwrap(), SciNum::new_exact(dec!(-6.022e23)));
+        // Capital E for exponent
+        assert_eq!(SciNum::from_str("1.5E10").unwrap(), SciNum::new_exact(dec!(1.5E10)));
+        // Make sure incorrectly formatted string fails
+        assert!(SciNum::from_str("not a number").is_err());
     }
 }

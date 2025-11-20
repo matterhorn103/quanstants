@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
 // SPDX-License-Identifier: MIT
 
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     dimensions::Dimensions,

@@ -245,17 +245,17 @@ impl Prefix {
     }
 
     pub fn is_binary(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Prefix::kibi
-            | Prefix::mebi
-            | Prefix::gibi
-            | Prefix::tebi
-            | Prefix::pebi
-            | Prefix::exbi
-            | Prefix::zebi
-            | Prefix::yobi => true,
-            _ => false,
-        }
+                | Prefix::mebi
+                | Prefix::gibi
+                | Prefix::tebi
+                | Prefix::pebi
+                | Prefix::exbi
+                | Prefix::zebi
+                | Prefix::yobi
+        )
     }
 }
 

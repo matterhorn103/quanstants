@@ -132,24 +132,20 @@ impl FromStr for Dimensions {
     type Err = QuanstantsError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        dbg!(s);
         if s == "(dimensionless)" {
             return Ok(Self::DIMENSIONLESS);
         };
-        let symbols = ['T', 'L', 'M', 'I', 'Θ', 'N', 'J'];
         let mut exponents: [Frac; 7] = [Frac::ZERO; 7];
         let split = s.split_whitespace();
         for term in split {
-            dbg!(&term);
             let mut chars = term.chars();
-            dbg!(&chars);
+            // The symbol will always be the first character
             let symbol = chars.next().ok_or(QuanstantsError::Parse)?;
             let exponent = match chars.as_str() {
+                // Exponent of 1 is implicit
                 "" => Frac::ONE,
                 exp => Frac::from_str(exp)?,
             };
-            dbg!(exponent);
-            dbg!(symbol);
             let i = match symbol {
                 'T' => Ok(0),
                 'L' => Ok(1),
@@ -162,9 +158,9 @@ impl FromStr for Dimensions {
             }?;
             exponents[i] = exponent;
         }
-        dbg!(&exponents);
-        let [t, l, m, i, θ, n, j] = exponents;
-        Ok(Self::new(t, l, m, i, θ, n, j))
+        #[allow(non_snake_case)]
+        let [T, L, M, I, Θ, N, J] = exponents;
+        Ok(Self::new(T, L, M, I, Θ, N, J))
     }
 }
 

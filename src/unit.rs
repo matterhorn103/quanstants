@@ -475,6 +475,6 @@ mod tests {
                 factors: Vec::new(),
             }),
         };
-        assert_eq!(format!("{:?}", s), "Unit { id: 1100, inner: s }");
+        assert_eq!(format!("{s:?}"), "Unit { id: 1100, inner: s }");
     }
 }

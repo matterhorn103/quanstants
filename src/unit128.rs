@@ -9,9 +9,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    dimensions::Dimensions, error::QuanstantsError, fraction::Frac, scinum::SciNum, unit::Unit,
-};
+use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, scinum::SciNum};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[repr(u8)]
@@ -41,7 +39,7 @@ impl TryFrom<u8> for Nibble {
         if value > 0xF {
             Err("Maximum value of a nibble is 15!")
         } else {
-            Ok(unsafe { std::mem::transmute(value) })
+            Ok(unsafe { std::mem::transmute::<u8, Nibble>(value) })
         }
     }
 }

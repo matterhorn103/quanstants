@@ -7,15 +7,12 @@ use std::{
     str::FromStr,
 };
 
-use num_traits::{self, FromPrimitive, Zero};
+use num_traits::FromPrimitive;
 use regex::Regex;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 
-use crate::{
-    error::QuanstantsError,
-    fraction::{self, Frac},
-};
+use crate::{error::QuanstantsError, fraction::Frac};
 
 /// A decimal float in scientific notation with an associated uncertainty.
 ///
@@ -914,13 +911,13 @@ mod tests {
     #[test]
     #[should_panic] // For now, not supported yet
     fn exact_from_scientific_parts_large() {
-        let n = SciNum::exact_from_scientific_parts(236, 40);
+        let _n = SciNum::exact_from_scientific_parts(236, 40);
     }
 
     #[test]
     #[should_panic] // For now, not supported
     fn exact_from_scientific_parts_small() {
-        let n = SciNum::exact_from_scientific_parts(49, -76);
+        let _n = SciNum::exact_from_scientific_parts(49, -76);
     }
 
     #[test]

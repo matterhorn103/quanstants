@@ -39,7 +39,6 @@ value.unit = [["m", 1]]
 [units.reciprocal_centimetre]
 id = "0x" # Need to work out
 name = "reciprocal centimetre"
-alt_names = [ "reciprocal centimeter" ]
-aliases = [ "inverse centimetre", "wavenumber" ]
+aliases = [ "reciprocal centimeter", "inverse centimetre", "inverse centimeter", "wavenumber" ]
 value.number = 1
 value.unit = [["centimetre", -1]]

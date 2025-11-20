@@ -12,7 +12,7 @@ pub mod prefix;
 pub mod quantity;
 pub mod reg;
 pub mod scinum;
-//pub mod serde;
+pub mod serde;
 pub mod unit;
 pub mod unit128;
 

@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
 // SPDX-License-Identifier: MIT
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use crate::{
     dimensions::Dimensions,
+    error::QuanstantsError,
     fraction::Frac,
     prefix::Prefix,
     scinum::SciNum,
+    serde::UnitDef,
     unit::{LinearFactor, LinearUnit, LinearUnitType, Unit},
     unit128::Unit128,
 };
@@ -265,6 +267,92 @@ impl UnitRegistry {
             self.insert_under_string(alias, unit.clone());
         }
         self.units.insert(id, unit);
+    }
+
+    fn add_from_def(&mut self, def: UnitDef) -> Result<(), QuanstantsError> {
+        if def.base {
+            if !def.alt_names.is_empty() {
+                self.add_base_with_alt_names(
+                    def.dimensions
+                        .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
+                    def.symbol
+                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                    def.name
+                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.prefix,
+                    def.alt_names,
+                );
+            } else if !def.aliases.is_empty() {
+                self.add_base_with_aliases(
+                    def.dimensions
+                        .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
+                    def.symbol
+                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                    def.name
+                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.prefix,
+                    def.aliases,
+                );
+            } else {
+                self.add_base(
+                    def.dimensions
+                        .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
+                    def.symbol
+                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                    def.name
+                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.prefix,
+                );
+            }
+        } else {
+            let value = def
+                .value
+                .ok_or(QuanstantsError::Definition("value".to_string()))?;
+            let proportionality_factor = value.number.with_uncertainty(value.uncertainty);
+            // TODO this definitely shouldn't just panic if the unit isn't found
+            let unit_factors: Vec<(Unit, Frac)> = value
+                .unit
+                .into_iter()
+                .map(|f| (self.get_by_name(&f.0).unwrap(), f.1))
+                .collect();
+            if !def.alt_names.is_empty() {
+                self.add_derived_with_alt_names(
+                    def.id,
+                    def.symbol
+                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                    def.name
+                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.prefix,
+                    proportionality_factor,
+                    unit_factors,
+                    def.alt_names,
+                );
+            } else if !def.aliases.is_empty() {
+                self.add_derived_with_aliases(
+                    def.id,
+                    def.symbol
+                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                    def.name
+                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.prefix,
+                    proportionality_factor,
+                    unit_factors,
+                    def.aliases,
+                );
+            } else {
+                self.add_derived(
+                    def.id,
+                    def.symbol
+                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                    def.name
+                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.prefix,
+                    proportionality_factor,
+                    unit_factors,
+                );
+            }
+        }
+        Ok(())
     }
 
     #[inline]

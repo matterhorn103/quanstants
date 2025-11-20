@@ -3,12 +3,15 @@
 
 use std::{
     fmt::{self, Debug},
-    ops::{Div, Mul}, str::FromStr,
+    ops::{Div, Mul},
+    str::FromStr,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, scinum::SciNum, unit::Unit};
+use crate::{
+    dimensions::Dimensions, error::QuanstantsError, fraction::Frac, scinum::SciNum, unit::Unit,
+};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[repr(u8)]

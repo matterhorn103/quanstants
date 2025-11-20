@@ -3,11 +3,22 @@
 
 #![allow(non_camel_case_types)]
 
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use crate::{error::QuanstantsError, scinum::SciNum};
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Debug,
+    serde_with::DeserializeFromStr,
+    serde_with::SerializeDisplay,
+)]
 pub enum Prefix {
     // Metric
     quecto,
@@ -251,6 +262,14 @@ impl Prefix {
 impl fmt::Display for Prefix {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.symbol())
+    }
+}
+
+impl FromStr for Prefix {
+    type Err = QuanstantsError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Prefix::from_name(s)
     }
 }
 

@@ -8,7 +8,19 @@ use std::str::FromStr;
 use crate::error::QuanstantsError;
 use crate::fraction::Frac;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+#[derive(
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Debug,
+    Default,
+    serde_with::DeserializeFromStr,
+    serde_with::SerializeDisplay,
+)]
 #[allow(non_snake_case)]
 pub struct Dimensions {
     pub T: Frac,
@@ -99,7 +111,9 @@ impl fmt::Display for Dimensions {
             for i in 0..7 {
                 if !exponents[i].is_zero() {
                     // Add spaces between dimension terms like for units
-                    if !string.is_empty() { string.push(' ') }
+                    if !string.is_empty() {
+                        string.push(' ')
+                    }
                     string.push(symbols[i]);
                     if exponents[i] != 1 {
                         // Stick to non-superscript for now
@@ -119,7 +133,9 @@ impl FromStr for Dimensions {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         dbg!(s);
-        if s == "(dimensionless)" { return Ok(Self::DIMENSIONLESS) };
+        if s == "(dimensionless)" {
+            return Ok(Self::DIMENSIONLESS);
+        };
         let symbols = ['T', 'L', 'M', 'I', 'Θ', 'N', 'J'];
         let mut exponents: [Frac; 7] = [Frac::ZERO; 7];
         let split = s.split_whitespace();
@@ -130,7 +146,7 @@ impl FromStr for Dimensions {
             let symbol = chars.next().ok_or(QuanstantsError::Parse)?;
             let exponent = match chars.as_str() {
                 "" => Frac::ONE,
-                exp => Frac::from_str(exp)?
+                exp => Frac::from_str(exp)?,
             };
             dbg!(exponent);
             dbg!(symbol);
@@ -145,7 +161,7 @@ impl FromStr for Dimensions {
                 _ => Err(QuanstantsError::Parse),
             }?;
             exponents[i] = exponent;
-        };
+        }
         dbg!(&exponents);
         let [t, l, m, i, θ, n, j] = exponents;
         Ok(Self::new(t, l, m, i, θ, n, j))
@@ -383,6 +399,9 @@ mod tests {
         let dim2 = Dimensions::new(0, -2, 1, 0, 2, 0, -1);
         assert_eq!(Dimensions::from_str("T L-1 I2 N-3").unwrap(), dim);
         assert_eq!(Dimensions::from_str("L-2 M Θ2 J-1").unwrap(), dim2);
-        assert_eq!(Dimensions::from_str("(dimensionless)").unwrap(), Dimensions::DIMENSIONLESS);
+        assert_eq!(
+            Dimensions::from_str("(dimensionless)").unwrap(),
+            Dimensions::DIMENSIONLESS
+        );
     }
 }

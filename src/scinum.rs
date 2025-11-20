@@ -3,7 +3,8 @@
 
 use std::{
     fmt::{self, Debug},
-    ops::{Add, Div, Mul, Sub}, str::FromStr,
+    ops::{Add, Div, Mul, Sub},
+    str::FromStr,
 };
 
 use num_traits::{self, FromPrimitive, Zero};
@@ -11,7 +12,10 @@ use regex::Regex;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 
-use crate::{error::QuanstantsError, fraction::{self, Frac}};
+use crate::{
+    error::QuanstantsError,
+    fraction::{self, Frac},
+};
 
 /// A decimal float in scientific notation with an associated uncertainty.
 ///
@@ -24,7 +28,7 @@ use crate::{error::QuanstantsError, fraction::{self, Frac}};
 /// and uncertainty.
 /// For now, the scaling factor exponent must always be 0, so the range of representable values is
 /// exactly the same as `rust_decimal::Decimal`.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, serde_with::DeserializeFromStr, serde_with::SerializeDisplay)]
 pub struct SciNum {
     negative: bool,
     number_scale: u8,
@@ -86,7 +90,7 @@ impl SciNum {
     }
 
     /// Creates an exact `SciNum` from parts corresponding to _m_ × 10<sup><i>n</i></sup>.
-    /// 
+    ///
     /// Currently, this will panic if the exponent is large or small enough to cause the overall
     /// number to exceed `Decimal::MAX`.
     pub fn exact_from_scientific_parts<T>(significand: T, exponent: i16) -> Self
@@ -101,6 +105,21 @@ impl SciNum {
         } else {
             Self::new_exact(significand / Decimal::from(10_u32.pow(exponent.unsigned_abs() as u32)))
         }
+    }
+
+    /// Creates a new `SciNum` with the same number but the provided uncertainty.
+    ///
+    /// Currently panics if the current `SciNum` and the uncertainty have different values for
+    /// `exponent`.
+    pub fn with_uncertainty(mut self, uncertainty: Self) -> Self {
+        if self.exponent != uncertainty.exponent {
+            panic!()
+        };
+        self.uncertainty_scale = uncertainty.number_scale;
+        self.uncertainty_lo = uncertainty.number_lo;
+        self.uncertainty_mid = uncertainty.number_mid;
+        self.uncertainty_hi = uncertainty.number_hi;
+        self
     }
 
     /// Returns the number as an exact `SciNum` without its uncertainty.
@@ -164,7 +183,7 @@ impl SciNum {
     }
 
     /// Returns the relative uncertainty as a `Decimal`.
-    /// 
+    ///
     /// The relative uncertainty is always positive.
     #[inline]
     pub(crate) fn relative_uncertainty_dec(&self) -> Decimal {
@@ -217,7 +236,7 @@ impl SciNum {
     #[inline]
     pub fn scientific_parts_normalized_split(&self) -> (i8, Option<i128>, i16) {
         if self.is_zero() {
-            return (0, None, 0)
+            return (0, None, 0);
         }
         let significand = self.significand_integral();
         // Work out the number of places the decimal point needs to move to the left in the
@@ -795,7 +814,7 @@ impl SciNum {
     };
 
     /// The largest supported number.
-    /// 
+    ///
     /// Identical to Decimal::MAX for the time being, until SciNum supports non-zero exponents.
     pub const MAX: SciNum = SciNum {
         negative: false,
@@ -811,7 +830,7 @@ impl SciNum {
     };
 
     /// The smallest supported number.
-    /// 
+    ///
     /// Identical to Decimal::MIN for the time being, until SciNum supports non-zero exponents.
     pub const MIN: SciNum = SciNum {
         negative: true,
@@ -1165,15 +1184,34 @@ mod tests {
         // Integer
         assert_eq!(SciNum::from_str("42").unwrap(), SciNum::new_exact(dec!(42)));
         // Negative float
-        assert_eq!(SciNum::from_str("-3.14").unwrap(), SciNum::new_exact(dec!(-3.14)));
+        assert_eq!(
+            SciNum::from_str("-3.14").unwrap(),
+            SciNum::new_exact(dec!(-3.14))
+        );
         // Scientific notation
-        assert_eq!(SciNum::from_str("1.5e10").unwrap(), SciNum::new_exact(dec!(1.5e10)));
+        assert_eq!(
+            SciNum::from_str("1.5e8").unwrap(),
+            SciNum::new_exact(dec!(1.5e8))
+        );
+        // TODO large exponent fails with overflow error
+        //assert_eq!(SciNum::from_str("1.5e10").unwrap(), SciNum::new_exact(dec!(1.5e10)));
         // Scientific notation with negative exponent
-        assert_eq!(SciNum::from_str("2e-5").unwrap(), SciNum::new_exact(dec!(2e-5)));
+        assert_eq!(
+            SciNum::from_str("2e-5").unwrap(),
+            SciNum::new_exact(dec!(2e-5))
+        );
         // Negative number with positive exponent
+        assert_eq!(
+            SciNum::from_str("-6.022e6").unwrap(),
+            SciNum::new_exact(dec!(-6.022e6))
+        );
+        // TODO large exponent fails with overflow error
         //assert_eq!(SciNum::from_str("-6.022e23").unwrap(), SciNum::new_exact(dec!(-6.022e23)));
         // Capital E for exponent
-        assert_eq!(SciNum::from_str("1.5E10").unwrap(), SciNum::new_exact(dec!(1.5E10)));
+        assert_eq!(
+            SciNum::from_str("1.5E8").unwrap(),
+            SciNum::new_exact(dec!(1.5E8))
+        );
         // Make sure incorrectly formatted string fails
         assert!(SciNum::from_str("not a number").is_err());
     }

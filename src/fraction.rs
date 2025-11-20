@@ -5,12 +5,25 @@ use num_rational::Ratio;
 use num_traits::ToPrimitive;
 use std::{
     fmt,
-    ops::{Add, Deref, Div, Mul, Neg, Sub}, str::FromStr,
+    ops::{Add, Deref, Div, Mul, Neg, Sub},
+    str::FromStr,
 };
 
 use crate::error::QuanstantsError;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+#[derive(
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Debug,
+    Default,
+    serde_with::DeserializeFromStr,
+    serde_with::SerializeDisplay,
+)]
 pub struct Frac(Ratio<i8>);
 
 impl Deref for Frac {

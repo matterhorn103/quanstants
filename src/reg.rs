@@ -422,6 +422,7 @@ impl Default for UnitRegistry {
     }
 }
 
+// Functions to add sets of units, for internal use only
 impl UnitRegistry {
     fn add_unitless(&mut self) {
         self.units.insert(Unit128::UNITLESS, Unit::unitless());
@@ -513,7 +514,7 @@ impl UnitRegistry {
             String::from("hertz"),
             None,
             SciNum::ONE,
-            vec![(second.clone(), Frac::ONE)],
+            vec![(second.clone(), Frac::from(-1))],
         );
 
         // N (newton) = kg⋅m⋅s⁻²

@@ -25,7 +25,7 @@ pub(crate) enum LinearUnitType {
 // Base, unitless, derived, and compound units i.e. normal ones that work in multiplication
 // A LinearUnit should not be cloned, it should be used and passed around only behind a pointer
 #[derive(Debug)]
-pub(crate) struct LinearUnit {
+pub struct LinearUnit {
     pub(crate) utype: LinearUnitType,
     pub(crate) dimensions: Dimensions,
     pub(crate) symbol: Option<String>, // Compound units have None for this
@@ -38,7 +38,7 @@ pub(crate) struct LinearUnit {
 // Generally LinearUnit just stores data without having its own methods
 // Logic is implemented by the LinearFactor and Unit wrappers
 impl LinearUnit {
-    pub(crate) fn symbol(&self, use_superscripts: bool) -> String {
+    pub fn symbol(&self, use_superscripts: bool) -> String {
         match self.utype {
             LinearUnitType::Unitless => String::from(""),
             LinearUnitType::Base | LinearUnitType::Derived => self.symbol.clone().unwrap(),
@@ -51,8 +51,12 @@ impl LinearUnit {
         }
     }
 
-    pub(crate) fn name(&self) -> String {
-        todo!()
+    pub fn name(&self) -> String {
+        match self.utype {
+            LinearUnitType::Unitless => String::from(""),
+            LinearUnitType::Base | LinearUnitType::Derived => self.name.clone().unwrap(),
+            LinearUnitType::Compound => todo!(),
+        }
     }
 }
 
@@ -70,9 +74,9 @@ impl LinearUnit {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct LinearFactor {
-    pub(crate) unit: Arc<LinearUnit>,
-    pub(crate) exponent: Frac,
+pub struct LinearFactor {
+    pub unit: Arc<LinearUnit>,
+    pub exponent: Frac,
 }
 
 // Some logic is implemented on a per-LinearFactor basis to make it easier for a Unit to
@@ -157,7 +161,11 @@ impl Unit {
         self.inner.number
     }
 
-    fn to_factors(&self) -> Vec<LinearFactor> {
+    pub fn defining_factors(&self) -> Vec<LinearFactor> {
+        self.inner.factors.clone()
+    }
+
+    pub fn to_factors(&self) -> Vec<LinearFactor> {
         match self.inner.utype {
             LinearUnitType::Base | LinearUnitType::Derived => {
                 vec![LinearFactor {

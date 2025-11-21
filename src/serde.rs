@@ -18,6 +18,7 @@ pub(crate) struct DefFile {
 pub(crate) struct UnitDef {
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub(crate) id: Option<Unit128>,
+    pub(crate) source: Option<String>,
     pub(crate) base: bool,
     pub(crate) dimensions: Option<Dimensions>,
     pub(crate) symbol: Option<String>,
@@ -30,6 +31,7 @@ pub(crate) struct UnitDef {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct ConstantDef {
+    pub(crate) source: Option<String>,
     pub(crate) symbol: Option<String>,
     pub(crate) name: String,
     pub(crate) alt_names: Vec<String>,

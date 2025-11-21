@@ -18,6 +18,7 @@ use crate::{
 pub struct UnitRegistry {
     units: HashMap<Unit128, Unit>,
     string_map: HashMap<String, Unit>,
+    sources: HashMap<Unit128, Option<String>>,
 }
 
 impl UnitRegistry {
@@ -25,6 +26,7 @@ impl UnitRegistry {
         let mut reg = Self {
             units: HashMap::new(),
             string_map: HashMap::new(),
+            sources: HashMap::new(),
         };
         reg.add_unitless();
         reg.add_si_base();
@@ -67,11 +69,12 @@ impl UnitRegistry {
         symbol: String,
         name: String,
         prefix: Option<Prefix>,
-    ) {
+    ) -> Unit128 {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol, name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
         self.units.insert(id, unit);
+        id
     }
 
     pub fn add_base_with_alt_names(
@@ -81,7 +84,7 @@ impl UnitRegistry {
         name: String,
         prefix: Option<Prefix>,
         alt_names: Vec<String>,
-    ) {
+    ) -> Unit128 {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
@@ -91,6 +94,7 @@ impl UnitRegistry {
         }
         // Getting the unit by ID should return the canonical form
         self.units.insert(id, unit);
+        id
     }
 
     pub fn add_base_with_aliases(
@@ -100,7 +104,7 @@ impl UnitRegistry {
         name: String,
         prefix: Option<Prefix>,
         aliases: Vec<String>,
-    ) {
+    ) -> Unit128 {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol, name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
@@ -108,6 +112,7 @@ impl UnitRegistry {
             self.insert_under_string(alias, unit.clone());
         }
         self.units.insert(id, unit);
+        id
     }
 
     fn new_derived(
@@ -145,15 +150,20 @@ impl UnitRegistry {
         proportionality_factor: SciNum,
         unit_factors: &[(Unit, Frac)],
     ) -> Unit128 {
+        // Build the compound unit representing the unit terms only, ignoring any prefix or
+        // numerical factor
+        // This is just the easiest way to obtain the proportionality factor that results from
+        // expressing the unit terms in SI base units, which we need
         let cmpd = Unit128::new_compound(unit_factors.iter().map(|x| (x.0.id, x.1)).collect());
         if let Some(p) = prefix {
             if p.is_binary()
                 && proportionality_factor == SciNum::ONE
                 && cmpd.factor() == SciNum::ONE
             {
-                // Encode binary prefix
+                // Encode binary prefix using binary scheme
                 todo!()
             } else {
+                // Roll all numerical factors, including the prefix, into just one
                 Unit128::new(
                     p.value() * proportionality_factor * cmpd.factor(),
                     cmpd.dimensions(),
@@ -183,7 +193,7 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
         proportionality_factor: SciNum,
         unit_factors: Vec<(Unit, Frac)>,
-    ) {
+    ) -> Unit128 {
         let id = match id {
             Some(id) => id, // If it's a catalogued derived unit it'll have had the ID provided
             None => Self::calculate_derived_id(prefix, proportionality_factor, &unit_factors),
@@ -198,8 +208,22 @@ impl UnitRegistry {
         );
         self.insert_under_string(name, unit.clone());
         self.units.insert(id, unit);
+        id
     }
 
+    /// Adds a derived unit to the registry under multiple alternative names.
+    /// 
+    /// The `name` and each `alt_name` then all refer to separate `Unit`s with identical values.
+    /// 
+    /// Localized and translated names are equally valid spellings, so it is important that
+    /// the unit returned from a lookup has the name expected by the user and not the "canonical"
+    /// (English) one.
+    /// This includes distinguishing between "metre" and "meter".
+    /// 
+    /// Calling `Unit.name()` on the alternative units then returns a different name in each case.
+    /// The symbol and value of each alternative unit is the same.
+    /// The ID of each alternative unit is also identical, but lookup in the registry using the ID
+    /// will always return the canonical unit.
     #[allow(clippy::too_many_arguments)]
     pub fn add_derived_with_alt_names(
         &mut self,
@@ -210,7 +234,7 @@ impl UnitRegistry {
         proportionality_factor: SciNum,
         unit_factors: Vec<(Unit, Frac)>,
         alt_names: Vec<String>,
-    ) {
+    ) -> Unit128 {
         let id = match id {
             Some(id) => id, // If it's a catalogued derived unit it'll have had the ID provided
             None => Self::calculate_derived_id(prefix, proportionality_factor, &unit_factors),
@@ -237,8 +261,19 @@ impl UnitRegistry {
         }
         // Getting the unit by ID should return the canonical form
         self.units.insert(id, unit);
+        id
     }
 
+    /// Adds a derived unit to the registry along with aliases that point to the same unit.
+    /// 
+    /// Unlike `alt_names`, `aliases` refer to the exact same `Unit`, they just allow the unit
+    /// to be found using several different names.
+    /// 
+    /// For example:
+    /// - the "percent" unit can also be found under "per cent"
+    /// - the "Dalton" unit can also be found under "unified atomic mass unit"
+    /// 
+    /// Calling `Unit.name()` on the units always returns the canonical name.
     #[allow(clippy::too_many_arguments)]
     pub fn add_derived_with_aliases(
         &mut self,
@@ -249,7 +284,7 @@ impl UnitRegistry {
         proportionality_factor: SciNum,
         unit_factors: Vec<(Unit, Frac)>,
         aliases: Vec<String>,
-    ) {
+    ) -> Unit128 {
         let id = match id {
             Some(id) => id, // If it's a catalogued derived unit it'll have had the ID provided
             None => Self::calculate_derived_id(prefix, proportionality_factor, &unit_factors),
@@ -267,10 +302,17 @@ impl UnitRegistry {
             self.insert_under_string(alias, unit.clone());
         }
         self.units.insert(id, unit);
+        id
     }
 
-    fn add_from_def(&mut self, def: UnitDef) -> Result<(), QuanstantsError> {
-        if def.base {
+    /// Creates a `Unit` (base or derived, as appropriate) from the definition and inserts it into
+    /// the registry.
+    /// 
+    /// Returns an error if the definition is invalid, either because the definition is missing
+    /// fields necessary for the type of unit, or because the units used in the definition cannot
+    /// be found in the registry.
+    fn add_from_def(&mut self, def: UnitDef) -> Result<Unit128, QuanstantsError> {
+        let id = if def.base {
             if !def.alt_names.is_empty() {
                 self.add_base_with_alt_names(
                     def.dimensions
@@ -281,7 +323,7 @@ impl UnitRegistry {
                         .ok_or(QuanstantsError::Definition("name".to_string()))?,
                     def.prefix,
                     def.alt_names,
-                );
+                )
             } else if !def.aliases.is_empty() {
                 self.add_base_with_aliases(
                     def.dimensions
@@ -292,7 +334,7 @@ impl UnitRegistry {
                         .ok_or(QuanstantsError::Definition("name".to_string()))?,
                     def.prefix,
                     def.aliases,
-                );
+                )
             } else {
                 self.add_base(
                     def.dimensions
@@ -302,7 +344,7 @@ impl UnitRegistry {
                     def.name
                         .ok_or(QuanstantsError::Definition("name".to_string()))?,
                     def.prefix,
-                );
+                )
             }
         } else {
             let value = def
@@ -326,7 +368,7 @@ impl UnitRegistry {
                     proportionality_factor,
                     unit_factors,
                     def.alt_names,
-                );
+                )
             } else if !def.aliases.is_empty() {
                 self.add_derived_with_aliases(
                     def.id,
@@ -338,7 +380,7 @@ impl UnitRegistry {
                     proportionality_factor,
                     unit_factors,
                     def.aliases,
-                );
+                )
             } else {
                 self.add_derived(
                     def.id,
@@ -349,10 +391,11 @@ impl UnitRegistry {
                     def.prefix,
                     proportionality_factor,
                     unit_factors,
-                );
+                )
             }
-        }
-        Ok(())
+        };
+        self.sources.insert(id, def.source);
+        Ok(id)
     }
 
     #[inline]

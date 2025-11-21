@@ -78,6 +78,7 @@ pub(crate) struct LinearFactor {
 // Some logic is implemented on a per-LinearFactor basis to make it easier for a Unit to
 // iterate over its factors
 impl LinearFactor {
+    /// Takes the inverse of the linear factor by multiplying the exponent by −1
     pub(crate) fn inverse(self) -> Self {
         Self {
             unit: self.unit,
@@ -86,17 +87,19 @@ impl LinearFactor {
     }
 
     pub(crate) fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
-        // We maybe need to not just do this simple logic for compound units but for everything else
-        // it works fine
+        // We maybe need to do more complicated logic for compound units,
+        // but for everything else it works fine
         Self {
             unit: self.unit,
             exponent: self.exponent * exponent.into(),
         }
     }
 
+    /// Returns the combined symbol of the unit and its exponent.
+    /// If `use_superscripts` is `true`, uses Unicode superscript characters for the exponent.
     pub(crate) fn symbol(&self, use_superscripts: bool) -> String {
-        // This will be fine as long as we don't allow LinearFactors to hold a Compound unit with a
-        // non-unity exponent
+        // This will be fine as long as we don't allow LinearFactors to hold
+        // a Compound unit with a non-unity exponent
         if self.exponent == 1 {
             self.unit.symbol(false)
         } else if use_superscripts {

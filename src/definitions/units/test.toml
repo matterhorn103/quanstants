@@ -36,7 +36,7 @@ alt_names = [ "ångström" ]
 value.number = 1e-10
 value.unit = [["m", 1]]
 
-[units.reciprocal_centimetre]
+[units."reciprocal centimetre"]
 id = "0x" # Need to work out
 name = "reciprocal centimetre"
 aliases = [ "reciprocal centimeter", "inverse centimetre", "inverse centimeter", "wavenumber" ]

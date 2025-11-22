@@ -167,7 +167,15 @@ value.unit = [["mole", "1"], ["second", "-1"]]
 #[unit.electronvolt]
 #[unit.hectare]
 #[unit.hour]
-#[unit.litre]
+
+[unit.litre]
+id = "0xFD0000000000130001"
+symbol = "L"  # For now, for distinguishability, but should work out way to allow l as alternative
+name = "litre"
+alt_names = ["liter"]
+value.number = "1e-3"
+value.unit = [["metre", "3"]]
+
 #[unit.minute]
 #[unit.neper]
 #[unit.tonne]

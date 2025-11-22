@@ -57,7 +57,16 @@ pub mod units {
     pub enum UnitModule {
         Si,
     }
-    pub(crate) const SI: &str = include_str!("definitions/units/si.toml");
+
+    impl UnitModule {
+        const SI: &str = include_str!("definitions/units/si.toml");
+
+        pub fn toml(self) -> &'static str {
+            match self {
+                Self::Si => Self::SI,
+            }
+        }
+    }
 }
 
 pub mod constants {
@@ -72,6 +81,6 @@ mod tests {
 
     #[test]
     fn parse_si() {
-        let _: DefFile = toml::from_str(units::SI).unwrap();
+        let _: DefFile = toml::from_str(units::UnitModule::Si.toml()).unwrap();
     }
 }

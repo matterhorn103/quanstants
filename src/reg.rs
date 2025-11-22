@@ -389,10 +389,7 @@ impl UnitRegistry {
     }
 
     pub fn load_module(&mut self, module: UnitModule) -> Result<(), QuanstantsError> {
-        let def_file_string = match module {
-            UnitModule::Si => crate::defs::units::SI,
-        };
-        let def_file: DefFile = toml::from_str(def_file_string).expect("Files stored in binary, so they should work");
+        let def_file: DefFile = toml::from_str(module.toml()).expect("Files stored in binary, so they should work");
         for u in def_file.units.into_values() {
             self.add_from_def(u)?;
         }

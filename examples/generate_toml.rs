@@ -1,6 +1,6 @@
 use std::fs;
 
-use quanstants::{context::Context, fraction::Frac, scinum::SciNum, serde::{DefFile, QuantityDef, UnitDef}};
+use quanstants::{context::Context, fraction::Frac, scinum::SciNum, defs::{DefFile, QuantityDef, UnitDef}};
 
 fn def_from_derived_unit(ctx: &Context, unit_name: &str) -> UnitDef {
     let unit = ctx.unit_by_name(unit_name).unwrap();

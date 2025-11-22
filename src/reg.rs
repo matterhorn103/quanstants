@@ -9,7 +9,7 @@ use crate::{
     fraction::Frac,
     prefix::Prefix,
     scinum::SciNum,
-    serde::UnitDef,
+    defs::UnitDef,
     unit::{LinearFactor, LinearUnit, LinearUnitType, Unit},
     unit128::Unit128,
 };

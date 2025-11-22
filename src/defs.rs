@@ -45,3 +45,11 @@ pub struct QuantityDef {
     pub unit: Vec<(String, Frac)>,
     pub uncertainty: SciNum,
 }
+
+pub mod units {
+
+}
+
+pub mod constants {
+    
+}

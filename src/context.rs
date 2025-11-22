@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    error::QuanstantsError, prefix::Prefix, reg::UnitRegistry, unit::Unit, unit128::Unit128,
+    defs::units::UnitModule, error::QuanstantsError, prefix::Prefix, reg::UnitRegistry, unit::Unit, unit128::Unit128
 };
 
 #[derive(Debug, Default)]
@@ -36,6 +36,11 @@ impl Context {
     #[inline]
     pub fn prefix_by_name(&self, name: &str) -> Result<Prefix, QuanstantsError> {
         Prefix::from_name(name)
+    }
+
+    #[inline]
+    pub fn load_unit_module(&mut self, module: UnitModule) -> Result<(), QuanstantsError> {
+        self.units.load_module(module)
     }
 }
 
@@ -95,7 +100,7 @@ pub(crate) mod py {
     use crate::{prefix::py::PyPrefix, unit::py::PyUnit};
 
     use super::*;
-    use pyo3::prelude::*;
+    use pyo3::{prelude::*};
 
     #[pyclass(name = "Context")]
     #[derive(Debug, Default)]
@@ -120,6 +125,10 @@ pub(crate) mod py {
 
         fn unit_by_id(&self, id: u128) -> PyUnit {
             self.0.unit_by_id(Unit128::from_bits(id)).unwrap().into()
+        }
+
+        fn _list_units(&self) -> Vec<String> {
+            self.0.units.string_map.keys().cloned().collect()
         }
 
         // Square bracket notation lookup for units
@@ -447,6 +456,10 @@ pub(crate) mod py {
         // Square bracket notation lookup for units
         fn __getitem__(&self, py: Python, name: &str) -> PyUnit {
             self.parent.borrow(py).unit_by_name(name)
+        }
+
+        fn list(&self, py: Python) -> Vec<String> {
+            self.parent.borrow(py)._list_units()
         }
     }
 

@@ -5,14 +5,14 @@ id = "0x1"
 symbol = "rad"
 name = "radian"
 value.number = "1"
-value.unit = [[]]
+value.unit = []
 
 [units.steradian]
 id = "0x2"
 symbol = "sr"
 name = "steradian"
 value.number = "1"
-value.unit = [[]]
+value.unit = []
 
 [units.hertz]
 id = "0xF101"
@@ -156,19 +156,19 @@ value.unit = [["mole", "1"], ["second", "-1"]]
 
 # Non-SI units officially accepted for use with the SI
 
-#[unit.arcminute]
-#[unit.arcsecond]
-#[unit."astronomical unit"]
-#[unit.bel]
-#[unit.dalton]
-#[unit.day]
-#[unit.decibel]
-#[unit.degree]
-#[unit.electronvolt]
-#[unit.hectare]
-#[unit.hour]
+#[units.arcminute]
+#[units.arcsecond]
+#[units."astronomical unit"]
+#[units.bel]
+#[units.dalton]
+#[units.day]
+#[units.decibel]
+#[units.degree]
+#[units.electronvolt]
+#[units.hectare]
+#[units.hour]
 
-[unit.litre]
+[units.litre]
 id = "0xFD0000000000130001"
 symbol = "L"  # For now, for distinguishability, but should work out way to allow l as alternative
 name = "litre"
@@ -176,9 +176,9 @@ alt_names = ["liter"]
 value.number = "1e-3"
 value.unit = [["metre", "3"]]
 
-#[unit.minute]
-#[unit.neper]
-#[unit.tonne]
+#[units.minute]
+#[units.neper]
+#[units.tonne]
 
 # TODO
 # bel, decibel, neper for power vs root-power quantities

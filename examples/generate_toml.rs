@@ -12,7 +12,7 @@ fn def_from_derived_unit(ctx: &Context, unit_name: &str) -> UnitDef {
         id: Some(unit.id),
         base: false,
         symbol: Some(unit.symbol(false)),
-        name: Some(unit.name()),
+        name: unit.name(),
         prefix: None,
         aliases: Vec::new(),
         alt_names: Vec::new(),
@@ -20,7 +20,7 @@ fn def_from_derived_unit(ctx: &Context, unit_name: &str) -> UnitDef {
         dimensions: None,
         value: Some(QuantityDef {
             number: SciNum::ONE,
-            uncertainty: SciNum::ZERO,
+            uncertainty: Some(SciNum::ZERO),
             unit: unit_factors,
         }),
     }

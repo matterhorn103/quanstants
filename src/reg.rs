@@ -4,21 +4,14 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    dimensions::Dimensions,
-    error::QuanstantsError,
-    fraction::Frac,
-    prefix::Prefix,
-    scinum::SciNum,
-    defs::UnitDef,
-    unit::{LinearFactor, LinearUnit, LinearUnitType, Unit},
-    unit128::Unit128,
+    defs::{DefFile, UnitDef, units::UnitModule}, dimensions::Dimensions, error::QuanstantsError, fraction::Frac, prefix::Prefix, scinum::SciNum, unit::{LinearFactor, LinearUnit, LinearUnitType, Unit}, unit128::Unit128
 };
 
 #[derive(Debug)]
 pub struct UnitRegistry {
-    units: HashMap<Unit128, Unit>,
-    string_map: HashMap<String, Unit>,
-    sources: HashMap<Unit128, Option<String>>,
+    pub(crate) units: HashMap<Unit128, Unit>,
+    pub(crate) string_map: HashMap<String, Unit>,
+    pub(crate) sources: HashMap<Unit128, Option<String>>,
 }
 
 impl UnitRegistry {
@@ -311,7 +304,7 @@ impl UnitRegistry {
     /// Returns an error if the definition is invalid, either because the definition is missing
     /// fields necessary for the type of unit, or because the units used in the definition cannot
     /// be found in the registry.
-    fn add_from_def(&mut self, def: UnitDef) -> Result<Unit128, QuanstantsError> {
+    pub(crate) fn add_from_def(&mut self, def: UnitDef) -> Result<Unit128, QuanstantsError> {
         let id = if def.base {
             if !def.alt_names.is_empty() {
                 self.add_base_with_alt_names(
@@ -319,8 +312,7 @@ impl UnitRegistry {
                         .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
                     def.symbol
                         .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
-                    def.name
-                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.name,
                     def.prefix,
                     def.alt_names,
                 )
@@ -330,8 +322,7 @@ impl UnitRegistry {
                         .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
                     def.symbol
                         .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
-                    def.name
-                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.name,
                     def.prefix,
                     def.aliases,
                 )
@@ -341,8 +332,7 @@ impl UnitRegistry {
                         .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
                     def.symbol
                         .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
-                    def.name
-                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.name,
                     def.prefix,
                 )
             }
@@ -350,7 +340,10 @@ impl UnitRegistry {
             let value = def
                 .value
                 .ok_or(QuanstantsError::Definition("value".to_string()))?;
-            let proportionality_factor = value.number.with_uncertainty(value.uncertainty);
+            let proportionality_factor = match value.uncertainty {
+                Some(u) => value.number.with_uncertainty(u),
+                None => value.number,
+            };
             // TODO this definitely shouldn't just panic if the unit isn't found
             let unit_factors: Vec<(Unit, Frac)> = value
                 .unit
@@ -362,8 +355,7 @@ impl UnitRegistry {
                     def.id,
                     def.symbol
                         .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
-                    def.name
-                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.name,
                     def.prefix,
                     proportionality_factor,
                     unit_factors,
@@ -374,8 +366,7 @@ impl UnitRegistry {
                     def.id,
                     def.symbol
                         .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
-                    def.name
-                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.name,
                     def.prefix,
                     proportionality_factor,
                     unit_factors,
@@ -386,8 +377,7 @@ impl UnitRegistry {
                     def.id,
                     def.symbol
                         .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
-                    def.name
-                        .ok_or(QuanstantsError::Definition("name".to_string()))?,
+                    def.name,
                     def.prefix,
                     proportionality_factor,
                     unit_factors,
@@ -396,6 +386,17 @@ impl UnitRegistry {
         };
         self.sources.insert(id, def.source);
         Ok(id)
+    }
+
+    pub fn load_module(&mut self, module: UnitModule) -> Result<(), QuanstantsError> {
+        let def_file_string = match module {
+            UnitModule::Si => crate::defs::units::SI,
+        };
+        let def_file: DefFile = toml::from_str(def_file_string).expect("Files stored in binary, so they should work");
+        for u in def_file.units.into_values() {
+            self.add_from_def(u)?;
+        }
+        Ok(())
     }
 
     #[inline]
@@ -417,7 +418,8 @@ impl UnitRegistry {
 impl Default for UnitRegistry {
     fn default() -> Self {
         let mut reg = Self::new();
-        reg.add_si_derived();
+        //reg.add_si_derived();
+        reg.load_module(UnitModule::Si).expect("Internal file should always read correctly");
         reg
     }
 }
@@ -849,5 +851,9 @@ mod tests {
             reg.get_by_name("katal").unwrap(),
             mol.clone() * s.clone().pow(-1)
         );
+        //assert_eq!(
+        //    reg.get_by_name("litre").unwrap(),
+        //    m.clone() * m.clone() * m.clone()// * SciNum::new_exact(dec!(0.001))
+        //);
     }
 }

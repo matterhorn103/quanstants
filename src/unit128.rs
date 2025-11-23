@@ -448,7 +448,7 @@ impl Unit128 {
     pub const GRAM: Unit128 = {
         Unit128 {
             num: 0xFD,
-            dim: 0x1100000D,
+            dim: 0x11000001,
         }
     };
 

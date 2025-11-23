@@ -200,6 +200,8 @@ pub(crate) mod py {
             self.0.prefix_by_name(name).unwrap().into()
         }
 
+        // Unit getters
+
         #[getter]
         fn unitless(&self) -> PyUnit {
             self.0.unitless().into()
@@ -498,6 +500,168 @@ pub(crate) mod py {
         #[getter]
         fn kat(&self) -> PyUnit {
             self.0.katal().into()
+        }
+
+        // Prefix getters
+
+        #[getter]
+        fn quecto(&self) -> PyPrefix {
+            self.0.quecto().into()
+        }
+
+        #[getter]
+        fn ronto(&self) -> PyPrefix {
+            self.0.ronto().into()
+        }
+
+        #[getter]
+        fn yocto(&self) -> PyPrefix {
+            self.0.yocto().into()
+        }
+
+        #[getter]
+        fn zepto(&self) -> PyPrefix {
+            self.0.zepto().into()
+        }
+
+        #[getter]
+        fn atto(&self) -> PyPrefix {
+            self.0.atto().into()
+        }
+
+        #[getter]
+        fn femto(&self) -> PyPrefix {
+            self.0.femto().into()
+        }
+
+        #[getter]
+        fn pico(&self) -> PyPrefix {
+            self.0.pico().into()
+        }
+
+        #[getter]
+        fn nano(&self) -> PyPrefix {
+            self.0.nano().into()
+        }
+
+        #[getter]
+        fn micro(&self) -> PyPrefix {
+            self.0.micro().into()
+        }
+
+        #[getter]
+        fn milli(&self) -> PyPrefix {
+            self.0.milli().into()
+        }
+
+        #[getter]
+        fn centi(&self) -> PyPrefix {
+            self.0.centi().into()
+        }
+
+        #[getter]
+        fn deci(&self) -> PyPrefix {
+            self.0.deci().into()
+        }
+
+        #[getter]
+        fn deca(&self) -> PyPrefix {
+            self.0.deca().into()
+        }
+
+        #[getter]
+        fn hecto(&self) -> PyPrefix {
+            self.0.hecto().into()
+        }
+
+        #[getter]
+        fn kilo(&self) -> PyPrefix {
+            self.0.kilo().into()
+        }
+
+        #[getter]
+        fn mega(&self) -> PyPrefix {
+            self.0.mega().into()
+        }
+
+        #[getter]
+        fn giga(&self) -> PyPrefix {
+            self.0.giga().into()
+        }
+
+        #[getter]
+        fn tera(&self) -> PyPrefix {
+            self.0.tera().into()
+        }
+
+        #[getter]
+        fn peta(&self) -> PyPrefix {
+            self.0.peta().into()
+        }
+
+        #[getter]
+        fn exa(&self) -> PyPrefix {
+            self.0.exa().into()
+        }
+
+        #[getter]
+        fn zetta(&self) -> PyPrefix {
+            self.0.zetta().into()
+        }
+
+        #[getter]
+        fn yotta(&self) -> PyPrefix {
+            self.0.yotta().into()
+        }
+
+        #[getter]
+        fn ronna(&self) -> PyPrefix {
+            self.0.ronna().into()
+        }
+
+        #[getter]
+        fn quetta(&self) -> PyPrefix {
+            self.0.quetta().into()
+        }
+
+        #[getter]
+        fn kibi(&self) -> PyPrefix {
+            self.0.kibi().into()
+        }
+
+        #[getter]
+        fn mebi(&self) -> PyPrefix {
+            self.0.mebi().into()
+        }
+
+        #[getter]
+        fn gibi(&self) -> PyPrefix {
+            self.0.gibi().into()
+        }
+
+        #[getter]
+        fn tebi(&self) -> PyPrefix {
+            self.0.tebi().into()
+        }
+
+        #[getter]
+        fn pebi(&self) -> PyPrefix {
+            self.0.pebi().into()
+        }
+
+        #[getter]
+        fn exbi(&self) -> PyPrefix {
+            self.0.exbi().into()
+        }
+
+        #[getter]
+        fn zebi(&self) -> PyPrefix {
+            self.0.zebi().into()
+        }
+
+        #[getter]
+        fn yobi(&self) -> PyPrefix {
+            self.0.yobi().into()
         }
     }
 

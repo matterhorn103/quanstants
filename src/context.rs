@@ -62,6 +62,15 @@ macro_rules! unit_getter {
     };
 }
 
+macro_rules! prefix_getter {
+    ($name:ident) => {
+        #[inline]
+        pub fn $name(&self) -> Prefix {
+            Prefix::$name
+        }
+    };
+}
+
 // Convenience functions for pre-populated units
 #[allow(dead_code)]
 impl Context {
@@ -100,6 +109,45 @@ impl Context {
     unit_getter!(gray, Unit128::GRAY);
     unit_getter!(sievert, Unit128::SIEVERT);
     unit_getter!(katal, Unit128::KATAL);
+}
+
+// Convenience functions for prefixes
+#[allow(dead_code)]
+impl Context {
+    // Metric
+    prefix_getter!(quecto);
+    prefix_getter!(ronto);
+    prefix_getter!(yocto);
+    prefix_getter!(zepto);
+    prefix_getter!(atto);
+    prefix_getter!(femto);
+    prefix_getter!(pico);
+    prefix_getter!(nano);
+    prefix_getter!(micro);
+    prefix_getter!(milli);
+    prefix_getter!(centi);
+    prefix_getter!(deci);
+    prefix_getter!(deca);
+    prefix_getter!(hecto);
+    prefix_getter!(kilo);
+    prefix_getter!(mega);
+    prefix_getter!(giga);
+    prefix_getter!(tera);
+    prefix_getter!(peta);
+    prefix_getter!(exa);
+    prefix_getter!(zetta);
+    prefix_getter!(yotta);
+    prefix_getter!(ronna);
+    prefix_getter!(quetta);
+    // Binary
+    prefix_getter!(kibi);
+    prefix_getter!(mebi);
+    prefix_getter!(gibi);
+    prefix_getter!(tebi);
+    prefix_getter!(pebi);
+    prefix_getter!(exbi);
+    prefix_getter!(zebi);
+    prefix_getter!(yobi);
 }
 
 #[cfg(feature = "python")]

@@ -5,6 +5,7 @@
 #![allow(non_ascii_idents)]
 
 pub mod context;
+pub mod defs;
 pub mod dimensions;
 pub mod error;
 pub mod fraction;
@@ -12,7 +13,6 @@ pub mod prefix;
 pub mod quantity;
 pub mod reg;
 pub mod scinum;
-pub mod defs;
 pub mod unit;
 pub mod unit128;
 

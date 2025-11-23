@@ -3,6 +3,8 @@
 
 use std::{error::Error, fmt, num::TryFromIntError};
 
+use crate::unit::Unit;
+
 #[derive(Clone, Debug)]
 pub enum QuanstantsError {
     Parse,
@@ -11,6 +13,8 @@ pub enum QuanstantsError {
     Overflow,
     Definition(String),
     Lookup(String),
+    MismatchedUnits(Unit, Unit),
+    NonLinearUnit(Unit),
 }
 
 impl fmt::Display for QuanstantsError {
@@ -28,6 +32,8 @@ impl fmt::Display for QuanstantsError {
             QuanstantsError::Lookup(search) => {
                 write!(f, "{search} not found")
             }
+            QuanstantsError::MismatchedUnits(u1, u2) => write!(f, "Incompatible units: {u1} and {u2}"),
+            QuanstantsError::NonLinearUnit(u) => write!(f, "The attempted operation is only valid for linear units, and {u} is not linear"),
         }
     }
 }

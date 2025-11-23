@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use serde_with::{DisplayFromStr, serde_as, skip_serializing_none};
+use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 
 use crate::{
     dimensions::Dimensions, fraction::Frac, prefix::Prefix, scinum::SciNum, unit128::Unit128,
@@ -56,22 +56,23 @@ pub struct QuantityDef {
 pub mod units {
     pub enum UnitModule {
         Si,
+        SiCompatible,
     }
 
     impl UnitModule {
         const SI: &str = include_str!("definitions/units/si.toml");
+        const SI_COMPATIBLE: &str = include_str!("definitions/units/si_compatible.toml");
 
         pub fn toml(self) -> &'static str {
             match self {
                 Self::Si => Self::SI,
+                Self::SiCompatible => Self::SI_COMPATIBLE,
             }
         }
     }
 }
 
-pub mod constants {
-    
-}
+pub mod constants {}
 
 #[cfg(test)]
 mod tests {

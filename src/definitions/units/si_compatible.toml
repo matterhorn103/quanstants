@@ -1,0 +1,113 @@
+# Non-SI units officially accepted for use with the SI
+
+## time
+
+[units.minute]
+id = "0x3C000000000000001101"
+symbol = "min"
+name = "minute"
+value.number = "60"
+value.unit = [["second", "1"]]
+
+[units.hour]
+id = "0xE10000000000000001101"
+symbol = "h"
+name = "hour"
+value.number = "3600"
+value.unit = [["second", "1"]]
+
+[units.day]
+id = "0x15180000000000000001101"
+symbol = "d"
+name = "day"
+value.number = "86400"
+value.unit = [["second", "1"]]
+
+## length
+
+[units."astronomical unit"]
+id = "0x22D4BA5A6C000000000000110001"
+symbol = "au"
+name = "astronomical unit"
+value.number = "149597870700"
+value.unit = [["metre", "1"]]
+
+## plane and phase angle
+
+[units.degree]
+#id = ""
+symbol = "°"
+name = "degree"
+aliases = ["degree of arc", "arcdegree"]
+value.number = "0.008726646259971648" # TODO improve precision
+value.unit = [["radian", "1"]]
+
+[units.arcminute]
+#id = ""
+symbol = "′"
+name = "arcminute"
+aliases = ["minute of arc"]
+value.number = "0.0002908882086657216" # TODO improve precision
+value.unit = [["radian", "1"]]
+
+[units.arcsecond]
+#id = ""
+symbol = "″"
+name = "arcsecond"
+aliases = ["second of arc"]
+value.number = "4.84813681109536e-06" # TODO improve precision
+value.unit = [["radian", "1"]]
+
+## area
+
+[units.hectare]
+#id = ""
+symbol = "ha"
+name = "hectare"
+value.number = "1e4"
+value.unit = [["metre", "2"]]
+
+## volume
+
+[units.litre]
+id = "0xFD0000000000130001"
+symbol = "L"  # For now, for distinguishability, but should work out way to allow l as alternative
+name = "litre"
+alt_names = ["liter"]
+value.number = "1e-3"
+value.unit = [["metre", "3"]]
+
+## mass
+
+[units.tonne]
+#id = ""
+symbol = "t"
+name = "tonne"
+value.number = "1e3"
+value.unit = [["kilogram", "1"]]
+
+[units.dalton]
+#id = ""
+symbol = "Da"
+name = "dalton"
+aliases = ["atomic mass unit", "unified atomic mass unit"]
+value.number = "1.66053906660e-27"
+value.unit = [["kilogram", "1"]]
+value.uncertainty = "0.00000000050e-27"
+
+## energy
+
+[units.electronvolt]
+#id = ""
+symbol = "eV"
+name = "electronvolt"
+value.number = "1.602176634e-19"
+value.unit = [["joule", "1"]]
+
+## logarithmic ratio quantities
+# TODO define for both power vs root-power quantities
+# (Though possibly don't define them here)
+
+#[units.neper]
+#[units.bel]
+#[units.decibel]

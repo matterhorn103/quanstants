@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    defs::units::UnitModule, error::QuanstantsError, prefix::Prefix, reg::UnitRegistry, unit::Unit, unit128::Unit128
+    defs::units::UnitModule, error::QuanstantsError, prefix::Prefix, reg::UnitRegistry, unit::Unit,
+    unit128::Unit128,
 };
 
 #[derive(Debug, Default)]
@@ -11,12 +12,18 @@ pub struct Context {
 }
 
 impl Context {
+    /// Creates a new `Context` pre-populated with:
+    /// - SI base units
+    /// - SI derived units
+    /// - non-SI units officially approved for use with the SI
+    /// - the seven defining fundamental constants of the SI
     pub fn new() -> Self {
         Self {
             units: UnitRegistry::default(), // Always pre-populate with SI units
         }
     }
 
+    /// Creates a new `Context` with minimal pre-population (just the SI base units).
     pub fn new_empty() -> Self {
         Self {
             units: UnitRegistry::new(), // Currently just adds unitless and SI base units
@@ -100,7 +107,7 @@ pub(crate) mod py {
     use crate::{prefix::py::PyPrefix, unit::py::PyUnit};
 
     use super::*;
-    use pyo3::{prelude::*};
+    use pyo3::prelude::*;
 
     #[pyclass(name = "Context")]
     #[derive(Debug, Default)]

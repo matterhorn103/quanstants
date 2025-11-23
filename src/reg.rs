@@ -4,7 +4,14 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    defs::{DefFile, UnitDef, units::UnitModule}, dimensions::Dimensions, error::QuanstantsError, fraction::Frac, prefix::Prefix, scinum::SciNum, unit::{LinearFactor, LinearUnit, LinearUnitType, Unit}, unit128::Unit128
+    defs::{units::UnitModule, DefFile, UnitDef},
+    dimensions::Dimensions,
+    error::QuanstantsError,
+    fraction::Frac,
+    prefix::Prefix,
+    scinum::SciNum,
+    unit::{LinearFactor, LinearUnit, LinearUnitType, Unit},
+    unit128::Unit128,
 };
 
 #[derive(Debug)]
@@ -15,6 +22,7 @@ pub struct UnitRegistry {
 }
 
 impl UnitRegistry {
+    /// Creates a new `UnitRegistry` with minimal pre-population (just the SI base units).
     pub fn new() -> Self {
         let mut reg = Self {
             units: HashMap::new(),
@@ -205,14 +213,14 @@ impl UnitRegistry {
     }
 
     /// Adds a derived unit to the registry under multiple alternative names.
-    /// 
+    ///
     /// The `name` and each `alt_name` then all refer to separate `Unit`s with identical values.
-    /// 
+    ///
     /// Localized and translated names are equally valid spellings, so it is important that
     /// the unit returned from a lookup has the name expected by the user and not the "canonical"
     /// (English) one.
     /// This includes distinguishing between "metre" and "meter".
-    /// 
+    ///
     /// Calling `Unit.name()` on the alternative units then returns a different name in each case.
     /// The symbol and value of each alternative unit is the same.
     /// The ID of each alternative unit is also identical, but lookup in the registry using the ID
@@ -258,14 +266,14 @@ impl UnitRegistry {
     }
 
     /// Adds a derived unit to the registry along with aliases that point to the same unit.
-    /// 
+    ///
     /// Unlike `alt_names`, `aliases` refer to the exact same `Unit`, they just allow the unit
     /// to be found using several different names.
-    /// 
+    ///
     /// For example:
     /// - the "percent" unit can also be found under "per cent"
     /// - the "Dalton" unit can also be found under "unified atomic mass unit"
-    /// 
+    ///
     /// Calling `Unit.name()` on the units always returns the canonical name.
     #[allow(clippy::too_many_arguments)]
     pub fn add_derived_with_aliases(
@@ -300,7 +308,7 @@ impl UnitRegistry {
 
     /// Creates a `Unit` (base or derived, as appropriate) from the definition and inserts it into
     /// the registry.
-    /// 
+    ///
     /// Returns an error if the definition is invalid, either because the definition is missing
     /// fields necessary for the type of unit, or because the units used in the definition cannot
     /// be found in the registry.
@@ -389,7 +397,8 @@ impl UnitRegistry {
     }
 
     pub fn load_module(&mut self, module: UnitModule) -> Result<(), QuanstantsError> {
-        let def_file: DefFile = toml::from_str(module.toml()).expect("Files stored in binary, so they should work");
+        let def_file: DefFile =
+            toml::from_str(module.toml()).expect("Files stored in binary, so they should work");
         for u in def_file.units.into_values() {
             self.add_from_def(u)?;
         }
@@ -413,10 +422,14 @@ impl UnitRegistry {
 }
 
 impl Default for UnitRegistry {
+    /// Creates a new `UnitRegistry` pre-populated with the SI base units, SI derived units,
+    /// and the non-SI units officially approved for use with the SI.
     fn default() -> Self {
         let mut reg = Self::new();
-        //reg.add_si_derived();
-        reg.load_module(UnitModule::Si).expect("Internal file should always read correctly");
+        reg.load_module(UnitModule::Si)
+            .expect("Internal `si.toml` file should be correct");
+        reg.load_module(UnitModule::SiCompatible)
+            .expect("Internal `si_compatible.toml` file should be correct");
         reg
     }
 }

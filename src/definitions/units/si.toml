@@ -154,37 +154,11 @@ name = "katal"
 value.number = "1"
 value.unit = [["mole", "1"], ["second", "-1"]]
 
-# Non-SI units officially accepted for use with the SI
-
-#[units.arcminute]
-#[units.arcsecond]
-#[units."astronomical unit"]
-#[units.bel]
-#[units.dalton]
-#[units.day]
-#[units.decibel]
-#[units.degree]
-#[units.electronvolt]
-#[units.hectare]
-#[units.hour]
-
-[units.litre]
-id = "0xFD0000000000130001"
-symbol = "L"  # For now, for distinguishability, but should work out way to allow l as alternative
-name = "litre"
-alt_names = ["liter"]
-value.number = "1e-3"
-value.unit = [["metre", "3"]]
-
-#[units.minute]
-#[units.neper]
-#[units.tonne]
-
-# TODO
-# bel, decibel, neper for power vs root-power quantities
-# (Though consider not including defining them here)
-
 # Other
 
-#[units.gram]
-
+[units.gram]
+id = "0xFD0000000011000001"
+symbol = "g"
+name = "gram"
+value.number = "1e-3"
+value.unit = [["kilogram", "1"]]

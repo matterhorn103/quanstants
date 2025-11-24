@@ -50,9 +50,21 @@ impl Dimensions {
         [self.T, self.L, self.M, self.I, self.Θ, self.N, self.J]
     }
 
-    pub fn pow<T: Into<Frac>>(self, exponent: T) -> Dimensions {
+    pub fn inverse(&self) -> Self {
+        Self {
+            T: -self.T,
+            L: -self.L,
+            M: -self.M,
+            I: -self.I,
+            Θ: -self.Θ,
+            N: -self.N,
+            J: -self.J,
+        }
+    }
+
+    pub fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
         let exp: Frac = exponent.into();
-        Dimensions {
+        Self {
             T: self.T * exp,
             L: self.L * exp,
             M: self.M * exp,
@@ -71,7 +83,7 @@ impl Dimensions {
 impl Mul for Dimensions {
     type Output = Self;
 
-    fn mul(self, other: Dimensions) -> Dimensions {
+    fn mul(self, other: Self) -> Self {
         Self {
             T: self.T + other.T,
             L: self.L + other.L,
@@ -87,7 +99,7 @@ impl Mul for Dimensions {
 impl Div for Dimensions {
     type Output = Self;
 
-    fn div(self, other: Dimensions) -> Dimensions {
+    fn div(self, other: Self) -> Self {
         Self {
             T: self.T - other.T,
             L: self.L - other.L,

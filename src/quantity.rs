@@ -29,6 +29,12 @@ impl Quantity {
     pub fn uncertainty(&self) -> Self {
         Self::new(self.number.uncertainty(), self.unit.clone())
     }
+
+    /// Returns true if the `Quantity` has an uncertainty of zero.
+    #[inline]
+    pub fn is_exact(&self) -> bool {
+        self.number.is_exact()
+    }
 }
 
 impl<T> From<T> for Quantity
@@ -75,49 +81,11 @@ impl Mul for Quantity {
     }
 }
 
-impl Mul<Unit> for Quantity {
-    type Output = Self;
-
-    fn mul(self, rhs: Unit) -> Self {
-        Self::new(self.number, self.unit * rhs)
-    }
-}
-
-impl<T> Mul<T> for Quantity
-where
-    T: Into<SciNum>,
-{
-    type Output = Self;
-
-    fn mul(self, rhs: T) -> Self {
-        Self::new(self.number * rhs.into(), self.unit)
-    }
-}
-
 impl Div for Quantity {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
         Self::new(self.number / rhs.number, self.unit / rhs.unit)
-    }
-}
-
-impl Div<Unit> for Quantity {
-    type Output = Self;
-
-    fn div(self, rhs: Unit) -> Self {
-        Self::new(self.number, self.unit / rhs)
-    }
-}
-
-impl<T> Div<T> for Quantity
-where
-    T: Into<SciNum>,
-{
-    type Output = Self;
-
-    fn div(self, rhs: T) -> Self {
-        Self::new(self.number / rhs.into(), self.unit)
     }
 }
 
@@ -129,6 +97,8 @@ impl fmt::Display for Quantity {
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
+    use std::str::FromStr;
+
     use crate::unit::py::PyUnit;
 
     use super::*;
@@ -169,6 +139,94 @@ pub(crate) mod py {
         fn __str__(&self) -> String {
             format!("{} {}", self.0.number, self.0.unit.symbol(true))
         }
+
+        fn __repr__(&self) -> String {
+            if self.0.is_exact() {
+                format!("Quantity({}, {})", self.0.number, self.0.unit.symbol(true))
+            } else {
+                format!("Quantity({}, {}, uncertainty={})", self.0.number.number(), self.0.unit.symbol(true), self.0.number.uncertainty())
+            }
+        }
+
+        fn __eq__(&self, other: &Self) -> bool {
+            self.0 == other.0
+        }
+
+        fn __add__(&self, other: Self) -> PyQuantity {
+            PyQuantity::from(self.owned_inner() + other.into_inner())
+        }
+
+        fn __radd__(&self, other: Self) -> PyQuantity {
+            PyQuantity::from(other.into_inner() + self.owned_inner())
+        }
+
+        fn __sub__(&self, other: Self) -> PyQuantity {
+            PyQuantity::from(self.owned_inner() - other.into_inner())
+        }
+
+        fn __rsub__(&self, other: Self) -> PyQuantity {
+            PyQuantity::from(other.into_inner() - self.owned_inner())
+        }
+
+        fn __mul__(&self, other: PyQuantityArithmeticEnum) -> PyQuantity {
+            match other {
+                PyQuantityArithmeticEnum::Quantity(q) => PyQuantity::from(self.owned_inner() * q.into_inner()),
+                PyQuantityArithmeticEnum::Unit(u) => PyQuantity::from(self.owned_inner() * u.into_inner()),
+                PyQuantityArithmeticEnum::Int(i) => PyQuantity::from(self.owned_inner() * i),
+                PyQuantityArithmeticEnum::Float(f) => PyQuantity::from(self.owned_inner() * SciNum::from_f64_exact(f).unwrap()),
+                PyQuantityArithmeticEnum::Decimal(d) => PyQuantity::from(self.owned_inner() * SciNum::new_exact(d)),
+                PyQuantityArithmeticEnum::String(s) => PyQuantity::from(self.owned_inner() * SciNum::from_str(&s).unwrap()),
+            }
+        }
+
+        fn __rmul__(&self, other: PyQuantityArithmeticEnum) -> PyQuantity {
+            match other {
+                PyQuantityArithmeticEnum::Quantity(q) => PyQuantity::from(q.into_inner() * self.owned_inner()),
+                PyQuantityArithmeticEnum::Unit(u) => PyQuantity::from(u.into_inner() * self.owned_inner()),
+                PyQuantityArithmeticEnum::Int(i) => PyQuantity::from(i * self.owned_inner()),
+                PyQuantityArithmeticEnum::Float(f) => PyQuantity::from(SciNum::from_f64_exact(f).unwrap() * self.owned_inner()),
+                PyQuantityArithmeticEnum::Decimal(d) => PyQuantity::from(SciNum::new_exact(d) * self.owned_inner()),
+                PyQuantityArithmeticEnum::String(s) => PyQuantity::from(SciNum::from_str(&s).unwrap() * self.owned_inner()),
+            }
+        }
+
+        fn __truediv__(&self, other: PyQuantityArithmeticEnum) -> PyQuantity {
+            match other {
+                PyQuantityArithmeticEnum::Quantity(q) => PyQuantity::from(self.owned_inner() / q.into_inner()),
+                PyQuantityArithmeticEnum::Unit(u) => PyQuantity::from(self.owned_inner() / u.into_inner()),
+                PyQuantityArithmeticEnum::Int(i) => PyQuantity::from(self.owned_inner() / i),
+                PyQuantityArithmeticEnum::Float(f) => PyQuantity::from(self.owned_inner() / SciNum::from_f64_exact(f).unwrap()),
+                PyQuantityArithmeticEnum::Decimal(d) => PyQuantity::from(self.owned_inner() / SciNum::new_exact(d)),
+                PyQuantityArithmeticEnum::String(s) => PyQuantity::from(self.owned_inner() / SciNum::from_str(&s).unwrap()),
+            }
+        }
+
+        fn __rtruediv__(&self, other: PyQuantityArithmeticEnum) -> PyQuantity {
+            match other {
+                PyQuantityArithmeticEnum::Quantity(q) => PyQuantity::from(q.into_inner() / self.owned_inner()),
+                PyQuantityArithmeticEnum::Unit(u) => PyQuantity::from(u.into_inner() / self.owned_inner()),
+                PyQuantityArithmeticEnum::Int(i) => PyQuantity::from(i / self.owned_inner()),
+                PyQuantityArithmeticEnum::Float(f) => PyQuantity::from(SciNum::from_f64_exact(f).unwrap() / self.owned_inner()),
+                PyQuantityArithmeticEnum::Decimal(d) => PyQuantity::from(SciNum::new_exact(d) / self.owned_inner()),
+                PyQuantityArithmeticEnum::String(s) => PyQuantity::from(SciNum::from_str(&s).unwrap() / self.owned_inner()),
+            }
+        }
+    }
+
+    #[derive(FromPyObject)]
+    enum PyQuantityArithmeticEnum {
+        #[pyo3(transparent, annotation = "Quantity")]
+        Quantity(PyQuantity),
+        #[pyo3(transparent, annotation = "Unit")]
+        Unit(PyUnit),
+        #[pyo3(transparent, annotation = "int")]
+        Int(isize),
+        #[pyo3(transparent, annotation = "float")]
+        Float(f64),
+        #[pyo3(transparent, annotation = "Decimal")]
+        Decimal(Decimal),
+        #[pyo3(transparent, annotation = "str")]
+        String(String),
     }
 }
 

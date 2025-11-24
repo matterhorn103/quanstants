@@ -257,6 +257,20 @@ impl Unit128 {
     pub fn to_bits(self) -> u128 {
         (self.num as u128) << 64 | self.dim as u128
     }
+
+    pub fn inverse(self) -> Unit128 {
+        // Panics for referenced units
+        if self.is_referenced() {
+            panic!()
+        } else {
+            Unit128::new(
+                self.factor().inverse(),
+                self.dimensions().inverse(),
+                (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
+            )
+        }
+    }
+
     pub fn pow<T: Into<Frac>>(self, exponent: T) -> Unit128 {
         // Panics for referenced units
         let exp: Frac = exponent.into();

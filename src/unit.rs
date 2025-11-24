@@ -181,6 +181,23 @@ impl Unit {
         self.to_factors().into_iter().map(|x| x.inverse()).collect()
     }
 
+    pub fn inverse(self) -> Self {
+        let new_inner = Arc::new(LinearUnit {
+            utype: LinearUnitType::Compound,
+            dimensions: self.dimensions().inverse(),
+            symbol: None,
+            name: None,
+            prefix: None,
+            number: self.number().inverse(),
+            factors: self.to_inverse_factors(),
+        });
+        let new_id = self.id.inverse();
+        Self {
+            id: new_id,
+            inner: new_inner,
+        }
+    }
+
     pub fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
         let exponent: Frac = exponent.into();
         let new_inner = Arc::new(LinearUnit {
@@ -293,6 +310,8 @@ impl fmt::Display for Unit {
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
+    use std::str::FromStr;
+
     use crate::{
         quantity::{py::PyQuantity, Quantity},
         unit128::py::PyUnitId,
@@ -332,20 +351,22 @@ pub(crate) mod py {
             self.0 == other.0
         }
 
-        fn __rmul__(&self, other: RArithmeticEnum) -> PyQuantity {
+        // Only 3 * m is valid, not m * 3, so only define rmul and rtruediv
+        // Operations between units and quantities are all handled by PyQuantity
+        fn __rmul__(&self, other: PyUnitArithmeticEnum) -> PyQuantity {
             match other {
-                RArithmeticEnum::Quantity(py_quantity) => {
-                    PyQuantity::from(py_quantity.into_inner() * self.owned_inner())
+                PyUnitArithmeticEnum::Quantity(q) => {
+                    PyQuantity::from(q.into_inner() * self.owned_inner())
                 }
-                RArithmeticEnum::Int(integer) => Quantity::new(integer, self.owned_inner()).into(),
-                RArithmeticEnum::Float(float) => {
-                    Quantity::new(SciNum::from_f64(float, 0.0).unwrap(), self.owned_inner()).into()
+                PyUnitArithmeticEnum::Int(i) => Quantity::new(i, self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Float(f) => {
+                    Quantity::new(SciNum::from_f64_exact(f).unwrap(), self.owned_inner()).into()
                 }
-                RArithmeticEnum::Decimal(decimal) => {
-                    Quantity::new(decimal, self.owned_inner()).into()
+                PyUnitArithmeticEnum::Decimal(d) => {
+                    Quantity::new(d, self.owned_inner()).into()
                 }
-                RArithmeticEnum::String(string) => Quantity::new(
-                    Decimal::from_str_exact(&string).unwrap(),
+                PyUnitArithmeticEnum::String(s) => Quantity::new(
+                    SciNum::from_str(&s).unwrap(),
                     self.owned_inner(),
                 )
                 .into(),
@@ -363,7 +384,7 @@ pub(crate) mod py {
     }
 
     #[derive(FromPyObject)]
-    enum RArithmeticEnum {
+    enum PyUnitArithmeticEnum {
         #[pyo3(transparent, annotation = "Quantity")]
         Quantity(PyQuantity),
         #[pyo3(transparent, annotation = "int")]

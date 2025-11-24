@@ -339,6 +339,13 @@ impl SciNum {
         ))
     }
 
+    /// Creates an exact `SciNum` from floats via `Decimal::from_f64()`.
+    pub fn from_f64_exact(number: f64) -> Option<Self> {
+        Some(Self::new_exact(
+            Decimal::from_f64(number)?,
+        ))
+    }
+
     pub fn add_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
     where
         T: Into<Decimal>,
@@ -409,6 +416,11 @@ impl SciNum {
                 * number.abs()
         };
         Self::new(number, uncertainty)
+    }
+
+    #[inline]
+    pub fn inverse(self) -> Self {
+        Self::ONE / self
     }
 
     #[inline]

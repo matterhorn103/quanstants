@@ -15,6 +15,7 @@ pub mod reg;
 pub mod scinum;
 pub mod unit;
 pub mod unit128;
+pub mod ops;
 
 #[cfg(feature = "python")]
 mod bindings {

@@ -286,24 +286,125 @@ pub(crate) mod py {
 
     #[pyclass(name = "Prefix")]
     #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-    pub struct PyPrefix(Prefix);
+    pub enum PyPrefix {
+        // Metric
+        quecto,
+        ronto,
+        yocto,
+        zepto,
+        atto,
+        femto,
+        pico,
+        nano,
+        micro,
+        milli,
+        centi,
+        deci,
+        deca,
+        hecto,
+        kilo,
+        mega,
+        giga,
+        tera,
+        peta,
+        exa,
+        zetta,
+        yotta,
+        ronna,
+        quetta,
+        // Binary
+        kibi,
+        mebi,
+        gibi,
+        tebi,
+        pebi,
+        exbi,
+        zebi,
+        yobi,
+    }
 
     impl PyPrefix {
         pub fn into_inner(self) -> Prefix {
-            self.0
+            match self {
+                PyPrefix::quecto => Prefix::quecto,
+                PyPrefix::ronto => Prefix::ronto,
+                PyPrefix::yocto => Prefix::yocto,
+                PyPrefix::zepto => Prefix::zepto,
+                PyPrefix::atto => Prefix::atto,
+                PyPrefix::femto => Prefix::femto,
+                PyPrefix::pico => Prefix::pico,
+                PyPrefix::nano => Prefix::nano,
+                PyPrefix::micro => Prefix::micro,
+                PyPrefix::milli => Prefix::milli,
+                PyPrefix::centi => Prefix::centi,
+                PyPrefix::deci => Prefix::deci,
+                PyPrefix::deca => Prefix::deca,
+                PyPrefix::hecto => Prefix::hecto,
+                PyPrefix::kilo => Prefix::kilo,
+                PyPrefix::mega => Prefix::mega,
+                PyPrefix::giga => Prefix::giga,
+                PyPrefix::tera => Prefix::tera,
+                PyPrefix::peta => Prefix::peta,
+                PyPrefix::exa => Prefix::exa,
+                PyPrefix::zetta => Prefix::zetta,
+                PyPrefix::yotta => Prefix::yotta,
+                PyPrefix::ronna => Prefix::ronna,
+                PyPrefix::quetta => Prefix::quetta,
+                PyPrefix::kibi => Prefix::kibi,
+                PyPrefix::mebi => Prefix::mebi,
+                PyPrefix::gibi => Prefix::gibi,
+                PyPrefix::tebi => Prefix::tebi,
+                PyPrefix::pebi => Prefix::pebi,
+                PyPrefix::exbi => Prefix::exbi,
+                PyPrefix::zebi => Prefix::zebi,
+                PyPrefix::yobi => Prefix::yobi,
+            }
         }
     }
 
     impl From<Prefix> for PyPrefix {
-        fn from(value: Prefix) -> Self {
-            Self(value)
+        fn from(p: Prefix) -> Self {
+            match p {
+                Prefix::quecto => PyPrefix::quecto,
+                Prefix::ronto => PyPrefix::ronto,
+                Prefix::yocto => PyPrefix::yocto,
+                Prefix::zepto => PyPrefix::zepto,
+                Prefix::atto => PyPrefix::atto,
+                Prefix::femto => PyPrefix::femto,
+                Prefix::pico => PyPrefix::pico,
+                Prefix::nano => PyPrefix::nano,
+                Prefix::micro => PyPrefix::micro,
+                Prefix::milli => PyPrefix::milli,
+                Prefix::centi => PyPrefix::centi,
+                Prefix::deci => PyPrefix::deci,
+                Prefix::deca => PyPrefix::deca,
+                Prefix::hecto => PyPrefix::hecto,
+                Prefix::kilo => PyPrefix::kilo,
+                Prefix::mega => PyPrefix::mega,
+                Prefix::giga => PyPrefix::giga,
+                Prefix::tera => PyPrefix::tera,
+                Prefix::peta => PyPrefix::peta,
+                Prefix::exa => PyPrefix::exa,
+                Prefix::zetta => PyPrefix::zetta,
+                Prefix::yotta => PyPrefix::yotta,
+                Prefix::ronna => PyPrefix::ronna,
+                Prefix::quetta => PyPrefix::quetta,
+                Prefix::kibi => PyPrefix::kibi,
+                Prefix::mebi => PyPrefix::mebi,
+                Prefix::gibi => PyPrefix::gibi,
+                Prefix::tebi => PyPrefix::tebi,
+                Prefix::pebi => PyPrefix::pebi,
+                Prefix::exbi => PyPrefix::exbi,
+                Prefix::zebi => PyPrefix::zebi,
+                Prefix::yobi => PyPrefix::yobi,
+            }
         }
     }
 
     #[pymethods]
     impl PyPrefix {
         fn __str__(&self) -> String {
-            self.0.to_string()
+            self.into_inner().to_string()
         }
     }
 }

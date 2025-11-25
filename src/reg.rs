@@ -507,6 +507,7 @@ impl UnitRegistry {
     }
 }
 
+#[cfg(feature = "python")]
 pub(crate) mod py {
     use crate::{context::py::PyContext, defs::units::py::PyUnitModule, unit::py::PyUnit};
 

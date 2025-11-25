@@ -72,6 +72,7 @@ pub mod units {
         }
     }
 
+    #[cfg(feature = "python")]
     pub(crate) mod py {
         use super::*;
         use pyo3::prelude::*;

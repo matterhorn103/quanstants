@@ -54,6 +54,7 @@ pub struct QuantityDef {
 }
 
 pub mod units {
+    #[derive(Debug)]
     pub enum UnitModule {
         Si,
         SiCompatible,

@@ -336,60 +336,76 @@ impl FromStr for Unit128 {
     type Err = QuanstantsError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let a = i8::MAX;
         let hex = s.strip_prefix("0x").unwrap_or(s);
         let bits = u128::from_str_radix(hex, 16).map_err(|_e| QuanstantsError::Parse)?;
         Ok(Self::from_bits(bits))
     }
 }
 
-//impl Serialize for Unit128 {
-//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//    where
-//        S: serde::Serializer {
-//        serializer.serialize_str(&self.to_string())
-//    }
-//}
-//
-//impl Deserialize for Unit128 {
-//    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//    where
-//        D: serde::Deserializer<'de> {
-//        deserializer.deserialize_string(StringVisitor)
-//    }
-//}
-
+#[allow(dead_code)]
+// Functions for converting between `SciNum`s and the 64-bit numeric component of `Unit128`
 impl Unit128 {
+
+    // Maximum and minimum values for a simple numeric component
+    // Though the bias of -1 means that actually a mantissa 1 higher than this is
+    // theoretically possible, restrict to these values so that they always fit into other
+    // formats with the same width but no bias
+    const MAX_MANTISSA_FACTOR: i64 = 0x7FFFFFFFFFFFFF;
+    const MIN_MANTISSA_FACTOR: i64 = -0x7FFFFFFFFFFFFF;
+    const MAX_EXPONENT_FACTOR: i8 = 0x7F;
+    const MIN_EXPONENT_FACTOR: i8 = -0x80;
+    
+    /// Calculates the 64-bit simple numeric component that encodes the provided `SciNum`.
+    /// 
+    /// Currently panics if the factor is too large to be represented.
     pub(crate) fn factor_to_bits(factor: SciNum) -> u64 {
-        // Need to find a way to shorten factors with too much precision
-        // (This doesn't work)
-        //let dec = dec.trunc_with_scale(14);
-        if factor.sigfigs() > 15 {
-            todo!()
-        } else {
-            match i8::try_from(factor.exponent_integral()) {
-                Ok(exponent) => {
-                    exponent as u8 as u64 | ((factor.significand_integral() - 1) as u64) << 8
-                }
-                Err(_) => todo!(),
+        let shortened_factor: SciNum = if factor.sigfigs() > 15 {
+            SciNum::new_exact(factor.number_dec().round_sf_with_strategy(15, rust_decimal::RoundingStrategy::MidpointAwayFromZero).expect("rust_decimal can do 28 s.f. of precision"))
+        } else { factor };
+
+        match i8::try_from(shortened_factor.exponent_integral()) {
+            Ok(exponent) => {
+                exponent as u8 as u64 | ((shortened_factor.significand_integral() - 1) as u64) << 8
             }
+            Err(_) => panic!("Exponent of provided SciNum {} exceeds the range of the i8 used for Unit128's numeric factor's exponent", shortened_factor.exponent_integral()),
         }
     }
 
+    // Maximum and minimum values for a referenced numeric component
+    const MAX_MANTISSA_FACTOR_REFERENCED: i32 = 0x7FFFFF;
+    const MIN_MANTISSA_FACTOR_REFERENCED: i32 = -0x7FFFFF;
+    const MAX_EXPONENT_FACTOR_REFERENCED: i8 = 0x7F;
+    const MIN_EXPONENT_FACTOR_REFERENCED: i8 = -0x80;
+    const MAX_MANTISSA_REFERENCE: i32 = 0x7FFFFF;
+    const MIN_MANTISSA_REFERENCE: i32 = -0x7FFFFF;
+    const MAX_EXPONENT_REFERENCE: i8 = 0x7F;
+    const MIN_EXPONENT_REFERENCE: i8 = -0x80;
+
+    /// Calculates the 64-bit referenced numeric component that encodes the provided `SciNum`s.
+    /// 
+    /// Currently panics if either the factor or reference are too large to be represented.
     pub(crate) fn factor_and_reference_to_bits(factor: SciNum, reference: SciNum) -> u64 {
-        if factor.sigfigs() > 6 || reference.sigfigs() > 6 {
-            todo!()
-        } else {
-            Unit128::factor_to_bits(factor) & 0x0000_0000_FFFF_FFFF
-                | Unit128::factor_to_bits(reference) << 32
-        }
+        let shortened_factor: SciNum = if factor.sigfigs() > 6 {
+            SciNum::new_exact(factor.number_dec().round_sf_with_strategy(6, rust_decimal::RoundingStrategy::MidpointAwayFromZero).expect("rust_decimal can do 28 s.f. of precision"))
+        } else { factor };
+
+        let shortened_reference: SciNum = if reference.sigfigs() > 6 {
+            SciNum::new_exact(reference.number_dec().round_sf_with_strategy(6, rust_decimal::RoundingStrategy::MidpointAwayFromZero).expect("rust_decimal can do 28 s.f. of precision"))
+        } else { reference };
+        
+        (Unit128::factor_to_bits(shortened_factor) & 0x0000_0000_FFFF_FFFF)
+            | (Unit128::factor_to_bits(shortened_reference) << 32)
     }
 
+    /// Determines the `SciNum` encoded by the provided 64-bit numeric component.
     pub(crate) fn bits_to_factor(b: u64) -> SciNum {
         let exponent = (b & 0x0000_0000_0000_00FF) as i8;
         let significand = ((b as i64) >> 8) + 1;
         SciNum::exact_from_scientific_parts(significand, exponent.into())
     }
 
+    /// Determines the `SciNum`s encoded by the provided 64-bit referenced numeric component.
     pub(crate) fn bits_to_factor_and_reference(b: u64) -> (SciNum, SciNum) {
         let factor_exponent = (b & 0x0000_0000_0000_00FF) as i8;
         let factor_significand = ((b & 0x0000_0000_FFFF_FF00) >> 8) + 1;

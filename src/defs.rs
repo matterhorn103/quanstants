@@ -83,9 +83,9 @@ pub mod units {
             SiCompatible,
         }
 
-        impl PyUnitModule {
-            pub(crate) fn into_inner(self) -> UnitModule {
-                match self {
+        impl From<PyUnitModule> for UnitModule {
+            fn from(m: PyUnitModule) -> UnitModule {
+                match m {
                     PyUnitModule::Si => UnitModule::Si,
                     PyUnitModule::SiCompatible => UnitModule::SiCompatible,
                 }
@@ -93,7 +93,7 @@ pub mod units {
         }
 
         impl From<UnitModule> for PyUnitModule {
-            fn from(m: UnitModule) -> Self {
+            fn from(m: UnitModule) -> PyUnitModule {
                 match m {
                     UnitModule::Si => PyUnitModule::Si,
                     UnitModule::SiCompatible => PyUnitModule::SiCompatible,

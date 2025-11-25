@@ -8,6 +8,7 @@ from quanstants._quanstants import (
     Prefix,
     Unit,
     Context,
+    UnitModule,
 )
 
 __all__ = [
@@ -17,6 +18,7 @@ __all__ = [
     Prefix,
     Unit,
     Context,
+    UnitModule,
 ]
 
 # Default context

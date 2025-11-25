@@ -77,7 +77,7 @@ pub mod units {
         use super::*;
         use pyo3::prelude::*;
 
-        #[pyclass(name = "Prefix")]
+        #[pyclass(name = "UnitModule")]
         #[derive(Copy, Clone, Debug)]
         pub(crate) enum PyUnitModule {
             Si,

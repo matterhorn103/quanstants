@@ -29,6 +29,7 @@ mod bindings {
         m.add_class::<crate::unit::py::PyUnit>()?;
         m.add_class::<crate::prefix::py::PyPrefix>()?;
         m.add_class::<crate::context::py::PyContext>()?;
+        m.add_class::<crate::defs::units::py::PyUnitModule>()?;
         Ok(())
     }
 }

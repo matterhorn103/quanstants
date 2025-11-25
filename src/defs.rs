@@ -54,7 +54,7 @@ pub struct QuantityDef {
 }
 
 pub mod units {
-    #[derive(Debug)]
+    #[derive(Copy, Clone, Debug)]
     pub enum UnitModule {
         Si,
         SiCompatible,
@@ -68,6 +68,36 @@ pub mod units {
             match self {
                 Self::Si => Self::SI,
                 Self::SiCompatible => Self::SI_COMPATIBLE,
+            }
+        }
+    }
+
+    pub(crate) mod py {
+        use super::*;
+        use pyo3::prelude::*;
+
+        #[pyclass(name = "Prefix")]
+        #[derive(Copy, Clone, Debug)]
+        pub(crate) enum PyUnitModule {
+            Si,
+            SiCompatible,
+        }
+
+        impl PyUnitModule {
+            pub(crate) fn into_inner(self) -> UnitModule {
+                match self {
+                    PyUnitModule::Si => UnitModule::Si,
+                    PyUnitModule::SiCompatible => UnitModule::SiCompatible,
+                }
+            }
+        }
+
+        impl From<UnitModule> for PyUnitModule {
+            fn from(m: UnitModule) -> Self {
+                match m {
+                    UnitModule::Si => PyUnitModule::Si,
+                    UnitModule::SiCompatible => PyUnitModule::SiCompatible,
+                }
             }
         }
     }

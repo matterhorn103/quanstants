@@ -191,8 +191,15 @@ pub(crate) mod py {
         }
 
         /// Creates a new `Quantity` from a number and a unit.
-        pub fn quantity(&self, number: PyIntoSciNum, unit: PyUnit) -> PyQuantity {
-            Quantity { number: number.try_into().unwrap(), unit: unit.into_inner() }.into()
+        #[pyo3(signature = (number, unit, uncertainty=None))]
+        fn quantity(&self, number: PyIntoSciNum, unit: PyUnit, uncertainty: Option<PyIntoSciNum>) -> PyQuantity {
+            let num: SciNum = if let Some(u) = uncertainty {
+                let num: SciNum = number.try_into().unwrap();
+                num.with_uncertainty(u.try_into().unwrap())
+            } else {
+                number.try_into().unwrap()
+            };
+            Quantity { number: num, unit: unit.into_inner() }.into()
         }
 
         /// Provides access to the context's unit registry.

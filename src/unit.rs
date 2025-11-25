@@ -383,7 +383,7 @@ pub(crate) mod py {
         }
     }
 
-    #[derive(FromPyObject)]
+    #[derive(Debug, FromPyObject)]
     enum PyUnitArithmeticEnum {
         #[pyo3(transparent, annotation = "Quantity")]
         Quantity(PyQuantity),

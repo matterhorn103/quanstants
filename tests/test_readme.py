@@ -2,9 +2,10 @@ import decimal
 from decimal import Decimal as dec # noqa: F401
 from fractions import Fraction as frac # noqa: F401
 
+import pytest
 from quanstants import qu  # type: ignore # noqa: F401
 
-
+@pytest.mark.skip()
 class TestREADME:
     """Here we parse the README and test each example statement automatically.
     

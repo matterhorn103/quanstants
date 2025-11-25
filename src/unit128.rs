@@ -336,9 +336,8 @@ impl FromStr for Unit128 {
     type Err = QuanstantsError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let a = i8::MAX;
         let hex = s.strip_prefix("0x").unwrap_or(s);
-        let bits = u128::from_str_radix(hex, 16).map_err(|_e| QuanstantsError::Parse)?;
+        let bits = u128::from_str_radix(hex, 16).map_err(|_e| QuanstantsError::Parse(s.into()))?;
         Ok(Self::from_bits(bits))
     }
 }

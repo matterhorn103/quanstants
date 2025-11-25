@@ -91,7 +91,7 @@ impl Prefix {
             "Ei" => Ok(Self::exbi),
             "Zi" => Ok(Self::zebi),
             "Yi" => Ok(Self::yobi),
-            _ => Err(QuanstantsError::Parse),
+            _ => Err(QuanstantsError::Parse(symbol.to_string())),
         }
     }
 
@@ -129,7 +129,7 @@ impl Prefix {
             "exbi" => Ok(Self::exbi),
             "zebi" => Ok(Self::zebi),
             "yobi" => Ok(Self::yobi),
-            _ => Err(QuanstantsError::Parse),
+            _ => Err(QuanstantsError::Parse(name.to_string())),
         }
     }
 

@@ -189,10 +189,10 @@ impl FromStr for Frac {
         let parts: Vec<&str> = s.split(&['/', '⁄']).collect();
         let den: i8 = match parts.len() {
             1 => Ok(1),
-            2 => i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse),
-            _ => Err(QuanstantsError::Parse),
+            2 => i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse(parts[0].to_string())),
+            _ => Err(QuanstantsError::Parse(s.to_string())),
         }?;
-        let num: i8 = i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse)?;
+        let num: i8 = i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse(parts[0].to_string()))?;
         Ok(Self::new(num, den))
     }
 }

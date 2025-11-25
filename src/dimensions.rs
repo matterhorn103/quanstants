@@ -152,7 +152,7 @@ impl FromStr for Dimensions {
         for term in split {
             let mut chars = term.chars();
             // The symbol will always be the first character
-            let symbol = chars.next().ok_or(QuanstantsError::Parse)?;
+            let symbol = chars.next().ok_or(QuanstantsError::Parse(term.to_string()))?;
             let exponent = match chars.as_str() {
                 // Exponent of 1 is implicit
                 "" => Frac::ONE,
@@ -166,7 +166,7 @@ impl FromStr for Dimensions {
                 'Θ' => Ok(4),
                 'N' => Ok(5),
                 'J' => Ok(6),
-                _ => Err(QuanstantsError::Parse),
+                _ => Err(QuanstantsError::Parse(symbol.to_string())),
             }?;
             exponents[i] = exponent;
         }

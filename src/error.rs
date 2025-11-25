@@ -7,7 +7,7 @@ use crate::unit::Unit;
 
 #[derive(Clone, Debug)]
 pub enum QuanstantsError {
-    Parse,
+    Parse(String),
     Cast,
     Range,
     Overflow,
@@ -20,7 +20,7 @@ pub enum QuanstantsError {
 impl fmt::Display for QuanstantsError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            QuanstantsError::Parse => write!(f, "Failed to parse"),
+            QuanstantsError::Parse(string) => write!(f, "Failed to parse: {string}"),
             QuanstantsError::Cast => write!(f, "Failed to cast"),
             QuanstantsError::Range => write!(f, "Input lies outside of valid range"),
             QuanstantsError::Overflow => {

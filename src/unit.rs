@@ -351,25 +351,47 @@ pub(crate) mod py {
             self.0 == other.0
         }
 
-        // Only 3 * m is valid, not m * 3, so only define rmul and rtruediv
+        fn __mul__(&self, other: &Self) -> Self {
+            Self(self.owned_inner() * other.owned_inner())
+        }
+
+        // Only 3 * m is valid, not m * 3, so only define rmul and rtruediv for mixed ops
         // Operations between units and quantities are all handled by PyQuantity
         fn __rmul__(&self, other: PyUnitArithmeticEnum) -> PyQuantity {
             match other {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() * self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => Quantity::new(i, self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Int(i) => (i * self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
-                    Quantity::new(SciNum::from_f64_exact(f).unwrap(), self.owned_inner()).into()
+                    (SciNum::from_f64_exact(f).unwrap() * self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::Decimal(d) => {
-                    Quantity::new(d, self.owned_inner()).into()
+                    (d * self.owned_inner()).into()
                 }
-                PyUnitArithmeticEnum::String(s) => Quantity::new(
-                    SciNum::from_str(&s).unwrap(),
-                    self.owned_inner(),
-                )
-                .into(),
+                PyUnitArithmeticEnum::String(s) => 
+                    (SciNum::from_str(&s).unwrap() * self.owned_inner()).into()
+            }
+        }
+
+        fn __truediv__(&self, other: &Self) -> Self {
+            Self(self.owned_inner() / other.owned_inner())
+        }
+
+        fn __rtruediv__(&self, other: PyUnitArithmeticEnum) -> PyQuantity {
+            match other {
+                PyUnitArithmeticEnum::Quantity(q) => {
+                    PyQuantity::from(q.into_inner() / self.owned_inner())
+                }
+                PyUnitArithmeticEnum::Int(i) => (i / self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Float(f) => {
+                    (SciNum::from_f64_exact(f).unwrap() / self.owned_inner()).into()
+                }
+                PyUnitArithmeticEnum::Decimal(d) => {
+                    (d / self.owned_inner()).into()
+                }
+                PyUnitArithmeticEnum::String(s) => 
+                    (SciNum::from_str(&s).unwrap() / self.owned_inner()).into()
             }
         }
 

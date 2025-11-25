@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
 // SPDX-License-Identifier: MIT
 
+use std::str::FromStr;
+
 use crate::{
-    defs::units::UnitModule, error::QuanstantsError, prefix::Prefix, reg::UnitRegistry, unit::Unit,
-    unit128::Unit128,
+    defs::units::UnitModule, error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::Quantity, reg::UnitRegistry, scinum::SciNum, unit::Unit, unit128::Unit128
 };
 
 #[derive(Debug, Default)]
@@ -31,6 +32,11 @@ impl Context {
     }
 
     #[inline]
+    pub fn unit_by_symbol(&self, name: &str) -> Option<Unit> {
+        self.units.get_by_symbol(name)
+    }
+
+    #[inline]
     pub fn unit_by_name(&self, name: &str) -> Option<Unit> {
         self.units.get_by_name(name)
     }
@@ -48,6 +54,42 @@ impl Context {
     #[inline]
     pub fn load_unit_module(&mut self, module: UnitModule) -> Result<(), QuanstantsError> {
         self.units.load_module(module)
+    }
+
+    pub fn quantity(&self, number: SciNum, unit: Unit) -> Quantity {
+        Quantity { number, unit }
+    }
+
+    pub fn quantity_from_str(&self, s: &str) -> Result<Quantity, QuanstantsError> {
+        let s = s.to_owned();
+        let mut parts = s.split_whitespace();
+        if s.contains("+/-") || s.contains("±") {
+            todo!("Uncertainties must be denoted using parentheses for now")
+        }
+        let number = SciNum::from_str(parts.next().expect("String shouldn't be empty"))?;
+        let mut unit_vec = Vec::new();
+        for term_string in parts {
+            let mut unit_string = String::new();
+            let mut exponent_string = String::new();
+            for c in term_string.chars() {
+                if c.is_alphabetic() {
+                    unit_string.push(c);
+                } else if c == '^' {
+                    continue;
+                } else {
+                    exponent_string.push(c);
+                }
+            }
+            let unit = self.unit_by_symbol(&unit_string).or(self.unit_by_name(&unit_string)).ok_or(QuanstantsError::Lookup(unit_string))?;
+            let term = if exponent_string.is_empty() {
+                unit
+            } else {
+                unit.pow(Frac::from_str(&exponent_string)?)
+            };
+            unit_vec.push(term);
+        }
+        let product_unit = unit_vec.into_iter().reduce(|acc, e| acc * e).unwrap_or(self.unitless());
+        Ok(Quantity { number, unit: product_unit })
     }
 }
 
@@ -169,7 +211,7 @@ impl Context {
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
-    use crate::{prefix::py::PyPrefix, unit::py::PyUnit};
+    use crate::{prefix::py::PyPrefix, quantity::py::PyQuantity, unit::py::PyUnit};
 
     use super::*;
     use pyo3::prelude::*;
@@ -184,6 +226,10 @@ pub(crate) mod py {
         #[new]
         fn new() -> Self {
             PyContext::default()
+        }
+
+        fn __call__(&self, s: &str) -> PyQuantity {
+            self.0.quantity_from_str(s).unwrap().into()
         }
 
         #[getter]
@@ -776,5 +822,13 @@ mod tests {
         context.gray();
         context.sievert();
         context.katal();
+    }
+
+    #[test]
+    fn quantity_from_str() {
+        let context = Context::new();
+        assert_eq!(context.quantity_from_str("3 m").unwrap(), SciNum::new_exact(3) * context.metre());
+        assert_eq!(context.quantity_from_str("3 metre").unwrap(), SciNum::new_exact(3) * context.metre());
+        assert_eq!(context.quantity_from_str("3 m2").unwrap(), SciNum::new_exact(3) * context.metre().pow(2));
     }
 }

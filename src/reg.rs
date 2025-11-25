@@ -43,6 +43,12 @@ impl UnitRegistry {
         self.string_map.insert(normalized, unit);
     }
 
+    /// Adds the unit to symbol_map under the provided symbol if not already present.
+    #[inline]
+    fn insert_under_symbol_checked(&mut self, symbol: String, unit: Unit) {
+        self.symbol_map.entry(symbol).or_insert(unit);
+    }
+
     fn new_base(
         &mut self,
         id: Unit128,
@@ -74,8 +80,9 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
     ) -> Unit128 {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
-        let unit = self.new_base(id, dimensions, symbol, name.clone(), prefix);
+        let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
+        self.insert_under_symbol_checked(symbol, unit.clone());
         self.units.insert(id, unit);
         id
     }
@@ -95,7 +102,8 @@ impl UnitRegistry {
             let alt_unit = self.new_base(id, dimensions, symbol.clone(), n.clone(), prefix);
             self.insert_under_string(n, alt_unit);
         }
-        // Getting the unit by ID should return the canonical form
+        // Getting the unit by symbol or ID should return the canonical form
+        self.insert_under_symbol_checked(symbol, unit.clone());
         self.units.insert(id, unit);
         id
     }
@@ -109,11 +117,12 @@ impl UnitRegistry {
         aliases: Vec<String>,
     ) -> Unit128 {
         let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
-        let unit = self.new_base(id, dimensions, symbol, name.clone(), prefix);
+        let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
         for alias in aliases {
             self.insert_under_string(alias, unit.clone());
         }
+        self.insert_under_symbol_checked(symbol, unit.clone());
         self.units.insert(id, unit);
         id
     }
@@ -203,13 +212,14 @@ impl UnitRegistry {
         };
         let unit = self.new_derived(
             id,
-            symbol,
+            symbol.clone(),
             name.clone(),
             prefix,
             proportionality_factor,
             unit_factors,
         );
         self.insert_under_string(name, unit.clone());
+        self.insert_under_symbol_checked(symbol, unit.clone());
         self.units.insert(id, unit);
         id
     }
@@ -262,7 +272,8 @@ impl UnitRegistry {
             );
             self.insert_under_string(n, alt_unit);
         }
-        // Getting the unit by ID should return the canonical form
+        // Getting the unit by symbol or ID should return the canonical form
+        self.insert_under_symbol_checked(symbol, unit.clone());
         self.units.insert(id, unit);
         id
     }
@@ -304,6 +315,7 @@ impl UnitRegistry {
         for alias in aliases {
             self.insert_under_string(alias, unit.clone());
         }
+        self.insert_under_symbol_checked(symbol, unit.clone());
         self.units.insert(id, unit);
         id
     }
@@ -580,5 +592,19 @@ mod tests {
         //    reg.get_by_name("litre").unwrap(),
         //    m.clone() * m.clone() * m.clone()// * SciNum::new_exact(dec!(0.001))
         //);
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn get_by_symbol() {
+        let reg = UnitRegistry::default();
+
+        let _s = reg.get_by_symbol("s").unwrap();
+        let _m = reg.get_by_symbol("m").unwrap();
+        let _kg = reg.get_by_symbol("kg").unwrap();
+        let _A = reg.get_by_symbol("A").unwrap();
+        let _K = reg.get_by_symbol("K").unwrap();
+        let _mol = reg.get_by_symbol("mol").unwrap();
+        let _cd = reg.get_by_symbol("cd").unwrap();
     }
 }

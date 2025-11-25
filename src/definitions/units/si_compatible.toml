@@ -86,23 +86,25 @@ name = "tonne"
 value.number = "1e3"
 value.unit = [["kilogram", "1"]]
 
-[units.dalton]
-#id = ""
-symbol = "Da"
-name = "dalton"
-aliases = ["atomic mass unit", "unified atomic mass unit"]
-value.number = "1.66053906660e-27"
-value.unit = [["kilogram", "1"]]
-value.uncertainty = "0.00000000050e-27"
+# TODO restore once SciNum supports large exponents
+#[units.dalton]
+##id = ""
+#symbol = "Da"
+#name = "dalton"
+#aliases = ["atomic mass unit", "unified atomic mass unit"]
+#value.number = "1.66053906660e-27"
+#value.unit = [["kilogram", "1"]]
+#value.uncertainty = "0.00000000050e-27"
 
 ## energy
 
-[units.electronvolt]
-#id = ""
-symbol = "eV"
-name = "electronvolt"
-value.number = "1.602176634e-19"
-value.unit = [["joule", "1"]]
+# TODO restore once SciNum supports large exponents
+#[units.electronvolt]
+##id = ""
+#symbol = "eV"
+#name = "electronvolt"
+#value.number = "1.602176634e-19"
+#value.unit = [["joule", "1"]]
 
 ## logarithmic ratio quantities
 # TODO define for both power vs root-power quantities

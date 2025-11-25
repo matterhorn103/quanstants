@@ -79,9 +79,24 @@ impl Context {
         self.units.unitless()
     }
 
+    // Make sure to get the meter with the US spelling
+    #[inline]
+    pub fn meter(&self) -> Unit {
+        self.units
+            .get_by_name("meter")
+            .expect("Context is always pre-populated with the SI base units, including the metre/meter")
+    }
+
+    // Make sure to get the liter with the US spelling
+    #[inline]
+    pub fn liter(&self) -> Unit {
+        self.units
+            .get_by_name("liter")
+            .expect("Context is pre-populated with common SI-compatible units, including the litre/liter")
+    }
+
     unit_getter!(second, Unit128::SECOND);
     unit_getter!(metre, Unit128::METRE);
-    unit_getter!(meter, Unit128::METRE);
     unit_getter!(kilogram, Unit128::KILOGRAM);
     unit_getter!(ampere, Unit128::AMPERE);
     unit_getter!(kelvin, Unit128::KELVIN);
@@ -109,6 +124,8 @@ impl Context {
     unit_getter!(gray, Unit128::GRAY);
     unit_getter!(sievert, Unit128::SIEVERT);
     unit_getter!(katal, Unit128::KATAL);
+    unit_getter!(gram, Unit128{ num: 0xFD, dim: 0x0000000011000001 });
+    unit_getter!(litre, Unit128{ num: 0xFD, dim: 0x0000000000130001 });
 }
 
 // Convenience functions for prefixes
@@ -224,7 +241,7 @@ pub(crate) mod py {
 
         #[getter]
         fn meter(&self) -> PyUnit {
-            self.0.metre().into()
+            self.0.meter().into()
         }
 
         #[getter]
@@ -500,6 +517,31 @@ pub(crate) mod py {
         #[getter]
         fn kat(&self) -> PyUnit {
             self.0.katal().into()
+        }
+
+        #[getter]
+        fn gram(&self) -> PyUnit {
+            self.0.gram().into()
+        }
+
+        #[getter]
+        fn g(&self) -> PyUnit {
+            self.0.gram().into()
+        }
+
+        #[getter]
+        fn litre(&self) -> PyUnit {
+            self.0.litre().into()
+        }
+
+        #[getter]
+        fn liter(&self) -> PyUnit {
+            self.0.liter().into()
+        }
+
+        #[getter]
+        fn L(&self) -> PyUnit {
+            self.0.litre().into()
         }
 
         // Prefix getters

@@ -507,6 +507,42 @@ impl UnitRegistry {
     }
 }
 
+pub(crate) mod py {
+    use crate::{context::py::PyContext, defs::units::py::PyUnitModule, unit::py::PyUnit};
+
+    use super::*;
+    use pyo3::prelude::*;
+
+    #[pyclass]
+    pub(crate) struct PyUnits {
+        pub(crate) parent: Py<PyContext>,
+    }
+
+    #[pymethods]
+    impl PyUnits {
+        // Square bracket notation lookup for units
+        fn __getitem__(&self, py: Python, name: &str) -> PyUnit {
+            self.parent.borrow(py).0.units.get_by_name(name).unwrap().into()
+        }
+
+        fn get_by_name(&self, py: Python, name: &str) -> PyUnit {
+            self.parent.borrow(py).0.units.get_by_name(name).unwrap().into()
+        }
+
+        fn get_by_id(&self, py: Python, id: u128) -> PyUnit {
+            self.parent.borrow(py).0.units.get_by_id(Unit128::from_bits(id)).unwrap().into()
+        }
+
+        fn list(&self, py: Python) -> Vec<String> {
+            self.parent.borrow(py).0.units.string_map.keys().cloned().collect()
+        }
+
+        fn load_module(&mut self, py: Python, module: PyUnitModule) {
+            self.parent.borrow_mut(py).0.units.load_module(module.into()).unwrap();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

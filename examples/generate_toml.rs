@@ -8,7 +8,7 @@ use quanstants::{
 };
 
 fn def_from_derived_unit(ctx: &Context, unit_name: &str) -> UnitDef {
-    let unit = ctx.unit_by_name(unit_name).unwrap();
+    let unit = ctx.units.get_by_name(unit_name).unwrap();
     let unit_factors: Vec<(String, Frac)> = unit
         .defining_factors()
         .iter()

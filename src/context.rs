@@ -4,7 +4,7 @@
 use std::str::FromStr;
 
 use crate::{
-    defs::units::UnitModule, error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::Quantity, reg::UnitRegistry, scinum::SciNum, unit::Unit, unit128::Unit128
+    error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::Quantity, reg::UnitRegistry, scinum::SciNum, unit::Unit, unit128::Unit128
 };
 
 #[derive(Debug, Default)]
@@ -31,31 +31,6 @@ impl Context {
         }
     }
 
-    #[inline]
-    pub fn unit_by_symbol(&self, name: &str) -> Option<Unit> {
-        self.units.get_by_symbol(name)
-    }
-
-    #[inline]
-    pub fn unit_by_name(&self, name: &str) -> Option<Unit> {
-        self.units.get_by_name(name)
-    }
-
-    #[inline]
-    pub fn unit_by_id(&self, id: Unit128) -> Option<Unit> {
-        self.units.get_by_id(id)
-    }
-
-    #[inline]
-    pub fn prefix_by_name(&self, name: &str) -> Result<Prefix, QuanstantsError> {
-        Prefix::from_name(name)
-    }
-
-    #[inline]
-    pub fn load_unit_module(&mut self, module: UnitModule) -> Result<(), QuanstantsError> {
-        self.units.load_module(module)
-    }
-
     pub fn quantity(&self, number: SciNum, unit: Unit) -> Quantity {
         Quantity { number, unit }
     }
@@ -80,7 +55,7 @@ impl Context {
                     exponent_string.push(c);
                 }
             }
-            let unit = self.unit_by_symbol(&unit_string).or(self.unit_by_name(&unit_string)).ok_or(QuanstantsError::Lookup(unit_string))?;
+            let unit = self.units.get_by_symbol(&unit_string).or(self.units.get_by_name(&unit_string)).ok_or(QuanstantsError::Lookup(unit_string))?;
             let term = if exponent_string.is_empty() {
                 unit
             } else {
@@ -93,6 +68,7 @@ impl Context {
     }
 }
 
+/// Macro to generate convenience functions for units
 macro_rules! unit_getter {
     ($name:ident, $id:expr) => {
         #[inline]
@@ -104,16 +80,7 @@ macro_rules! unit_getter {
     };
 }
 
-macro_rules! prefix_getter {
-    ($name:ident) => {
-        #[inline]
-        pub fn $name(&self) -> Prefix {
-            Prefix::$name
-        }
-    };
-}
-
-// Convenience functions for pre-populated units
+// Generate convenience functions for the pre-populated units
 #[allow(dead_code)]
 impl Context {
     #[inline]
@@ -159,7 +126,7 @@ impl Context {
     unit_getter!(weber, Unit128::WEBER);
     unit_getter!(tesla, Unit128::TESLA);
     unit_getter!(henry, Unit128::HENRY);
-    unit_getter!(celsius_degree, Unit128::CELSIUS_DEGREE);
+    //unit_getter!(celsius_degree, Unit128::CELSIUS_DEGREE);
     unit_getter!(lumen, Unit128::LUMEN);
     unit_getter!(lux, Unit128::LUX);
     unit_getter!(becquerel, Unit128::BECQUEREL);
@@ -170,55 +137,37 @@ impl Context {
     unit_getter!(litre, Unit128{ num: 0xFD, dim: 0x0000000000130001 });
 }
 
-// Convenience functions for prefixes
+/// Macro to generate convenience functions for prefixes
+macro_rules! prefix_getter {
+    ($name:ident) => {
+        #[inline]
+        pub fn $name(&self) -> Prefix {
+            Prefix::$name
+        }
+    };
+}
+
+// Generate convenience functions for the most common prefixes
 #[allow(dead_code)]
 impl Context {
-    // Metric
-    prefix_getter!(quecto);
-    prefix_getter!(ronto);
-    prefix_getter!(yocto);
-    prefix_getter!(zepto);
-    prefix_getter!(atto);
-    prefix_getter!(femto);
-    prefix_getter!(pico);
     prefix_getter!(nano);
     prefix_getter!(micro);
     prefix_getter!(milli);
-    prefix_getter!(centi);
-    prefix_getter!(deci);
-    prefix_getter!(deca);
-    prefix_getter!(hecto);
     prefix_getter!(kilo);
     prefix_getter!(mega);
     prefix_getter!(giga);
-    prefix_getter!(tera);
-    prefix_getter!(peta);
-    prefix_getter!(exa);
-    prefix_getter!(zetta);
-    prefix_getter!(yotta);
-    prefix_getter!(ronna);
-    prefix_getter!(quetta);
-    // Binary
-    prefix_getter!(kibi);
-    prefix_getter!(mebi);
-    prefix_getter!(gibi);
-    prefix_getter!(tebi);
-    prefix_getter!(pebi);
-    prefix_getter!(exbi);
-    prefix_getter!(zebi);
-    prefix_getter!(yobi);
 }
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
-    use crate::{prefix::py::PyPrefix, quantity::py::PyQuantity, unit::py::PyUnit};
+    use crate::{prefix::py::PyPrefix, quantity::py::PyQuantity, reg::py::PyUnits, unit::py::PyUnit};
 
     use super::*;
-    use pyo3::prelude::*;
+    use pyo3::{prelude::*, types::PyType};
 
     #[pyclass(name = "Context")]
     #[derive(Debug, Default)]
-    pub struct PyContext(Context);
+    pub(crate) struct PyContext(pub(crate) Context);
 
     #[allow(non_snake_case)]
     #[pymethods]
@@ -232,35 +181,21 @@ pub(crate) mod py {
             self.0.quantity_from_str(s).unwrap().into()
         }
 
+        // Square bracket notation lookup for units
+        fn __getitem__(&self, name: &str) -> PyUnit {
+            self.0.units.get_by_name(name).unwrap().into()
+        }
+
         #[getter]
         fn units(slf: Py<Self>) -> PyUnits {
             PyUnits { parent: slf }
         }
 
-        fn unit_by_name(&self, name: &str) -> PyUnit {
-            self.0.unit_by_name(name).unwrap().into()
-        }
-
-        fn unit_by_id(&self, id: u128) -> PyUnit {
-            self.0.unit_by_id(Unit128::from_bits(id)).unwrap().into()
-        }
-
-        fn _list_units(&self) -> Vec<String> {
-            self.0.units.string_map.keys().cloned().collect()
-        }
-
-        // Square bracket notation lookup for units
-        fn __getitem__(&self, name: &str) -> PyUnit {
-            self.unit_by_name(name)
-        }
-
-        #[getter]
-        fn prefixes(slf: Py<Self>) -> PyPrefixes {
-            PyPrefixes { parent: slf }
-        }
-
-        fn prefix_by_name(&self, name: &str) -> PyPrefix {
-            self.0.prefix_by_name(name).unwrap().into()
+        #[classattr]
+        fn Prefix() -> PyResult<Py<PyType>> {
+            Python::attach(|py| {
+                Ok(py.get_type::<PyPrefix>().unbind())
+            })
         }
 
         // Unit getters
@@ -500,10 +435,10 @@ pub(crate) mod py {
             self.0.henry().into()
         }
 
-        #[getter]
-        fn celsius_degree(&self) -> PyUnit {
-            self.0.celsius_degree().into()
-        }
+        //#[getter]
+        //fn celsius_degree(&self) -> PyUnit {
+        //    self.0.celsius_degree().into()
+        //}
 
         #[getter]
         fn lumen(&self) -> PyUnit {
@@ -593,41 +528,6 @@ pub(crate) mod py {
         // Prefix getters
 
         #[getter]
-        fn quecto(&self) -> PyPrefix {
-            self.0.quecto().into()
-        }
-
-        #[getter]
-        fn ronto(&self) -> PyPrefix {
-            self.0.ronto().into()
-        }
-
-        #[getter]
-        fn yocto(&self) -> PyPrefix {
-            self.0.yocto().into()
-        }
-
-        #[getter]
-        fn zepto(&self) -> PyPrefix {
-            self.0.zepto().into()
-        }
-
-        #[getter]
-        fn atto(&self) -> PyPrefix {
-            self.0.atto().into()
-        }
-
-        #[getter]
-        fn femto(&self) -> PyPrefix {
-            self.0.femto().into()
-        }
-
-        #[getter]
-        fn pico(&self) -> PyPrefix {
-            self.0.pico().into()
-        }
-
-        #[getter]
         fn nano(&self) -> PyPrefix {
             self.0.nano().into()
         }
@@ -643,26 +543,6 @@ pub(crate) mod py {
         }
 
         #[getter]
-        fn centi(&self) -> PyPrefix {
-            self.0.centi().into()
-        }
-
-        #[getter]
-        fn deci(&self) -> PyPrefix {
-            self.0.deci().into()
-        }
-
-        #[getter]
-        fn deca(&self) -> PyPrefix {
-            self.0.deca().into()
-        }
-
-        #[getter]
-        fn hecto(&self) -> PyPrefix {
-            self.0.hecto().into()
-        }
-
-        #[getter]
         fn kilo(&self) -> PyPrefix {
             self.0.kilo().into()
         }
@@ -675,111 +555,6 @@ pub(crate) mod py {
         #[getter]
         fn giga(&self) -> PyPrefix {
             self.0.giga().into()
-        }
-
-        #[getter]
-        fn tera(&self) -> PyPrefix {
-            self.0.tera().into()
-        }
-
-        #[getter]
-        fn peta(&self) -> PyPrefix {
-            self.0.peta().into()
-        }
-
-        #[getter]
-        fn exa(&self) -> PyPrefix {
-            self.0.exa().into()
-        }
-
-        #[getter]
-        fn zetta(&self) -> PyPrefix {
-            self.0.zetta().into()
-        }
-
-        #[getter]
-        fn yotta(&self) -> PyPrefix {
-            self.0.yotta().into()
-        }
-
-        #[getter]
-        fn ronna(&self) -> PyPrefix {
-            self.0.ronna().into()
-        }
-
-        #[getter]
-        fn quetta(&self) -> PyPrefix {
-            self.0.quetta().into()
-        }
-
-        #[getter]
-        fn kibi(&self) -> PyPrefix {
-            self.0.kibi().into()
-        }
-
-        #[getter]
-        fn mebi(&self) -> PyPrefix {
-            self.0.mebi().into()
-        }
-
-        #[getter]
-        fn gibi(&self) -> PyPrefix {
-            self.0.gibi().into()
-        }
-
-        #[getter]
-        fn tebi(&self) -> PyPrefix {
-            self.0.tebi().into()
-        }
-
-        #[getter]
-        fn pebi(&self) -> PyPrefix {
-            self.0.pebi().into()
-        }
-
-        #[getter]
-        fn exbi(&self) -> PyPrefix {
-            self.0.exbi().into()
-        }
-
-        #[getter]
-        fn zebi(&self) -> PyPrefix {
-            self.0.zebi().into()
-        }
-
-        #[getter]
-        fn yobi(&self) -> PyPrefix {
-            self.0.yobi().into()
-        }
-    }
-
-    #[pyclass]
-    pub struct PyUnits {
-        parent: Py<PyContext>,
-    }
-
-    #[pymethods]
-    impl PyUnits {
-        // Square bracket notation lookup for units
-        fn __getitem__(&self, py: Python, name: &str) -> PyUnit {
-            self.parent.borrow(py).unit_by_name(name)
-        }
-
-        fn list(&self, py: Python) -> Vec<String> {
-            self.parent.borrow(py)._list_units()
-        }
-    }
-
-    #[pyclass]
-    pub struct PyPrefixes {
-        parent: Py<PyContext>,
-    }
-
-    #[pymethods]
-    impl PyPrefixes {
-        // Square bracket notation lookup for prefixes
-        fn __getitem__(&self, py: Python, name: &str) -> PyPrefix {
-            self.parent.borrow(py).prefix_by_name(name)
         }
     }
 }
@@ -815,7 +590,7 @@ mod tests {
         context.weber();
         context.tesla();
         context.henry();
-        context.celsius_degree();
+        //context.celsius_degree();
         context.lumen();
         context.lux();
         context.becquerel();

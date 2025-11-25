@@ -32,7 +32,7 @@ pub struct SciNum {
     number_lo: u32,
     number_mid: u32,
     number_hi: u32,
-    exponent: i16,
+    pub(crate) exponent: i16,
     uncertainty_scale: u8,
     uncertainty_lo: u32,
     uncertainty_mid: u32,
@@ -110,7 +110,7 @@ impl SciNum {
     /// `exponent`.
     pub fn with_uncertainty(mut self, uncertainty: Self) -> Self {
         if self.exponent != uncertainty.exponent {
-            panic!()
+            todo!()
         };
         self.uncertainty_scale = uncertainty.number_scale;
         self.uncertainty_lo = uncertainty.number_lo;
@@ -875,6 +875,38 @@ pub mod dec {
     pub const SCALE_SHIFT: u32 = 16;
     // Number of bits sign is shifted by.
     pub const SIGN_SHIFT: u32 = 31;
+}
+
+#[cfg(feature = "python")]
+pub(crate) mod py {
+    use super::*;
+    use pyo3::prelude::*;
+
+    /// Types that can be converted into `SciNum`.
+    #[derive(Debug, FromPyObject)]
+    pub(crate) enum PyIntoSciNum {
+        #[pyo3(transparent, annotation = "int")]
+        Int(isize),
+        #[pyo3(transparent, annotation = "float")]
+        Float(f64),
+        #[pyo3(transparent, annotation = "Decimal")]
+        Decimal(Decimal),
+        #[pyo3(transparent, annotation = "str")]
+        String(String),
+    }
+
+    impl TryFrom<PyIntoSciNum> for SciNum {
+        type Error = QuanstantsError;
+    
+        fn try_from(n: PyIntoSciNum) -> Result<SciNum, QuanstantsError> {
+            match n {
+                PyIntoSciNum::Int(i) => Ok(SciNum::new_exact(i)),
+                PyIntoSciNum::Float(f) => Ok(SciNum::from_f64_exact(f).ok_or(QuanstantsError::Cast)?),
+                PyIntoSciNum::Decimal(d) => Ok(SciNum::new_exact(d)),
+                PyIntoSciNum::String(s) => SciNum::from_str(&s),
+            }
+        }
+    }
 }
 
 #[cfg(test)]

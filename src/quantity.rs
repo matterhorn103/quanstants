@@ -120,7 +120,7 @@ pub(crate) mod py {
 
     #[pyclass(frozen, name = "Quantity")]
     #[derive(Clone, PartialEq, PartialOrd, Debug)]
-    pub struct PyQuantity(Quantity);
+    pub(crate) struct PyQuantity(pub(crate) Quantity);
 
     impl PyQuantity {
         pub fn into_inner(self) -> Quantity {

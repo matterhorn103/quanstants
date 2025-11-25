@@ -31,10 +31,13 @@ impl Context {
         }
     }
 
+    /// Creates a new `Quantity` from a number and a unit.
+    #[inline]
     pub fn quantity(&self, number: SciNum, unit: Unit) -> Quantity {
         Quantity { number, unit }
     }
 
+    /// Creates a new `Quantity` from a string.
     pub fn quantity_from_str(&self, s: &str) -> Result<Quantity, QuanstantsError> {
         let s = s.to_owned();
         let mut parts = s.split_whitespace();
@@ -160,7 +163,7 @@ impl Context {
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
-    use crate::{prefix::py::PyPrefix, quantity::py::PyQuantity, reg::py::PyUnits, unit::py::PyUnit};
+    use crate::{prefix::py::PyPrefix, quantity::py::PyQuantity, reg::py::PyUnits, scinum::py::PyIntoSciNum, unit::py::PyUnit};
 
     use super::*;
     use pyo3::{prelude::*, types::PyType};
@@ -177,20 +180,28 @@ pub(crate) mod py {
             PyContext::default()
         }
 
-        fn __call__(&self, s: &str) -> PyQuantity {
-            self.0.quantity_from_str(s).unwrap().into()
-        }
-
-        // Square bracket notation lookup for units
+        /// Looks up a unit using square bracket notation.
         fn __getitem__(&self, name: &str) -> PyUnit {
             self.0.units.get_by_name(name).unwrap().into()
         }
 
+        /// Creates a new `Quantity` from a string.
+        fn __call__(&self, s: &str) -> PyQuantity {
+            self.0.quantity_from_str(s).unwrap().into()
+        }
+
+        /// Creates a new `Quantity` from a number and a unit.
+        pub fn quantity(&self, number: PyIntoSciNum, unit: PyUnit) -> PyQuantity {
+            Quantity { number: number.try_into().unwrap(), unit: unit.into_inner() }.into()
+        }
+
+        /// Provides access to the context's unit registry.
         #[getter]
         fn units(slf: Py<Self>) -> PyUnits {
             PyUnits { parent: slf }
         }
 
+        /// Makes the `Prefix` enum conveniently accessible as a class attribute.
         #[classattr]
         fn Prefix() -> PyResult<Py<PyType>> {
             Python::attach(|py| {

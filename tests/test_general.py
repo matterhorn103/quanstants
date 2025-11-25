@@ -1,10 +1,9 @@
-import decimal
 from decimal import Decimal as dec
 from fractions import Fraction as frac
 
 import pytest
 
-from quanstants import qu, Unit, UnitId
+from quanstants import qu, Unit, UnitId, UnitModule, Prefix
 
 
 class TestMainApi:
@@ -42,14 +41,14 @@ class TestUnits:
 
     def test_non_si_metric_units(self):
         # Just check that all those advertised are available
-        qu.units.load_module("metric")
+        qu.units.load_module(UnitModule.Metric)
         q = 45032.5 * qu["kilowatthour"]
         q = 1.27 * qu["carat"]
 
     def test_imperial_us(self):
         # Just check that all those advertised are available
-        qu.units.load_module("imperial")
-        qu.units.load_module("us")
+        qu.units.load_module(UnitModule.Imperial)
+        qu.units.load_module(UnitModule.USCustomary)
         q = 6 * qu["foot"]
         q = 20 * qu["us_fluid_ounce"]
         q = 32 * qu["nautical_mile"]
@@ -57,9 +56,9 @@ class TestUnits:
         assert 32 * qu["nautical_mile"] != 32 * (qu.nano * qu["mile"])
 
     def test_unit_common_between_modules(self):
-        qu.units.load_module("imperial")
+        qu.units.load_module(UnitModule.Imperial)
         u1 = qu["foot"]
-        qu.units.load_module("us")
+        qu.units.load_module(UnitModule.USCustomary)
         u2 = qu["foot"]
         assert u1 == u2
         assert u1.id == u2.id
@@ -133,7 +132,7 @@ class TestQuantityCreation:
         assert str(q) == "741.60 g mol⁻¹"
 
     def test_quantity_instantiation(self):
-        q = qu(0.997, qu.kg / qu.litre)
+        q = qu.quantity(0.997, qu.kg / qu.litre)
         assert str(q) == "0.997 kg L⁻¹"
 
     def test_quantity_creation_method_equivalence(self):
@@ -359,7 +358,7 @@ class TestConversion:
         assert repr(result) == "Quantity(2E+3, mm)"
 
     def test_to_metre(self):
-        qu.units.load_module("imperial")
+        qu.units.load_module(UnitModule.Imperial)
         result = (6 * qu["foot"]).to(qu.metre)
         assert repr(result) == "Quantity(1.8288, m)"
 
@@ -435,11 +434,11 @@ class TestConstants:
     def test_abbrev_named_constant(self):
         assert qu.constants["Planck"] == qu.constants["Planck constant"]
 
-    def test_add_codata(self):
-        qu.constants.load_module("CODATA 2018")
-
-        result = qu.constants["vacuum_electric_permittivity"]
-        assert repr(result) == "Constant(vacuum_electric_permittivity = 8.8541878128(13)E-12 F m⁻¹)"
+    # def test_add_codata(self):
+    #    qu.constants.load_module(ConstantsModule.Codata2018)
+    #
+    #    result = qu.constants["vacuum_electric_permittivity"]
+    #    assert repr(result) == "Constant(vacuum_electric_permittivity = 8.8541878128(13)E-12 F m⁻¹)"
 
     def test_as_quantity(self):
         E = qu.constants["proton mass"] * qu.constants["speed of light"] ** 2

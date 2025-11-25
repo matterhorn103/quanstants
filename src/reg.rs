@@ -18,6 +18,7 @@ use crate::{
 pub struct UnitRegistry {
     pub(crate) units: HashMap<Unit128, Unit>,
     pub(crate) string_map: HashMap<String, Unit>,
+    pub(crate) symbol_map: HashMap<String, Unit>,
     pub(crate) sources: HashMap<Unit128, Option<String>>,
 }
 
@@ -27,6 +28,7 @@ impl UnitRegistry {
         let mut reg = Self {
             units: HashMap::new(),
             string_map: HashMap::new(),
+            symbol_map: HashMap::new(),
             sources: HashMap::new(),
         };
         reg.add_unitless();
@@ -413,6 +415,11 @@ impl UnitRegistry {
     #[inline]
     pub fn get_by_name(&self, name: &str) -> Option<Unit> {
         self.string_map.get(&name.to_lowercase()).cloned()
+    }
+
+    #[inline]
+    pub fn get_by_symbol(&self, symbol: &str) -> Option<Unit> {
+        self.symbol_map.get(symbol).cloned()
     }
 
     #[inline]

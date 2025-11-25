@@ -30,7 +30,7 @@ macro_rules! impl_mul_div_with_unit {
             type Output = Quantity;
 
             fn mul(self, rhs: Unit) -> Quantity {
-                Quantity::new(self, rhs)
+                Quantity::new(self.into(), rhs)
             }
         }
 
@@ -38,7 +38,7 @@ macro_rules! impl_mul_div_with_unit {
             type Output = Quantity;
 
             fn div(self, rhs: Unit) -> Quantity {
-                Quantity::new(self, rhs.inverse())
+                Quantity::new(self.into(), rhs.inverse())
             }
         }
     };

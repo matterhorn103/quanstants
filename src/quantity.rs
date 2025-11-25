@@ -15,9 +15,9 @@ pub struct Quantity {
 }
 
 impl Quantity {
-    pub fn new(number: impl Into<SciNum>, unit: Unit) -> Self {
+    pub fn new(number: SciNum, unit: Unit) -> Self {
         Self {
-            number: number.into(),
+            number,
             unit,
         }
     }

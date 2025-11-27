@@ -171,19 +171,19 @@ pub(crate) mod py {
         }
 
         fn __add__(&self, other: &Self) -> Self {
-            Self::from(self.owned_inner() + other.into_inner())
+            Self::from(self.owned_inner() + other.owned_inner())
         }
 
         fn __radd__(&self, other: &Self) -> Self {
-            Self::from(other.into_inner() + self.owned_inner())
+            Self::from(other.owned_inner() + self.owned_inner())
         }
 
         fn __sub__(&self, other: &Self) -> Self {
-            Self::from(self.owned_inner() - other.into_inner())
+            Self::from(self.owned_inner() - other.owned_inner())
         }
 
         fn __rsub__(&self, other: &Self) -> Self {
-            Self::from(other.into_inner() - self.owned_inner())
+            Self::from(other.owned_inner() - self.owned_inner())
         }
 
         fn __mul__(&self, other: PyQuantityArithmeticEnum) -> Self {

@@ -301,11 +301,11 @@ pub mod py {
             self == other
         }
 
-        fn __mul__(&self, other: Self) -> Self {
+        fn __mul__(&self, other: &Self) -> Self {
             PyDimensions(self.0.mul(other.0))
         }
 
-        fn __truediv__(&self, other: Self) -> Self {
+        fn __truediv__(&self, other: &Self) -> Self {
             PyDimensions(self.0.div(other.0))
         }
 

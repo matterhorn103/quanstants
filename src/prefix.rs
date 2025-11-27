@@ -451,8 +451,8 @@ pub(crate) mod py {
             self.into_inner().to_string()
         }
 
-        fn __mul__(&self, rhs: PyUnit) -> PyUnit {
-            (self.into_inner() * rhs.into_inner()).into()
+        fn __mul__(&self, rhs: &PyUnit) -> PyUnit {
+            (self.into_inner() * rhs.owned_inner()).into()
         }
     }
 }

@@ -8,30 +8,49 @@ use crate::{
     scinum::SciNum, unit::Unit, unit128::Unit128,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Context {
     pub units: UnitRegistry,
 }
 
 impl Context {
+    /// Creates a new `Context` with minimal pre-population (just the SI base units).
+    /// 
+    /// WARNING: It is important to note that most of the convenience getters will panic if called
+    /// on a `Context` created in this way, as the respective items will not have been loaded.
+    pub fn new_minimal() -> Self {
+        Self {
+            units: UnitRegistry::new_minimal(),
+        }
+    }
+
     /// Creates a new `Context` pre-populated with:
-    /// - SI base units
-    /// - SI derived units
-    /// - non-SI units officially approved for use with the SI
-    /// - the seven defining fundamental constants of the SI
+    /// - the SI base units
+    /// - the SI derived units
     pub fn new() -> Self {
         Self {
-            units: UnitRegistry::default(), // Always pre-populate with SI units
+            units: UnitRegistry::new(),
         }
     }
+}
 
-    /// Creates a new `Context` with minimal pre-population (just the SI base units).
-    pub fn new_empty() -> Self {
+impl Default for Context {
+    /// Creates a new `Context` pre-populated with the same items as for `Context::new()`:
+    /// - the SI base units
+    /// - the SI derived units
+    /// 
+    /// and additionally pre-populated with:
+    /// - the non-SI units officially approved for use with the SI
+    /// - common prefixed units
+    /// - the seven defining fundamental constants of the SI
+    fn default() -> Self {
         Self {
-            units: UnitRegistry::new(), // Currently just adds unitless and SI base units
+            units: UnitRegistry::default(),
         }
     }
+}
 
+impl Context {
     /// Creates a new `Quantity` from a number and a unit.
     #[inline]
     pub fn quantity(&self, number: SciNum, unit: Unit) -> Quantity {
@@ -110,14 +129,6 @@ impl Context {
         )
     }
 
-    // Make sure to get the liter with the US spelling
-    #[inline]
-    pub fn liter(&self) -> Unit {
-        self.units.get_by_name("liter").expect(
-            "Context is pre-populated with common SI-compatible units, including the litre/liter",
-        )
-    }
-
     unit_getter!(second, Unit128::SECOND);
     unit_getter!(metre, Unit128::METRE);
     unit_getter!(kilogram, Unit128::KILOGRAM);
@@ -152,13 +163,6 @@ impl Context {
         Unit128 {
             num: 0xFD,
             dim: 0x0000000011000001
-        }
-    );
-    unit_getter!(
-        litre,
-        Unit128 {
-            num: 0xFD,
-            dim: 0x0000000000130001
         }
     );
 }
@@ -563,17 +567,17 @@ pub(crate) mod py {
 
         #[getter]
         fn litre(&self) -> PyUnit {
-            self.0.litre().into()
+            self.0.units.get_by_id(Unit128 { num: 0xFD, dim: 0x130001 }).expect("A Quantext in Python should always have this unit loaded").into()
         }
 
         #[getter]
         fn liter(&self) -> PyUnit {
-            self.0.liter().into()
+            self.0.units.get_by_name("liter").expect("A Quantext in Python should always have this unit loaded").into()
         }
 
         #[getter]
         fn L(&self) -> PyUnit {
-            self.0.litre().into()
+            self.0.units.get_by_id(Unit128 { num: 0xFD, dim: 0x130001 }).expect("A Quantext in Python should always have this unit loaded").into()
         }
 
         // Prefix getters

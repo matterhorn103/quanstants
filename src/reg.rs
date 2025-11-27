@@ -24,7 +24,8 @@ pub struct UnitRegistry {
 
 impl UnitRegistry {
     /// Creates a new `UnitRegistry` with minimal pre-population (just the SI base units).
-    pub fn new() -> Self {
+    #[inline]
+    pub fn new_minimal() -> Self {
         let mut reg = Self {
             units: HashMap::new(),
             string_map: HashMap::new(),
@@ -36,6 +37,32 @@ impl UnitRegistry {
         reg
     }
 
+    /// Creates a new `UnitRegistry` pre-populated with:
+    /// - the SI base units
+    /// - the SI derived units
+    pub fn new() -> Self {
+        let mut reg = Self::new_minimal();
+        reg.load_module(UnitModule::Si)
+            .expect("Internal `si.toml` file should be correct");
+        reg
+    }
+}
+
+impl Default for UnitRegistry {
+    /// Creates a new `UnitRegistry` pre-populated with:
+    /// - the SI base units
+    /// - the SI derived units
+    /// - the non-SI units officially approved for use with the SI
+    /// - common prefixed units
+    fn default() -> Self {
+        let mut reg = Self::new();
+        reg.load_module(UnitModule::SiCompatible)
+            .expect("Internal `si_compatible.toml` file should be correct");
+        reg
+    }
+}
+
+impl UnitRegistry {
     /// Adds the unit to string_map under the normalized lowercase form of the provided name.
     #[inline]
     fn insert_under_string(&mut self, name: String, unit: Unit) {
@@ -437,19 +464,6 @@ impl UnitRegistry {
     #[inline]
     pub fn get_by_id(&self, id: Unit128) -> Option<Unit> {
         self.units.get(&id).cloned()
-    }
-}
-
-impl Default for UnitRegistry {
-    /// Creates a new `UnitRegistry` pre-populated with the SI base units, SI derived units,
-    /// and the non-SI units officially approved for use with the SI.
-    fn default() -> Self {
-        let mut reg = Self::new();
-        reg.load_module(UnitModule::Si)
-            .expect("Internal `si.toml` file should be correct");
-        reg.load_module(UnitModule::SiCompatible)
-            .expect("Internal `si_compatible.toml` file should be correct");
-        reg
     }
 }
 

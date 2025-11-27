@@ -257,6 +257,48 @@ impl Prefix {
                 | Prefix::yobi
         )
     }
+
+    /// Returns the power _n_ such that the prefix's value is 10<sup>_n_</sup>, or in the case of
+    /// a binary prefix, 1024<sup>_n_/3</sup>.
+    /// 
+    /// For example, `Prefix::milli` returns `-3`, `Prefix::mega` returns `6`, and `Prefix::mebi`
+    /// also returns `6`.
+    pub fn equivalent_power(&self) -> i8 {
+        match self {
+            Self::quecto => -30,
+            Self::ronto => -27,
+            Self::yocto => -24,
+            Self::zepto => -21,
+            Self::atto => -18,
+            Self::femto => -15,
+            Self::pico => -12,
+            Self::nano => -9,
+            Self::micro => -6,
+            Self::milli => -3,
+            Self::centi => -2,
+            Self::deci => -1,
+            Self::deca => 1,
+            Self::hecto => 2,
+            Self::kilo => 3,
+            Self::mega => 6,
+            Self::giga => 9,
+            Self::tera => 12,
+            Self::peta => 15,
+            Self::exa => 18,
+            Self::zetta => 21,
+            Self::yotta => 24,
+            Self::ronna => 27,
+            Self::quetta => 30,
+            Self::kibi => 3,
+            Self::mebi => 6,
+            Self::gibi => 9,
+            Self::tebi => 12,
+            Self::pebi => 15,
+            Self::exbi => 18,
+            Self::zebi => 21,
+            Self::yobi => 24,
+        }
+    }
 }
 
 impl From<Prefix> for SciNum {
@@ -281,6 +323,8 @@ impl FromStr for Prefix {
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
+    use crate::unit::py::PyUnit;
+
     use super::*;
     use pyo3::prelude::*;
 
@@ -405,6 +449,10 @@ pub(crate) mod py {
     impl PyPrefix {
         fn __str__(&self) -> String {
             self.into_inner().to_string()
+        }
+
+        fn __mul__(&self, rhs: PyUnit) -> PyUnit {
+            (self.into_inner() * rhs.into_inner()).into()
         }
     }
 }

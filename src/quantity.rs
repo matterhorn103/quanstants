@@ -34,13 +34,12 @@ impl Quantity {
     ///
     /// Currently panics if the current number and the uncertainty have different values for
     /// `exponent`.
-    pub fn with_uncertainty(mut self, uncertainty: SciNum) -> Self {
+    pub fn with_uncertainty(&self, uncertainty: SciNum) -> Self {
         if self.number.exponent != uncertainty.exponent {
             todo!()
         };
         let new_num = self.number.with_uncertainty(uncertainty);
-        self.number = new_num;
-        self
+        Self { number: new_num, unit: self.unit.clone() }
     }
 
     /// Returns true if the `Quantity` has an uncertainty of zero.

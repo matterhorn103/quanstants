@@ -133,6 +133,7 @@ impl Unit {
         }
     }
 
+    #[inline]
     pub fn is_base(&self) -> bool {
         matches!(self.inner.utype, LinearUnitType::Base)
     }
@@ -141,26 +142,32 @@ impl Unit {
         todo!()
     }
 
+    #[inline]
     pub fn is_dimensionless(&self) -> bool {
         self.inner.dimensions.is_dimensionless()
     }
 
+    #[inline]
     pub fn dimensions(&self) -> Dimensions {
         self.inner.dimensions
     }
 
+    #[inline]
     pub fn symbol(&self, use_superscripts: bool) -> String {
         self.inner.symbol(use_superscripts)
     }
 
+    #[inline]
     pub fn name(&self) -> String {
         self.inner.name()
     }
 
+    #[inline]
     pub fn number(&self) -> SciNum {
         self.inner.number
     }
 
+    #[inline]
     pub fn defining_factors(&self) -> Vec<LinearFactor> {
         self.inner.factors.clone()
     }
@@ -177,6 +184,7 @@ impl Unit {
         }
     }
 
+    #[inline]
     fn to_inverse_factors(&self) -> Vec<LinearFactor> {
         self.to_factors().into_iter().map(|x| x.inverse()).collect()
     }
@@ -313,7 +321,7 @@ pub(crate) mod py {
     use std::str::FromStr;
 
     use crate::{
-        quantity::{py::PyQuantity, Quantity},
+        quantity::py::PyQuantity,
         unit128::py::PyUnitId,
     };
 

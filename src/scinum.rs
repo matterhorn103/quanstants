@@ -107,16 +107,18 @@ impl SciNum {
     /// Creates a new `SciNum` with the same number but the provided uncertainty.
     ///
     /// Currently panics if the current `SciNum` and the uncertainty have different values for
-    /// `exponent`.
-    pub fn with_uncertainty(mut self, uncertainty: Self) -> Self {
+    /// `exponent`; however, this should currently be impossible.
+    pub fn with_uncertainty(&self, uncertainty: Self) -> Self {
         if self.exponent != uncertainty.exponent {
             todo!()
         };
-        self.uncertainty_scale = uncertainty.number_scale;
-        self.uncertainty_lo = uncertainty.number_lo;
-        self.uncertainty_mid = uncertainty.number_mid;
-        self.uncertainty_hi = uncertainty.number_hi;
-        self
+        Self {
+            uncertainty_scale: uncertainty.number_scale,
+            uncertainty_lo: uncertainty.number_lo,
+            uncertainty_mid: uncertainty.number_mid,
+            uncertainty_hi: uncertainty.number_hi,
+            ..*self
+        }
     }
 
     /// Returns the number as an exact `SciNum` without its uncertainty.

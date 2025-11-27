@@ -523,23 +523,53 @@ pub(crate) mod py {
     impl PyUnits {
         // Square bracket notation lookup for units
         fn __getitem__(&self, py: Python, name: &str) -> PyUnit {
-            self.parent.borrow(py).0.units.get_by_name(name).unwrap().into()
+            self.parent
+                .borrow(py)
+                .0
+                .units
+                .get_by_name(name)
+                .unwrap()
+                .into()
         }
 
         fn get_by_name(&self, py: Python, name: &str) -> PyUnit {
-            self.parent.borrow(py).0.units.get_by_name(name).unwrap().into()
+            self.parent
+                .borrow(py)
+                .0
+                .units
+                .get_by_name(name)
+                .unwrap()
+                .into()
         }
 
         fn get_by_id(&self, py: Python, id: u128) -> PyUnit {
-            self.parent.borrow(py).0.units.get_by_id(Unit128::from_bits(id)).unwrap().into()
+            self.parent
+                .borrow(py)
+                .0
+                .units
+                .get_by_id(Unit128::from_bits(id))
+                .unwrap()
+                .into()
         }
 
         fn list(&self, py: Python) -> Vec<String> {
-            self.parent.borrow(py).0.units.string_map.keys().cloned().collect()
+            self.parent
+                .borrow(py)
+                .0
+                .units
+                .string_map
+                .keys()
+                .cloned()
+                .collect()
         }
 
         fn load_module(&mut self, py: Python, module: PyUnitModule) {
-            self.parent.borrow_mut(py).0.units.load_module(module.into()).unwrap();
+            self.parent
+                .borrow_mut(py)
+                .0
+                .units
+                .load_module(module.into())
+                .unwrap();
         }
     }
 }

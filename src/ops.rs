@@ -1,28 +1,40 @@
+// SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
+// SPDX-License-Identifier: MIT
+
 //! Implementations of mathematical operations for the main components of `quanstants` (`SciNum`,
 //! `Unit`, and `Quantity`) with each other as well as with the foreign types valid for those
 //! operations (`isize`, `f64`, `Decimal`, and `String`).
 //! Operations between a type and itself are implemented in the type's own file.
-//! 
+//!
 //! Multiplication and division operations are implemented for the following (where N is a numeric
 //! type -- meaning `SciNum` or a type that implements `Into<SciNum>` -- P is `Prefix`, U is `Unit`,
 //! and Q is `Quantity`):
-//! 
+//!
 //! N */ U -> Q
 //! U */ N -> Q
-//! 
+//!
 //! P * U -> U
-//! 
+//!
 //! N */ Q -> Q
 //! Q */ N -> Q
-//! 
+//!
 //! U */ Q -> Q
 //! Q */ U -> Q
 
-use std::{ops::{Div, Mul}, sync::Arc};
+use std::{
+    ops::{Div, Mul},
+    sync::Arc,
+};
 
 use rust_decimal::Decimal;
 
-use crate::{prefix::Prefix, quantity::Quantity, scinum::SciNum, unit::{LinearUnit, LinearUnitType, Unit}, unit128::Unit128};
+use crate::{
+    prefix::Prefix,
+    quantity::Quantity,
+    scinum::SciNum,
+    unit::{LinearUnit, LinearUnitType, Unit},
+    unit128::Unit128,
+};
 
 // N */ U -> Q
 
@@ -65,7 +77,7 @@ impl_mul_div_with_unit!(Decimal);
 
 impl<T> Mul<T> for Unit
 where
-    T: Into<SciNum>
+    T: Into<SciNum>,
 {
     type Output = Quantity;
 
@@ -77,7 +89,7 @@ where
 
 impl<T> Div<T> for Unit
 where
-    T: Into<SciNum>
+    T: Into<SciNum>,
 {
     type Output = Quantity;
 
@@ -96,7 +108,10 @@ impl Mul<Unit> for Prefix {
         if rhs.inner.prefix.is_some() {
             panic!("Cannot prefix an already prefixed unit!")
         }
-        if matches!(rhs.inner.utype, LinearUnitType::Unitless | LinearUnitType::Compound) {
+        if matches!(
+            rhs.inner.utype,
+            LinearUnitType::Unitless | LinearUnitType::Compound
+        ) {
             panic!("Cannot prefix a compound unit or Unitless!")
         }
         let new_inner = Arc::new(LinearUnit {
@@ -113,20 +128,20 @@ impl Mul<Unit> for Prefix {
             if rhs.id.num == 0 {
                 // Set as unit with binary factor
                 let dim = rhs.id.dim & !0xF | 0xB;
-                let num = self.equivalent_power() as u8 as u64; // Go via u8 so that it gets padded with zeros 
-                Unit128{ num, dim }
+                let num = self.equivalent_power() as u8 as u64; // Go via u8 so that it gets padded with zeros
+                Unit128 { num, dim }
             } else {
                 // Set as non-unique derived unit
                 let least_significant_byte: u8 = rhs.id.least_significant_byte() & !0x0F | 0x0D;
                 let dimensions = rhs.id.dimensions();
                 let factor = rhs.id.factor() * self.value();
                 Unit128::new(factor, dimensions, least_significant_byte)
-            }  
+            }
         } else {
             // Set as non-unique derived unit
             let dim = rhs.id.dim & !0xF | 0xD;
             let old_exponent = rhs.id.num as u8 as i8; // Go via u8 so that it gets truncated
-            // Increase/decrease decimal exponent appropriately
+                                                       // Increase/decrease decimal exponent appropriately
             let num = rhs.id.num & !0xF | ((old_exponent + self.equivalent_power()) as u8 as u64);
             Unit128 { num, dim }
         };
@@ -178,7 +193,7 @@ impl_mul_div_with_quantity!(usize);
 
 impl<T> Mul<T> for Quantity
 where
-    T: Into<SciNum>
+    T: Into<SciNum>,
 {
     type Output = Quantity;
 
@@ -190,7 +205,7 @@ where
 
 impl<T> Div<T> for Quantity
 where
-    T: Into<SciNum>
+    T: Into<SciNum>,
 {
     type Output = Quantity;
 
@@ -246,10 +261,28 @@ mod tests {
     fn prefix() {
         let ctx = Context::new();
         let millimetre = Prefix::milli * ctx.metre();
-        assert_eq!(millimetre.id, Unit128{ num: 0xFD, dim: 0x11000D });
+        assert_eq!(
+            millimetre.id,
+            Unit128 {
+                num: 0xFD,
+                dim: 0x11000D
+            }
+        );
         let kilometre = Prefix::kilo * ctx.metre();
-        assert_eq!(kilometre.id, Unit128{ num: 0x03, dim: 0x11000D });
+        assert_eq!(
+            kilometre.id,
+            Unit128 {
+                num: 0x03,
+                dim: 0x11000D
+            }
+        );
         let kibisecond = Prefix::kibi * ctx.second();
-        assert_eq!(kibisecond.id, Unit128{ num: 0x03, dim: 0x110B });
+        assert_eq!(
+            kibisecond.id,
+            Unit128 {
+                num: 0x03,
+                dim: 0x110B
+            }
+        );
     }
 }

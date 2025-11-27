@@ -9,13 +9,13 @@ pub mod defs;
 pub mod dimensions;
 pub mod error;
 pub mod fraction;
+pub mod ops;
 pub mod prefix;
 pub mod quantity;
 pub mod reg;
 pub mod scinum;
 pub mod unit;
 pub mod unit128;
-pub mod ops;
 
 #[cfg(feature = "python")]
 mod bindings {

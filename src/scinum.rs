@@ -343,9 +343,7 @@ impl SciNum {
 
     /// Creates an exact `SciNum` from floats via `Decimal::from_f64()`.
     pub fn from_f64_exact(number: f64) -> Option<Self> {
-        Some(Self::new_exact(
-            Decimal::from_f64(number)?,
-        ))
+        Some(Self::new_exact(Decimal::from_f64(number)?))
     }
 
     pub fn add_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
@@ -787,10 +785,15 @@ impl FromStr for SciNum {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let re = Regex::new(r"^(-?\d+(?:[.,]\d+)?)(?:[eE]([+-]?\d+))?$").unwrap();
         let caps = re.captures(s).ok_or(QuanstantsError::Parse(s.into()))?;
-        let number_str = caps.get(1).ok_or(QuanstantsError::Parse(s.into()))?.as_str();
-        let number = Decimal::from_str(number_str).map_err(|_e| QuanstantsError::Parse(s.into()))?;
+        let number_str = caps
+            .get(1)
+            .ok_or(QuanstantsError::Parse(s.into()))?
+            .as_str();
+        let number =
+            Decimal::from_str(number_str).map_err(|_e| QuanstantsError::Parse(s.into()))?;
         let exponent_str = caps.get(2).map(|m| m.as_str()).unwrap_or("0");
-        let exponent = i16::from_str(exponent_str).map_err(|_e| QuanstantsError::Parse(s.into()))?;
+        let exponent =
+            i16::from_str(exponent_str).map_err(|_e| QuanstantsError::Parse(s.into()))?;
         Ok(Self::exact_from_scientific_parts(number, exponent))
     }
 }
@@ -899,11 +902,13 @@ pub(crate) mod py {
 
     impl TryFrom<PyIntoSciNum> for SciNum {
         type Error = QuanstantsError;
-    
+
         fn try_from(n: PyIntoSciNum) -> Result<SciNum, QuanstantsError> {
             match n {
                 PyIntoSciNum::Int(i) => Ok(SciNum::new_exact(i)),
-                PyIntoSciNum::Float(f) => Ok(SciNum::from_f64_exact(f).ok_or(QuanstantsError::Cast)?),
+                PyIntoSciNum::Float(f) => {
+                    Ok(SciNum::from_f64_exact(f).ok_or(QuanstantsError::Cast)?)
+                }
                 PyIntoSciNum::Decimal(d) => Ok(SciNum::new_exact(d)),
                 PyIntoSciNum::String(s) => SciNum::from_str(&s),
             }

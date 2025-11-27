@@ -192,7 +192,8 @@ impl FromStr for Frac {
             2 => i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse(parts[0].to_string())),
             _ => Err(QuanstantsError::Parse(s.to_string())),
         }?;
-        let num: i8 = i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse(parts[0].to_string()))?;
+        let num: i8 =
+            i8::from_str(parts[0]).map_err(|_e| QuanstantsError::Parse(parts[0].to_string()))?;
         Ok(Self::new(num, den))
     }
 }

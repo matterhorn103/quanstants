@@ -345,7 +345,6 @@ impl FromStr for Unit128 {
 #[allow(dead_code)]
 // Functions for converting between `SciNum`s and the 64-bit numeric component of `Unit128`
 impl Unit128 {
-
     // Maximum and minimum values for a simple numeric component
     // Though the bias of -1 means that actually a mantissa 1 higher than this is
     // theoretically possible, restrict to these values so that they always fit into other
@@ -354,14 +353,24 @@ impl Unit128 {
     const MIN_MANTISSA_FACTOR: i64 = -0x7FFFFFFFFFFFFF;
     const MAX_EXPONENT_FACTOR: i8 = 0x7F;
     const MIN_EXPONENT_FACTOR: i8 = -0x80;
-    
+
     /// Calculates the 64-bit simple numeric component that encodes the provided `SciNum`.
-    /// 
+    ///
     /// Currently panics if the factor is too large to be represented.
     pub(crate) fn factor_to_bits(factor: SciNum) -> u64 {
         let shortened_factor: SciNum = if factor.sigfigs() > 15 {
-            SciNum::new_exact(factor.number_dec().round_sf_with_strategy(15, rust_decimal::RoundingStrategy::MidpointAwayFromZero).expect("rust_decimal can do 28 s.f. of precision"))
-        } else { factor };
+            SciNum::new_exact(
+                factor
+                    .number_dec()
+                    .round_sf_with_strategy(
+                        15,
+                        rust_decimal::RoundingStrategy::MidpointAwayFromZero,
+                    )
+                    .expect("rust_decimal can do 28 s.f. of precision"),
+            )
+        } else {
+            factor
+        };
 
         match i8::try_from(shortened_factor.exponent_integral()) {
             Ok(exponent) => {
@@ -382,17 +391,31 @@ impl Unit128 {
     const MIN_EXPONENT_REFERENCE: i8 = -0x80;
 
     /// Calculates the 64-bit referenced numeric component that encodes the provided `SciNum`s.
-    /// 
+    ///
     /// Currently panics if either the factor or reference are too large to be represented.
     pub(crate) fn factor_and_reference_to_bits(factor: SciNum, reference: SciNum) -> u64 {
         let shortened_factor: SciNum = if factor.sigfigs() > 6 {
-            SciNum::new_exact(factor.number_dec().round_sf_with_strategy(6, rust_decimal::RoundingStrategy::MidpointAwayFromZero).expect("rust_decimal can do 28 s.f. of precision"))
-        } else { factor };
+            SciNum::new_exact(
+                factor
+                    .number_dec()
+                    .round_sf_with_strategy(6, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .expect("rust_decimal can do 28 s.f. of precision"),
+            )
+        } else {
+            factor
+        };
 
         let shortened_reference: SciNum = if reference.sigfigs() > 6 {
-            SciNum::new_exact(reference.number_dec().round_sf_with_strategy(6, rust_decimal::RoundingStrategy::MidpointAwayFromZero).expect("rust_decimal can do 28 s.f. of precision"))
-        } else { reference };
-        
+            SciNum::new_exact(
+                reference
+                    .number_dec()
+                    .round_sf_with_strategy(6, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .expect("rust_decimal can do 28 s.f. of precision"),
+            )
+        } else {
+            reference
+        };
+
         (Unit128::factor_to_bits(shortened_factor) & 0x0000_0000_FFFF_FFFF)
             | (Unit128::factor_to_bits(shortened_reference) << 32)
     }

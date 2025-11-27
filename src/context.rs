@@ -4,7 +4,8 @@
 use std::str::FromStr;
 
 use crate::{
-    error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::Quantity, reg::UnitRegistry, scinum::SciNum, unit::Unit, unit128::Unit128
+    error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::Quantity, reg::UnitRegistry,
+    scinum::SciNum, unit::Unit, unit128::Unit128,
 };
 
 #[derive(Debug, Default)]
@@ -58,7 +59,11 @@ impl Context {
                     exponent_string.push(c);
                 }
             }
-            let unit = self.units.get_by_symbol(&unit_string).or(self.units.get_by_name(&unit_string)).ok_or(QuanstantsError::Lookup(unit_string))?;
+            let unit = self
+                .units
+                .get_by_symbol(&unit_string)
+                .or(self.units.get_by_name(&unit_string))
+                .ok_or(QuanstantsError::Lookup(unit_string))?;
             let term = if exponent_string.is_empty() {
                 unit
             } else {
@@ -66,8 +71,14 @@ impl Context {
             };
             unit_vec.push(term);
         }
-        let product_unit = unit_vec.into_iter().reduce(|acc, e| acc * e).unwrap_or(self.unitless());
-        Ok(Quantity { number, unit: product_unit })
+        let product_unit = unit_vec
+            .into_iter()
+            .reduce(|acc, e| acc * e)
+            .unwrap_or(self.unitless());
+        Ok(Quantity {
+            number,
+            unit: product_unit,
+        })
     }
 }
 
@@ -94,17 +105,17 @@ impl Context {
     // Make sure to get the meter with the US spelling
     #[inline]
     pub fn meter(&self) -> Unit {
-        self.units
-            .get_by_name("meter")
-            .expect("Context is always pre-populated with the SI base units, including the metre/meter")
+        self.units.get_by_name("meter").expect(
+            "Context is always pre-populated with the SI base units, including the metre/meter",
+        )
     }
 
     // Make sure to get the liter with the US spelling
     #[inline]
     pub fn liter(&self) -> Unit {
-        self.units
-            .get_by_name("liter")
-            .expect("Context is pre-populated with common SI-compatible units, including the litre/liter")
+        self.units.get_by_name("liter").expect(
+            "Context is pre-populated with common SI-compatible units, including the litre/liter",
+        )
     }
 
     unit_getter!(second, Unit128::SECOND);
@@ -136,8 +147,20 @@ impl Context {
     unit_getter!(gray, Unit128::GRAY);
     unit_getter!(sievert, Unit128::SIEVERT);
     unit_getter!(katal, Unit128::KATAL);
-    unit_getter!(gram, Unit128{ num: 0xFD, dim: 0x0000000011000001 });
-    unit_getter!(litre, Unit128{ num: 0xFD, dim: 0x0000000000130001 });
+    unit_getter!(
+        gram,
+        Unit128 {
+            num: 0xFD,
+            dim: 0x0000000011000001
+        }
+    );
+    unit_getter!(
+        litre,
+        Unit128 {
+            num: 0xFD,
+            dim: 0x0000000000130001
+        }
+    );
 }
 
 /// Macro to generate convenience functions for prefixes
@@ -163,7 +186,10 @@ impl Context {
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
-    use crate::{prefix::py::PyPrefix, quantity::py::PyQuantity, reg::py::PyUnits, scinum::py::PyIntoSciNum, unit::py::PyUnit};
+    use crate::{
+        prefix::py::PyPrefix, quantity::py::PyQuantity, reg::py::PyUnits, scinum::py::PyIntoSciNum,
+        unit::py::PyUnit,
+    };
 
     use super::*;
     use pyo3::{prelude::*, types::PyType};
@@ -192,14 +218,23 @@ pub(crate) mod py {
 
         /// Creates a new `Quantity` from a number and a unit.
         #[pyo3(signature = (number, unit, uncertainty=None))]
-        fn quantity(&self, number: PyIntoSciNum, unit: PyUnit, uncertainty: Option<PyIntoSciNum>) -> PyQuantity {
+        fn quantity(
+            &self,
+            number: PyIntoSciNum,
+            unit: PyUnit,
+            uncertainty: Option<PyIntoSciNum>,
+        ) -> PyQuantity {
             let num: SciNum = if let Some(u) = uncertainty {
                 let num: SciNum = number.try_into().unwrap();
                 num.with_uncertainty(u.try_into().unwrap())
             } else {
                 number.try_into().unwrap()
             };
-            Quantity { number: num, unit: unit.into_inner() }.into()
+            Quantity {
+                number: num,
+                unit: unit.into_inner(),
+            }
+            .into()
         }
 
         /// Provides access to the context's unit registry.
@@ -211,9 +246,7 @@ pub(crate) mod py {
         /// Makes the `Prefix` enum conveniently accessible as a class attribute.
         #[classattr]
         fn Prefix() -> PyResult<Py<PyType>> {
-            Python::attach(|py| {
-                Ok(py.get_type::<PyPrefix>().unbind())
-            })
+            Python::attach(|py| Ok(py.get_type::<PyPrefix>().unbind()))
         }
 
         // Unit getters
@@ -620,8 +653,17 @@ mod tests {
     #[test]
     fn quantity_from_str() {
         let context = Context::new();
-        assert_eq!(context.quantity_from_str("3 m").unwrap(), SciNum::new_exact(3) * context.metre());
-        assert_eq!(context.quantity_from_str("3 metre").unwrap(), SciNum::new_exact(3) * context.metre());
-        assert_eq!(context.quantity_from_str("3 m2").unwrap(), SciNum::new_exact(3) * context.metre().pow(2));
+        assert_eq!(
+            context.quantity_from_str("3 m").unwrap(),
+            SciNum::new_exact(3) * context.metre()
+        );
+        assert_eq!(
+            context.quantity_from_str("3 metre").unwrap(),
+            SciNum::new_exact(3) * context.metre()
+        );
+        assert_eq!(
+            context.quantity_from_str("3 m2").unwrap(),
+            SciNum::new_exact(3) * context.metre().pow(2)
+        );
     }
 }

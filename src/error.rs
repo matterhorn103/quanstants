@@ -32,8 +32,13 @@ impl fmt::Display for QuanstantsError {
             QuanstantsError::Lookup(search) => {
                 write!(f, "{search} not found")
             }
-            QuanstantsError::MismatchedUnits(u1, u2) => write!(f, "Incompatible units: {u1} and {u2}"),
-            QuanstantsError::NonLinearUnit(u) => write!(f, "The attempted operation is only valid for linear units, and {u} is not linear"),
+            QuanstantsError::MismatchedUnits(u1, u2) => {
+                write!(f, "Incompatible units: {u1} and {u2}")
+            }
+            QuanstantsError::NonLinearUnit(u) => write!(
+                f,
+                "The attempted operation is only valid for linear units, and {u} is not linear"
+            ),
         }
     }
 }

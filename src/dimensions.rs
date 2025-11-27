@@ -152,7 +152,9 @@ impl FromStr for Dimensions {
         for term in split {
             let mut chars = term.chars();
             // The symbol will always be the first character
-            let symbol = chars.next().ok_or(QuanstantsError::Parse(term.to_string()))?;
+            let symbol = chars
+                .next()
+                .ok_or(QuanstantsError::Parse(term.to_string()))?;
             let exponent = match chars.as_str() {
                 // Exponent of 1 is implicit
                 "" => Frac::ONE,

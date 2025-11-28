@@ -75,7 +75,6 @@ class TestPrefixes:
     def test_prefixed_units(self):
         # Just check that all those advertised are available
         q = 50 * qu.micrometre
-        q = 50 * qu.micron
         q = 27.2 * qu.kilowatt
         q = "99.7" * qu.megahertz
 
@@ -136,7 +135,7 @@ class TestQuantityCreation:
         assert str(q) == "0.997 kg L⁻¹"
 
     def test_quantity_creation_method_equivalence(self):
-        q1 = qu(0.997, qu.kg / qu.litre)
+        q1 = qu.quantity(0.997, qu.kg / qu.litre)
         q2 = 0.997 * (qu.kg / qu.litre)
         assert q1 == q2
 
@@ -157,7 +156,7 @@ class TestParsing:
     def test_uncertainty_parentheses(self):
         assert (
             repr(qu("6.67430(15)E-11 N m² kg⁻²"))
-            == "Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)"
+            == "Quantity(6.67430e-11, N m² kg⁻², uncertainty=1.5e-15)"
         )
 
     def test_uncertainty_plus_minus(self):
@@ -172,7 +171,7 @@ class TestUncertainties:
         gravity = ("6.67430e-11" * qu.newton * qu.metre**2 * qu.kilogram**-2).with_uncertainty(
             "0.00015e-11"
         )
-        assert repr(gravity) == "Quantity(6.67430E-11, N m² kg⁻², uncertainty=1.5E-15)"
+        assert repr(gravity) == "Quantity(6.67430e-11, N m² kg⁻², uncertainty=1.5e-15)"
 
     def test_plus_minus(self):
         assert repr(("4.2" * qu.m).plus_minus("0.2")) == "Quantity(4.2, m, uncertainty=0.2)"
@@ -190,7 +189,7 @@ class TestUncertainties:
                     "0.00015e-11"
                 )
             )
-            == "6.67430(15)E-11 N m² kg⁻²"
+            == "6.67430(15)e-11 N m² kg⁻²"
         )
 
     def test_str_plus_minus(self):
@@ -204,7 +203,7 @@ class TestUncertainties:
                     "0.00015e-11"
                 )
             )
-            == "6.67430E-11 ± 1.5E-15 N m² kg⁻²"
+            == "6.67430e-11 ± 1.5e-15 N m² kg⁻²"
         )
         qu.quanfig.uncertainty_style = "PARENTHESES"
 
@@ -214,7 +213,7 @@ class TestUncertainties:
 
     def test_get_uncertainty(self):
         density = qu.quantity(0.99704702, qu.kg / qu.L, uncertainty=0.00000083)
-        assert repr(density.uncertainty) == "Quantity(8.3E-7, kg L⁻¹)"
+        assert repr(density.uncertainty) == "Quantity(8.3e-7, kg L⁻¹)"
 
 
 class TestArithmetic:
@@ -342,13 +341,13 @@ class TestArithmetic:
     def test_26(self):
         a = (3 * qu.m).plus_minus(0.1)
         b = (2 * qu.m).plus_minus(0.2)
-        result = repr(a.__add__(b, correlation=0.7))
+        result = repr(a.add_with_correlation(b, correlation=0.7))
         assert result == "Quantity(5, m, uncertainty=0.2792848008753788233976784908)"
 
     def test_27(self):
         a = (3 * qu.m).plus_minus(0.1)
         b = (2 * qu.m).plus_minus(0.2)
-        result = repr(a.__sub__(b, correlation=1))
+        result = repr(a.sub_with_correlation(b, correlation=1))
         assert result == "Quantity(1, m, uncertainty=0.1)"
 
 

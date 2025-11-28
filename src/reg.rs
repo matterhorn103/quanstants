@@ -4,7 +4,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    defs::{units::UnitModule, DefFile, UnitDef},
+    defs::{DefFile, UnitDef, units::UnitModule},
     dimensions::Dimensions,
     error::QuanstantsError,
     fraction::Frac,
@@ -33,7 +33,7 @@ impl UnitRegistry {
             sources: HashMap::new(),
         };
         reg.add_unitless();
-        reg.add_si_base();
+        reg.load_si_base();
         reg
     }
 
@@ -58,6 +58,7 @@ impl Default for UnitRegistry {
         let mut reg = Self::new();
         reg.load_module(UnitModule::SiCompatible)
             .expect("Internal `si_compatible.toml` file should be correct");
+        reg.load_common_prefixed();
         reg
     }
 }
@@ -347,6 +348,20 @@ impl UnitRegistry {
         id
     }
 
+    /// Adds a `Prefix` to the provided `Unit`, gives it an ID with the least significant byte
+    /// indicated, and inserts it into the registry.
+    /// 
+    /// Only possible with metric prefixes and panics if attempted with a binary prefix.
+    fn add_prefixed(&mut self, prefix: Prefix, unit: Unit, least_significant_byte: u8) {
+        if prefix.is_binary() { panic!("Can't add a unit with a binary prefix to a unit registry!") }
+        // Create the unit in the normal way, but need to adjust the ID afterwards.
+        let mut new_unit = Prefix::from(prefix) * unit;
+        let id = Unit128{ num: new_unit.id.num, dim: new_unit.id.dim & !0xFF | (least_significant_byte as u64) };
+        new_unit.id = id;
+        self.insert_under_string(new_unit.name(), new_unit.clone());
+        self.units.insert(id, new_unit);
+    }
+
     /// Creates a `Unit` (base or derived, as appropriate) from the definition and inserts it into
     /// the registry.
     ///
@@ -473,7 +488,7 @@ impl UnitRegistry {
         self.units.insert(Unit128::UNITLESS, Unit::unitless());
     }
 
-    fn add_si_base(&mut self) {
+    fn load_si_base(&mut self) {
         self.add_base(
             Dimensions::new(1, 0, 0, 0, 0, 0, 0),
             String::from("s"),
@@ -518,6 +533,53 @@ impl UnitRegistry {
             String::from("candela"),
             None,
         );
+    }
+
+    /// Pre-defines some of the most common prefixed units.
+    fn load_common_prefixed(&mut self) {
+        self.add_prefixed(Prefix::nano, self.get_by_id(Unit128::SECOND).unwrap(), 0x01);
+        self.add_prefixed(Prefix::micro, self.get_by_id(Unit128::SECOND).unwrap(), 0x01);
+        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::SECOND).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::nano, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::micro, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::centi, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::deci, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::MOLE).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
+        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
+        self.add_prefixed(Prefix::giga, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
+        self.add_prefixed(Prefix::tera, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::hecto, self.get_by_id(Unit128::PASCAL).unwrap(), 0x01);
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::PASCAL).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
+        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
+        self.add_prefixed(Prefix::giga, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::JOULE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::JOULE).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::TESLA).unwrap(), 0x01);
+
+        if let Some(gram) = self.get_by_id(Unit128::GRAM) {
+            self.add_prefixed(Prefix::milli, gram, 0x01);
+        }
+
+        if let Some(electronvolt) = self.get_by_name("electronvolt") {
+            self.add_prefixed(Prefix::mega, electronvolt.clone(), 0x01);
+            self.add_prefixed(Prefix::giga, electronvolt, 0x01);
+        }
+        
+        if let Some(litre) = self.get_by_name("litre") {
+            self.add_prefixed(Prefix::micro, litre.clone(), 0x01);
+            self.add_prefixed(Prefix::milli, litre, 0x01);
+        }
     }
 }
 

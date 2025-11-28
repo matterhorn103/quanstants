@@ -72,7 +72,10 @@ impl Quantity {
         T: Into<Decimal>,
     {
         if self.unit == rhs.unit {
-            Self::new(self.number.add_with_correlation(rhs.number, correlation), self.unit)
+            Self::new(
+                self.number.add_with_correlation(rhs.number, correlation),
+                self.unit,
+            )
         } else {
             panic!()
         }
@@ -85,7 +88,10 @@ impl Quantity {
         T: Into<Decimal>,
     {
         if self.unit == rhs.unit {
-            Self::new(self.number.sub_with_correlation(rhs.number, correlation), self.unit)
+            Self::new(
+                self.number.sub_with_correlation(rhs.number, correlation),
+                self.unit,
+            )
         } else {
             panic!()
         }
@@ -97,7 +103,10 @@ impl Quantity {
     where
         T: Into<Decimal> + Copy,
     {
-        Self::new(self.number.mul_with_correlation(rhs.number, correlation), self.unit * rhs.unit)
+        Self::new(
+            self.number.mul_with_correlation(rhs.number, correlation),
+            self.unit * rhs.unit,
+        )
     }
 
     /// Divides two quantities and propagates the uncertainties as appropriate for the given
@@ -106,7 +115,10 @@ impl Quantity {
     where
         T: Into<Decimal> + Copy,
     {
-        Self::new(self.number.div_with_correlation(rhs.number, correlation), self.unit / rhs.unit)
+        Self::new(
+            self.number.div_with_correlation(rhs.number, correlation),
+            self.unit / rhs.unit,
+        )
     }
 }
 
@@ -322,25 +334,37 @@ pub(crate) mod py {
         /// Adds two quantities and propagates the uncertainties as appropriate for the given
         /// correlation.
         fn add_with_correlation(&self, rhs: &Self, correlation: Decimal) -> Self {
-            Self::from(self.owned_inner().add_with_correlation(rhs.owned_inner(), correlation))
+            Self::from(
+                self.owned_inner()
+                    .add_with_correlation(rhs.owned_inner(), correlation),
+            )
         }
 
         /// Subtracts two quantities and propagates the uncertainties as appropriate for the given
         /// correlation.
         fn sub_with_correlation(&self, rhs: &Self, correlation: Decimal) -> Self {
-            Self::from(self.owned_inner().sub_with_correlation(rhs.owned_inner(), correlation))
+            Self::from(
+                self.owned_inner()
+                    .sub_with_correlation(rhs.owned_inner(), correlation),
+            )
         }
 
         /// Multiplies two quantities and propagates the uncertainties as appropriate for the given
         /// correlation.
         fn mul_with_correlation(&self, rhs: &Self, correlation: Decimal) -> Self {
-            Self::from(self.owned_inner().mul_with_correlation(rhs.owned_inner(), correlation))
+            Self::from(
+                self.owned_inner()
+                    .mul_with_correlation(rhs.owned_inner(), correlation),
+            )
         }
 
         /// Divides two quantities and propagates the uncertainties as appropriate for the given
         /// correlation.
         fn truediv_with_correlation(&self, rhs: &Self, correlation: Decimal) -> Self {
-            Self::from(self.owned_inner().div_with_correlation(rhs.owned_inner(), correlation))
+            Self::from(
+                self.owned_inner()
+                    .div_with_correlation(rhs.owned_inner(), correlation),
+            )
         }
 
         fn with_uncertainty(&self, uncertainty: PyIntoSciNum) -> Self {

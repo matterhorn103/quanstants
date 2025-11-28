@@ -15,7 +15,7 @@ pub struct Context {
 
 impl Context {
     /// Creates a new `Context` with minimal pre-population (just the SI base units).
-    /// 
+    ///
     /// WARNING: It is important to note that most of the convenience getters will panic if called
     /// on a `Context` created in this way, as the respective items will not have been loaded.
     pub fn new_minimal() -> Self {
@@ -38,7 +38,7 @@ impl Default for Context {
     /// Creates a new `Context` pre-populated with the same items as for `Context::new()`:
     /// - the SI base units
     /// - the SI derived units
-    /// 
+    ///
     /// and additionally pre-populated with:
     /// - the non-SI units officially approved for use with the SI
     /// - common prefixed units
@@ -567,17 +567,35 @@ pub(crate) mod py {
 
         #[getter]
         fn litre(&self) -> PyUnit {
-            self.0.units.get_by_id(Unit128 { num: 0xFD, dim: 0x130001 }).expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_id(Unit128 {
+                    num: 0xFD,
+                    dim: 0x130001,
+                })
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
 
         #[getter]
         fn liter(&self) -> PyUnit {
-            self.0.units.get_by_name("liter").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("liter")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
 
         #[getter]
         fn L(&self) -> PyUnit {
-            self.0.units.get_by_id(Unit128 { num: 0xFD, dim: 0x130001 }).expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_id(Unit128 {
+                    num: 0xFD,
+                    dim: 0x130001,
+                })
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
 
         // Prefix getters
@@ -615,111 +633,219 @@ pub(crate) mod py {
         // Prefixed unit getters
         #[getter]
         fn nanosecond(&self) -> PyUnit {
-            self.0.units.get_by_name("nanosecond").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("nanosecond")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn microsecond(&self) -> PyUnit {
-            self.0.units.get_by_name("microsecond").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("microsecond")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn millisecond(&self) -> PyUnit {
-            self.0.units.get_by_name("millisecond").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("millisecond")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn nanometre(&self) -> PyUnit {
-            self.0.units.get_by_name("nanometre").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("nanometre")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn micrometre(&self) -> PyUnit {
-            self.0.units.get_by_name("micrometre").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("micrometre")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn millimetre(&self) -> PyUnit {
-            self.0.units.get_by_name("millimetre").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("millimetre")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn centimetre(&self) -> PyUnit {
-            self.0.units.get_by_name("centimetre").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("centimetre")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn decimetre(&self) -> PyUnit {
-            self.0.units.get_by_name("decimetre").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("decimetre")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn kilometre(&self) -> PyUnit {
-            self.0.units.get_by_name("kilometre").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("kilometre")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn millimole(&self) -> PyUnit {
-            self.0.units.get_by_name("millimole").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("millimole")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn kilohertz(&self) -> PyUnit {
-            self.0.units.get_by_name("kilohertz").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("kilohertz")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn megahertz(&self) -> PyUnit {
-            self.0.units.get_by_name("megahertz").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("megahertz")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn gigahertz(&self) -> PyUnit {
-            self.0.units.get_by_name("gigahertz").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("gigahertz")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn terahertz(&self) -> PyUnit {
-            self.0.units.get_by_name("terahertz").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("terahertz")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn hectopascal(&self) -> PyUnit {
-            self.0.units.get_by_name("hectopascal").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("hectopascal")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn kilopascal(&self) -> PyUnit {
-            self.0.units.get_by_name("kilopascal").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("kilopascal")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn kilowatt(&self) -> PyUnit {
-            self.0.units.get_by_name("kilowatt").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("kilowatt")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn megawatt(&self) -> PyUnit {
-            self.0.units.get_by_name("megawatt").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("megawatt")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn gigawatt(&self) -> PyUnit {
-            self.0.units.get_by_name("gigawatt").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("gigawatt")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn kilojoule(&self) -> PyUnit {
-            self.0.units.get_by_name("kilojoule").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("kilojoule")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn megajoule(&self) -> PyUnit {
-            self.0.units.get_by_name("megajoule").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("megajoule")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn millitesla(&self) -> PyUnit {
-            self.0.units.get_by_name("millitesla").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("millitesla")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn milligram(&self) -> PyUnit {
-            self.0.units.get_by_name("milligram").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("milligram")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn megaelectronvolt(&self) -> PyUnit {
-            self.0.units.get_by_name("megaelectronvolt").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("megaelectronvolt")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn gigaelectronvolt(&self) -> PyUnit {
-            self.0.units.get_by_name("gigaelectronvolt").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("gigaelectronvolt")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn microlitre(&self) -> PyUnit {
-            self.0.units.get_by_name("microlitre").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("microlitre")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
         #[getter]
         fn millilitre(&self) -> PyUnit {
-            self.0.units.get_by_name("millilitre").expect("A Quantext in Python should always have this unit loaded").into()
+            self.0
+                .units
+                .get_by_name("millilitre")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
         }
     }
 }

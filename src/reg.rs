@@ -4,7 +4,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    defs::{DefFile, UnitDef, units::UnitModule},
+    defs::{units::UnitModule, DefFile, UnitDef},
     dimensions::Dimensions,
     error::QuanstantsError,
     fraction::Frac,
@@ -350,13 +350,18 @@ impl UnitRegistry {
 
     /// Adds a `Prefix` to the provided `Unit`, gives it an ID with the least significant byte
     /// indicated, and inserts it into the registry.
-    /// 
+    ///
     /// Only possible with metric prefixes and panics if attempted with a binary prefix.
     fn add_prefixed(&mut self, prefix: Prefix, unit: Unit, least_significant_byte: u8) {
-        if prefix.is_binary() { panic!("Can't add a unit with a binary prefix to a unit registry!") }
+        if prefix.is_binary() {
+            panic!("Can't add a unit with a binary prefix to a unit registry!")
+        }
         // Create the unit in the normal way, but need to adjust the ID afterwards.
         let mut new_unit = Prefix::from(prefix) * unit;
-        let id = Unit128{ num: new_unit.id.num, dim: new_unit.id.dim & !0xFF | (least_significant_byte as u64) };
+        let id = Unit128 {
+            num: new_unit.id.num,
+            dim: new_unit.id.dim & !0xFF | (least_significant_byte as u64),
+        };
         new_unit.id = id;
         self.insert_under_string(new_unit.name(), new_unit.clone());
         self.units.insert(id, new_unit);
@@ -538,8 +543,16 @@ impl UnitRegistry {
     /// Pre-defines some of the most common prefixed units.
     fn load_common_prefixed(&mut self) {
         self.add_prefixed(Prefix::nano, self.get_by_id(Unit128::SECOND).unwrap(), 0x01);
-        self.add_prefixed(Prefix::micro, self.get_by_id(Unit128::SECOND).unwrap(), 0x01);
-        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::SECOND).unwrap(), 0x01);
+        self.add_prefixed(
+            Prefix::micro,
+            self.get_by_id(Unit128::SECOND).unwrap(),
+            0x01,
+        );
+        self.add_prefixed(
+            Prefix::milli,
+            self.get_by_id(Unit128::SECOND).unwrap(),
+            0x01,
+        );
 
         self.add_prefixed(Prefix::nano, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
         self.add_prefixed(Prefix::micro, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
@@ -555,7 +568,11 @@ impl UnitRegistry {
         self.add_prefixed(Prefix::giga, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
         self.add_prefixed(Prefix::tera, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
 
-        self.add_prefixed(Prefix::hecto, self.get_by_id(Unit128::PASCAL).unwrap(), 0x01);
+        self.add_prefixed(
+            Prefix::hecto,
+            self.get_by_id(Unit128::PASCAL).unwrap(),
+            0x01,
+        );
         self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::PASCAL).unwrap(), 0x01);
 
         self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
@@ -575,7 +592,7 @@ impl UnitRegistry {
             self.add_prefixed(Prefix::mega, electronvolt.clone(), 0x01);
             self.add_prefixed(Prefix::giga, electronvolt, 0x01);
         }
-        
+
         if let Some(litre) = self.get_by_name("litre") {
             self.add_prefixed(Prefix::micro, litre.clone(), 0x01);
             self.add_prefixed(Prefix::milli, litre, 0x01);

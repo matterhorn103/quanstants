@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::ops::{Div, Mul, Neg};
 use std::sync::Arc;
+
+use indexmap::IndexMap;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
@@ -211,14 +212,16 @@ impl Unit {
     /// Has no effect for non-compound units.
     pub fn cancel_by_unit(&self) -> Self {
         let old_factors = self.to_factors();
-        let mut factors_map: HashMap<Unit128, LinearFactor> = HashMap::with_capacity(old_factors.len());
+        // Use an IndexMap so that order is retained
+        let mut factors_map: IndexMap<Unit128, LinearFactor> = IndexMap::with_capacity(old_factors.len());
         for old_factor in old_factors {
             let k = old_factor.unit.id;
             factors_map.entry(k)
             .and_modify(|new_factor| new_factor.exponent += old_factor.exponent)
             .or_insert(old_factor);
-        }   
-        let new_factors = factors_map.into_values().collect();
+        }
+        // Drop any terms which after cancelling are 0th order
+        let new_factors = factors_map.into_values().filter(|f| f.exponent != 0).collect();
 
         Self::new(LinearUnit {
             id: self.id,
@@ -550,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn symbol_compound_cancelled() {
+    fn cancel() {
         let s = Unit::new(LinearUnit {
             id: Unit128::SECOND,
             utype: LinearUnitType::Base,
@@ -561,11 +564,24 @@ mod tests {
             number: SciNum::ONE,
             factors: Vec::new(),
         });
-        let s2 = s.clone() * s.clone();
-        dbg!(&s2.inner.symbol);
-        let s2_cancelled = s2.cancel_by_unit();
-        dbg!(&s2_cancelled.inner.symbol);
-        assert_eq!(s2_cancelled.symbol(false), "s2");
+        let m = Unit::new(LinearUnit {
+            id: Unit128::METRE,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("m")),
+            name: Some(String::from("metre")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
+        let ms = (m.clone() * s.clone()).cancel_by_unit();
+        let mm = (m.clone() * m.clone()).cancel_by_unit();
+        let m_per_s = (m.clone() / s.clone()).cancel_by_unit();
+        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancel_by_unit();
+        assert_eq!(ms.symbol(false), "m s");
+        assert_eq!(mm.symbol(false), "m2");
+        assert_eq!(m_per_s.symbol(false), "m s-1");
+        assert_eq!(s_m_per_s.symbol(false), "m");
     }
 
     #[test]

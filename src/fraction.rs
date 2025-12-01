@@ -5,7 +5,7 @@ use num_rational::Ratio;
 use num_traits::ToPrimitive;
 use std::{
     fmt,
-    ops::{Add, Deref, Div, Mul, Neg, Sub},
+    ops::{Add, AddAssign, Deref, Div, Mul, Neg, Sub},
     str::FromStr,
 };
 
@@ -118,57 +118,63 @@ impl Neg for Frac {
 
 impl Add for Frac {
     type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Self(self.0 + other.0)
+    fn add(self, rhs: Self) -> Self {
+        Self(self.0 + rhs.0)
     }
 }
 
 impl Add<i8> for Frac {
     type Output = Self;
-    fn add(self, other: i8) -> Self {
-        Self(self.0 + other)
+    fn add(self, rhs: i8) -> Self {
+        Self(self.0 + rhs)
+    }
+}
+
+impl AddAssign for Frac {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
     }
 }
 
 impl Sub for Frac {
     type Output = Self;
-    fn sub(self, other: Self) -> Self {
-        Self(self.0 - other.0)
+    fn sub(self, rhs: Self) -> Self {
+        Self(self.0 - rhs.0)
     }
 }
 
 impl Sub<i8> for Frac {
     type Output = Self;
-    fn sub(self, other: i8) -> Self {
-        Self(self.0 - other)
+    fn sub(self, rhs: i8) -> Self {
+        Self(self.0 - rhs)
     }
 }
 
 impl Mul for Frac {
     type Output = Self;
-    fn mul(self, other: Self) -> Self {
-        Self(self.0 * other.0)
+    fn mul(self, rhs: Self) -> Self {
+        Self(self.0 * rhs.0)
     }
 }
 
 impl Mul<i8> for Frac {
     type Output = Self;
-    fn mul(self, other: i8) -> Self {
-        Self(self.0 * other)
+    fn mul(self, rhs: i8) -> Self {
+        Self(self.0 * rhs)
     }
 }
 
 impl Div for Frac {
     type Output = Self;
-    fn div(self, other: Self) -> Self {
-        Self(self.0 / other.0)
+    fn div(self, rhs: Self) -> Self {
+        Self(self.0 / rhs.0)
     }
 }
 
 impl Div<i8> for Frac {
     type Output = Self;
-    fn div(self, other: i8) -> Self {
-        Self(self.0 / other)
+    fn div(self, rhs: i8) -> Self {
+        Self(self.0 / rhs)
     }
 }
 

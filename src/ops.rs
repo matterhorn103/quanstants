@@ -23,7 +23,6 @@
 
 use std::{
     ops::{Div, Mul},
-    sync::Arc,
 };
 
 use rust_decimal::Decimal;
@@ -114,15 +113,6 @@ impl Mul<Unit> for Prefix {
         ) {
             panic!("Cannot prefix a compound unit or Unitless!")
         }
-        let new_inner = Arc::new(LinearUnit {
-            utype: LinearUnitType::Derived,
-            dimensions: rhs.dimensions(),
-            symbol: Some(self.symbol() + &rhs.symbol(false)),
-            name: Some(self.name() + &rhs.name()),
-            prefix: Some(self),
-            number: rhs.number(),
-            factors: rhs.to_factors(),
-        });
         let new_id = if self.is_binary() {
             // Only use a binary exponent if there is no (decimal) factor currently
             if rhs.id.num == 0 {
@@ -145,10 +135,16 @@ impl Mul<Unit> for Prefix {
             let num = rhs.id.num & !0xF | ((old_exponent + self.equivalent_power()) as u8 as u64);
             Unit128 { num, dim }
         };
-        Unit {
+        Unit::new(LinearUnit {
             id: new_id,
-            inner: new_inner,
-        }
+            utype: LinearUnitType::Derived,
+            dimensions: rhs.dimensions(),
+            symbol: Some(self.symbol() + &rhs.symbol(false)),
+            name: Some(self.name() + &rhs.name()),
+            prefix: Some(self),
+            number: rhs.number(),
+            factors: rhs.to_factors(),
+        })
     }
 }
 

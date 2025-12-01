@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
 // SPDX-License-Identifier: MIT
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::{
     defs::{units::UnitModule, DefFile, UnitDef},
@@ -85,7 +85,8 @@ impl UnitRegistry {
         name: String,
         prefix: Option<Prefix>,
     ) -> Unit {
-        let inner_unit = LinearUnit {
+        Unit::new(LinearUnit {
+            id,
             utype: LinearUnitType::Base,
             dimensions,
             symbol: Some(symbol),
@@ -93,11 +94,7 @@ impl UnitRegistry {
             prefix,
             number: SciNum::ONE,
             factors: vec![],
-        };
-        Unit {
-            id,
-            inner: Arc::new(inner_unit),
-        }
+        })
     }
 
     pub fn add_base(
@@ -164,7 +161,8 @@ impl UnitRegistry {
         proportionality_factor: SciNum,
         unit_factors: Vec<(Unit, Frac)>,
     ) -> Unit {
-        let inner_unit = LinearUnit {
+        Unit::new(LinearUnit {
+            id,
             utype: LinearUnitType::Derived,
             dimensions: id.dimensions(),
             symbol: Some(symbol),
@@ -178,11 +176,7 @@ impl UnitRegistry {
                     exponent: x.1,
                 })
                 .collect(),
-        };
-        Unit {
-            id,
-            inner: Arc::new(inner_unit),
-        }
+        })
     }
 
     fn calculate_derived_id(

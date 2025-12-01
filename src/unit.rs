@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::ops::{Div, Mul, Neg};
 use std::sync::Arc;
@@ -26,6 +27,7 @@ pub(crate) enum LinearUnitType {
 // A LinearUnit should not be cloned, it should be used and passed around only behind a pointer
 #[derive(Debug)]
 pub struct LinearUnit {
+    pub(crate) id: Unit128,
     pub(crate) utype: LinearUnitType,
     pub(crate) dimensions: Dimensions,
     pub(crate) symbol: Option<String>, // Compound units have None for this
@@ -63,6 +65,7 @@ impl LinearUnit {
 impl LinearUnit {
     #[allow(dead_code)]
     pub const UNITLESS: LinearUnit = LinearUnit {
+        id: Unit128::UNITLESS,
         utype: LinearUnitType::Unitless,
         dimensions: Dimensions::DIMENSIONLESS,
         symbol: None,
@@ -126,6 +129,13 @@ pub struct Unit {
 }
 
 impl Unit {
+    pub fn new(inner: LinearUnit) -> Self {
+        Self {
+            id: inner.id,
+            inner: Arc::new(inner),
+        }
+    }
+
     pub fn unitless() -> Self {
         Self {
             id: Unit128::UNITLESS,
@@ -136,6 +146,11 @@ impl Unit {
     #[inline]
     pub fn is_base(&self) -> bool {
         matches!(self.inner.utype, LinearUnitType::Base)
+    }
+
+    #[inline]
+    pub fn is_compound(&self) -> bool {
+        matches!(self.inner.utype, LinearUnitType::Compound)
     }
 
     pub fn is_compound_base(&self) -> bool {
@@ -189,43 +204,43 @@ impl Unit {
         self.to_factors().into_iter().map(|x| x.inverse()).collect()
     }
 
-    pub fn inverse(self) -> Self {
-        let new_inner = Arc::new(LinearUnit {
-            utype: LinearUnitType::Compound,
-            dimensions: self.dimensions().inverse(),
-            symbol: None,
-            name: None,
-            prefix: None,
-            number: self.number().inverse(),
-            factors: self.to_inverse_factors(),
-        });
-        let new_id = self.id.inverse();
-        Self {
-            id: new_id,
-            inner: new_inner,
-        }
-    }
+    /// Combines factors of a compound unit that contain identical units.
+    /// 
+    /// For example, `m s² m⁻¹` becomes `s²`, and `J K⁻¹ J` becomes `J² K⁻¹`
+    /// 
+    /// Has no effect for non-compound units.
+    pub fn cancel_by_unit(&self) -> Self {
+        let old_factors = self.to_factors();
+        let mut factors_map: HashMap<Unit128, LinearFactor> = HashMap::with_capacity(old_factors.len());
+        for old_factor in old_factors {
+            let k = old_factor.unit.id;
+            factors_map.entry(k)
+            .and_modify(|new_factor| new_factor.exponent += old_factor.exponent)
+            .or_insert(old_factor);
+        }   
+        let new_factors = factors_map.into_values().collect();
 
-    pub fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
-        let exponent: Frac = exponent.into();
-        let new_inner = Arc::new(LinearUnit {
+        Self::new(LinearUnit {
+            id: self.id,
             utype: LinearUnitType::Compound,
-            dimensions: self.dimensions().pow(exponent),
+            dimensions: self.dimensions(),
             symbol: None,
             name: None,
             prefix: None,
-            number: self.number().powf(exponent.to_f64()),
-            factors: self
-                .to_factors()
-                .into_iter()
-                .map(|x| x.pow(exponent))
-                .collect(),
-        });
-        let new_id = self.id.pow(exponent);
-        Unit {
-            id: new_id,
-            inner: new_inner,
-        }
+            number: self.number(),
+            factors: new_factors,
+        })
+    }
+}
+
+// Equality and ordering functions not covered by traits
+impl Unit {
+    /// Returns `true` if the two units are exactly the same.
+    /// 
+    /// `identical()` differs from `eq()` in that it returns `false` for two different units
+    /// that have the same value.
+    pub fn identical(&self, other: &Self) -> bool {
+        self.id == other.id
     }
 }
 
@@ -249,11 +264,46 @@ impl Ord for Unit {
     }
 }
 
+// Arithmetic not covered by traits
+impl Unit {
+    pub fn inverse(self) -> Self {
+        Self::new(LinearUnit {
+            id: self.id.inverse(),
+            utype: LinearUnitType::Compound,
+            dimensions: self.dimensions().inverse(),
+            symbol: None,
+            name: None,
+            prefix: None,
+            number: self.number().inverse(),
+            factors: self.to_inverse_factors(),
+        })
+    }
+
+    pub fn pow<T: Into<Frac>>(self, exponent: T) -> Self {
+        let exponent: Frac = exponent.into();
+        Self::new(LinearUnit {
+            id: self.id.pow(exponent),
+            utype: LinearUnitType::Compound,
+            dimensions: self.dimensions().pow(exponent),
+            symbol: None,
+            name: None,
+            prefix: None,
+            number: self.number().powf(exponent.to_f64()),
+            factors: self
+                .to_factors()
+                .into_iter()
+                .map(|x| x.pow(exponent))
+                .collect(),
+        })
+    }
+}
+
 impl Mul for Unit {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
-        let new_inner = Arc::new(LinearUnit {
+        Self::new(LinearUnit {
+            id: self.id * rhs.id,
             utype: LinearUnitType::Compound,
             dimensions: self.dimensions() * rhs.dimensions(),
             symbol: None,
@@ -265,12 +315,7 @@ impl Mul for Unit {
                 .into_iter()
                 .chain(rhs.to_factors())
                 .collect(),
-        });
-        let new_id = self.id * rhs.id;
-        Self {
-            id: new_id,
-            inner: new_inner,
-        }
+        })
     }
 }
 
@@ -278,7 +323,8 @@ impl Div for Unit {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        let new_inner = Arc::new(LinearUnit {
+        Self::new(LinearUnit {
+            id: self.id / rhs.id,
             utype: LinearUnitType::Compound,
             dimensions: self.dimensions() / rhs.dimensions(),
             symbol: None,
@@ -290,12 +336,7 @@ impl Div for Unit {
                 .into_iter()
                 .chain(rhs.to_inverse_factors())
                 .collect(),
-        });
-        let new_id = self.id / rhs.id;
-        Self {
-            id: new_id,
-            inner: new_inner,
-        }
+        })
     }
 }
 
@@ -429,48 +470,42 @@ mod tests {
 
     #[test]
     fn equality() {
-        let s = Unit {
+        let s = Unit::new(LinearUnit {
             id: Unit128::SECOND,
-            inner: Arc::new(LinearUnit {
-                utype: LinearUnitType::Base,
-                dimensions: Dimensions::TIME,
-                symbol: Some(String::from("s")),
-                name: Some(String::from("second")),
-                prefix: None,
-                number: SciNum::ONE,
-                factors: Vec::new(),
-            }),
-        };
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::TIME,
+            symbol: Some(String::from("s")),
+            name: Some(String::from("second")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
         let s2 = s.clone();
         assert_eq!(s, s2);
     }
 
     #[test]
     fn mul() {
-        let s = Unit {
+        let s = Unit::new(LinearUnit {
             id: Unit128::SECOND,
-            inner: Arc::new(LinearUnit {
-                utype: LinearUnitType::Base,
-                dimensions: Dimensions::TIME,
-                symbol: Some(String::from("s")),
-                name: Some(String::from("second")),
-                prefix: None,
-                number: SciNum::ONE,
-                factors: Vec::new(),
-            }),
-        };
-        let m = Unit {
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::TIME,
+            symbol: Some(String::from("s")),
+            name: Some(String::from("second")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
+        let m = Unit::new(LinearUnit {
             id: Unit128::METRE,
-            inner: Arc::new(LinearUnit {
-                utype: LinearUnitType::Base,
-                dimensions: Dimensions::LENGTH,
-                symbol: Some(String::from("m")),
-                name: Some(String::from("metre")),
-                prefix: None,
-                number: SciNum::ONE,
-                factors: Vec::new(),
-            }),
-        };
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("m")),
+            name: Some(String::from("metre")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
         let ms = m.clone() * s.clone();
         let mm = m.clone() * m.clone();
         assert_eq!(ms.symbol(false), "m s");
@@ -483,36 +518,32 @@ mod tests {
 
     #[test]
     fn symbol() {
-        let s = Unit {
+        let s = Unit::new(LinearUnit {
             id: Unit128::SECOND,
-            inner: Arc::new(LinearUnit {
-                utype: LinearUnitType::Base,
-                dimensions: Dimensions::TIME,
-                symbol: Some(String::from("s")),
-                name: Some(String::from("second")),
-                prefix: None,
-                number: SciNum::ONE,
-                factors: Vec::new(),
-            }),
-        };
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::TIME,
+            symbol: Some(String::from("s")),
+            name: Some(String::from("second")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
         dbg!(&s.inner.symbol);
         assert_eq!(s.symbol(false), "s");
     }
 
     #[test]
     fn symbol_compound() {
-        let s = Unit {
+        let s = Unit::new(LinearUnit {
             id: Unit128::SECOND,
-            inner: Arc::new(LinearUnit {
-                utype: LinearUnitType::Base,
-                dimensions: Dimensions::TIME,
-                symbol: Some(String::from("s")),
-                name: Some(String::from("second")),
-                prefix: None,
-                number: SciNum::ONE,
-                factors: Vec::new(),
-            }),
-        };
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::TIME,
+            symbol: Some(String::from("s")),
+            name: Some(String::from("second")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
         let s2 = s.clone() * s.clone();
         dbg!(&s2.inner.symbol);
         assert_eq!(s2.symbol(false), "s2");
@@ -520,18 +551,16 @@ mod tests {
 
     #[test]
     fn debug() {
-        let s = Unit {
+        let s = Unit::new(LinearUnit {
             id: Unit128::SECOND,
-            inner: Arc::new(LinearUnit {
-                utype: LinearUnitType::Base,
-                dimensions: Dimensions::TIME,
-                symbol: Some(String::from("s")),
-                name: Some(String::from("second")),
-                prefix: None,
-                number: SciNum::ONE,
-                factors: Vec::new(),
-            }),
-        };
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::TIME,
+            symbol: Some(String::from("s")),
+            name: Some(String::from("second")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
         assert_eq!(format!("{s:?}"), "Unit { id: 1100, inner: s }");
     }
 }

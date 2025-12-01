@@ -546,7 +546,26 @@ mod tests {
         });
         let s2 = s.clone() * s.clone();
         dbg!(&s2.inner.symbol);
-        assert_eq!(s2.symbol(false), "s2");
+        assert_eq!(s2.symbol(false), "s s");
+    }
+
+    #[test]
+    fn symbol_compound_cancelled() {
+        let s = Unit::new(LinearUnit {
+            id: Unit128::SECOND,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::TIME,
+            symbol: Some(String::from("s")),
+            name: Some(String::from("second")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
+        let s2 = s.clone() * s.clone();
+        dbg!(&s2.inner.symbol);
+        let s2_cancelled = s2.cancel_by_unit();
+        dbg!(&s2_cancelled.inner.symbol);
+        assert_eq!(s2_cancelled.symbol(false), "s2");
     }
 
     #[test]

@@ -150,7 +150,7 @@ impl Mul for Quantity {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
-        Self::new(self.number * rhs.number, self.unit * rhs.unit)
+        Self::new(self.number * rhs.number, (self.unit * rhs.unit).cancel_by_unit())
     }
 }
 
@@ -158,7 +158,7 @@ impl Div for Quantity {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        Self::new(self.number / rhs.number, self.unit / rhs.unit)
+        Self::new(self.number / rhs.number, (self.unit / rhs.unit).cancel_by_unit())
     }
 }
 
@@ -399,8 +399,6 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::{
         unit::{LinearUnit, LinearUnitType},
         unit128::Unit128,

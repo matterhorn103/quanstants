@@ -443,9 +443,7 @@ impl Unit128 {
 
 impl Unit128 {
     #[allow(dead_code)]
-    pub const UNITLESS: Unit128 = { Unit128 { num: 0x0, dim: 0x0 } };
-
-    pub const ONE: Unit128 = Unit128::UNITLESS;
+    pub const ONE: Unit128 = { Unit128 { num: 0x0, dim: 0x0 } };
 
     pub const SECOND: Unit128 = {
         Unit128 {
@@ -795,7 +793,7 @@ mod tests {
 
     #[test]
     fn lsb() {
-        assert_eq!(Unit128::UNITLESS.least_significant_byte(), 0x00);
+        assert_eq!(Unit128::ONE.least_significant_byte(), 0x00);
         assert_eq!(Unit128::SECOND.least_significant_byte(), 0x00);
         let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
         assert_eq!(celsius.least_significant_byte(), 0x41);
@@ -805,7 +803,7 @@ mod tests {
 
     #[test]
     fn is_referenced() {
-        assert!(!Unit128::UNITLESS.is_referenced());
+        assert!(!Unit128::ONE.is_referenced());
         assert!(!Unit128::SECOND.is_referenced());
         let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
         assert!(celsius.is_referenced());

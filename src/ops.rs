@@ -102,7 +102,7 @@ impl Mul<Unit> for Prefix {
         }
         if matches!(
             rhs.inner.utype,
-            LinearUnitType::Unitless | LinearUnitType::Compound
+            LinearUnitType::One | LinearUnitType::Compound
         ) {
             panic!("Cannot prefix a compound unit or Unitless!")
         }

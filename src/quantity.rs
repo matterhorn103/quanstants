@@ -107,7 +107,7 @@ macro_rules! impl_from_for_sci_quant {
             fn from(n: $t) -> SciQuantity {
                 SciQuantity {
                     number: n.into(),
-                    unit: Unit::unitless(),
+                    unit: Unit::one(),
                 }
             }
         }

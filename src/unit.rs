@@ -17,7 +17,7 @@ use crate::unit128::Unit128;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum LinearUnitType {
-    Unitless,
+    One,
     Base,
     Derived,
     Compound,
@@ -36,7 +36,7 @@ pub struct LinearUnit {
     pub(crate) name: Option<String>,   // Compound units have None for this
     pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
     pub(crate) number: SciNum,         // 1 for everything except derived units
-    pub(crate) factors: Vec<LinearFactor>, // Empty for base units and unitless
+    pub(crate) factors: Vec<LinearFactor>, // Empty for base units and one
 }
 
 // Generally LinearUnit just stores data without having its own methods
@@ -44,7 +44,7 @@ pub struct LinearUnit {
 impl LinearUnit {
     pub fn symbol(&self, use_superscripts: bool) -> String {
         match self.utype {
-            LinearUnitType::Unitless => String::from(""),
+            LinearUnitType::One => String::from(""),
             LinearUnitType::Base | LinearUnitType::Derived => self.symbol.clone().unwrap(),
             LinearUnitType::Compound => self
                 .factors
@@ -57,7 +57,7 @@ impl LinearUnit {
 
     pub fn name(&self) -> String {
         match self.utype {
-            LinearUnitType::Unitless => String::from(""),
+            LinearUnitType::One => String::from(""),
             LinearUnitType::Base | LinearUnitType::Derived => self.name.clone().unwrap(),
             LinearUnitType::Compound => todo!(),
         }
@@ -66,9 +66,9 @@ impl LinearUnit {
 
 impl LinearUnit {
     #[allow(dead_code)]
-    pub const UNITLESS: LinearUnit = LinearUnit {
-        id: Unit128::UNITLESS,
-        utype: LinearUnitType::Unitless,
+    pub const ONE: LinearUnit = LinearUnit {
+        id: Unit128::ONE,
+        utype: LinearUnitType::One,
         dimensions: Dimensions::DIMENSIONLESS,
         symbol: None,
         name: None,
@@ -138,10 +138,10 @@ impl Unit {
         }
     }
 
-    pub fn unitless() -> Self {
+    pub fn one() -> Self {
         Self {
-            id: Unit128::UNITLESS,
-            inner: Arc::new(LinearUnit::UNITLESS),
+            id: Unit128::ONE,
+            inner: Arc::new(LinearUnit::ONE),
         }
     }
 
@@ -197,7 +197,7 @@ impl Unit {
                     exponent: 1.into(),
                 }]
             }
-            LinearUnitType::Compound | LinearUnitType::Unitless => self.inner.factors.clone(),
+            LinearUnitType::Compound | LinearUnitType::One => self.inner.factors.clone(),
         }
     }
 

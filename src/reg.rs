@@ -461,8 +461,8 @@ impl UnitRegistry {
     }
 
     #[inline]
-    pub fn unitless(&self) -> Unit {
-        self.units.get(&Unit128::UNITLESS).unwrap().clone()
+    pub fn one(&self) -> Unit {
+        self.units.get(&Unit128::ONE).unwrap().clone()
     }
 
     #[inline]
@@ -484,7 +484,7 @@ impl UnitRegistry {
 // Functions to add sets of units, for internal use only
 impl UnitRegistry {
     fn add_unitless(&mut self) {
-        self.units.insert(Unit128::UNITLESS, Unit::unitless());
+        self.units.insert(Unit128::ONE, Unit::one());
     }
 
     fn load_si_base(&mut self) {

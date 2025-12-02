@@ -95,7 +95,7 @@ impl Context {
         let product_unit = unit_vec
             .into_iter()
             .reduce(|acc, e| acc * e)
-            .unwrap_or(self.unitless());
+            .unwrap_or(self.one());
         Ok(Quantity {
             number,
             unit: product_unit,
@@ -119,8 +119,8 @@ macro_rules! unit_getter {
 #[allow(dead_code)]
 impl Context {
     #[inline]
-    pub fn unitless(&self) -> Unit {
-        self.units.unitless()
+    pub fn one(&self) -> Unit {
+        self.units.one()
     }
 
     // Make sure to get the meter with the US spelling
@@ -258,8 +258,8 @@ pub(crate) mod py {
         // Unit getters
 
         #[getter]
-        fn unitless(&self) -> PyUnit {
-            self.0.unitless().into()
+        fn one(&self) -> PyUnit {
+            self.0.one().into()
         }
 
         #[getter]

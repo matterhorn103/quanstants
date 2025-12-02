@@ -211,7 +211,7 @@ impl Unit {
     /// For example, `m s² m⁻¹` becomes `s²`, and `J K⁻¹ J` becomes `J² K⁻¹`
     /// 
     /// Has no effect for non-compound units.
-    pub fn cancel_by_unit(&self) -> Self {
+    pub fn cancelled_by_unit(&self) -> Self {
         let old_factors = self.to_factors();
         // Use an IndexMap so that order is retained
         let mut factors_map: IndexMap<Unit128, LinearFactor> = IndexMap::with_capacity(old_factors.len());
@@ -575,10 +575,10 @@ mod tests {
             number: SciNum::ONE,
             factors: Vec::new(),
         });
-        let ms = (m.clone() * s.clone()).cancel_by_unit();
-        let mm = (m.clone() * m.clone()).cancel_by_unit();
-        let m_per_s = (m.clone() / s.clone()).cancel_by_unit();
-        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancel_by_unit();
+        let ms = (m.clone() * s.clone()).cancelled_by_unit();
+        let mm = (m.clone() * m.clone()).cancelled_by_unit();
+        let m_per_s = (m.clone() / s.clone()).cancelled_by_unit();
+        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancelled_by_unit();
         assert_eq!(ms.symbol(false), "m s");
         assert_eq!(mm.symbol(false), "m2");
         assert_eq!(m_per_s.symbol(false), "m s-1");

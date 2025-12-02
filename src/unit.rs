@@ -12,6 +12,7 @@ use num_traits::Inv;
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
 use crate::prefix::Prefix;
+use crate::quantity::SciQuantity;
 use crate::scinum::SciNum;
 use crate::unit128::Unit128;
 
@@ -61,6 +62,19 @@ impl LinearUnit {
             LinearUnitType::Base | LinearUnitType::Derived => self.name.clone().unwrap(),
             LinearUnitType::Compound => todo!(),
         }
+    }
+
+    /// Returns `true` if the unit is a base unit or one.
+    #[inline]
+    pub fn is_base(&self) -> bool {
+        matches!(self.utype, LinearUnitType::Base | LinearUnitType::One)
+    }
+
+    /// Returns `true` if the unit is a compound unit and all its factors are base units.
+    #[inline]
+    pub fn is_compound_base(&self) -> bool {
+        matches!(self.utype, LinearUnitType::Compound)
+        && self.factors.iter().all(|f| f.unit.is_base())
     }
 }
 
@@ -121,6 +135,28 @@ impl LinearFactor {
             format!("{}{}", self.unit.symbol(false), self.exponent)
         }
     }
+
+    /// Returns the equivalent of the factor as a tuple of a SciNum and its factors as base units.
+    fn base_equivalent(self) -> (SciNum, Vec<LinearFactor>) {
+        match self.unit.utype {
+            LinearUnitType::Base | LinearUnitType::One => (SciNum::ONE, vec![self]),
+            LinearUnitType::Derived | LinearUnitType::Compound => {
+                let prefix_value = match self.unit.prefix {
+                    Some(p) => p.value(),
+                    None => SciNum::ONE,
+                };
+                let mut number = self.unit.number * prefix_value;
+                let mut base_factors = Vec::new();
+                for f in self.unit.factors.clone() {
+                    let exponent = f.exponent;
+                    let (u_base_num, u_base_factors) = f.base_equivalent();
+                    number = number * (u_base_num.powfrac(exponent));
+                    base_factors.append(&mut u_base_factors.into_iter().map(|g| g.pow(exponent)).collect());
+                };
+                (number, base_factors)
+            },
+        }
+    }
 }
 
 // This is the user-facing struct representing a linear unit
@@ -145,9 +181,10 @@ impl Unit {
         }
     }
 
+    /// Returns `true` if the unit is a base unit or one.
     #[inline]
     pub fn is_base(&self) -> bool {
-        matches!(self.inner.utype, LinearUnitType::Base)
+        self.inner.is_base()
     }
 
     #[inline]
@@ -155,8 +192,9 @@ impl Unit {
         matches!(self.inner.utype, LinearUnitType::Compound)
     }
 
+    #[inline]
     pub fn is_compound_base(&self) -> bool {
-        todo!()
+        self.inner.is_compound_base()
     }
 
     #[inline]
@@ -211,7 +249,8 @@ impl Unit {
     /// For example, `m s² m⁻¹` becomes `s²`, and `J K⁻¹ J` becomes `J² K⁻¹`
     /// 
     /// Has no effect for non-compound units.
-    pub fn cancelled_by_unit(&self) -> Self {
+    pub fn cancel_by_unit(self) -> Self {
+        if !self.is_compound() { return self }
         let old_factors = self.to_factors();
         // Use an IndexMap so that order is retained
         let mut factors_map: IndexMap<Unit128, LinearFactor> = IndexMap::with_capacity(old_factors.len());
@@ -234,6 +273,44 @@ impl Unit {
             number: self.number(),
             factors: new_factors,
         })
+    }
+
+    /// Returns the equivalent of the unit as a quantity.
+    pub fn value(&self) -> SciQuantity {
+        SciQuantity::new(SciNum::ONE, self.clone())
+    }
+
+    /// Returns the equivalent of the unit as a quantity in base units.
+    pub fn in_base(&self) -> SciQuantity {
+        if self.is_base() || self.is_compound_base() {
+            self.value()
+        } else {
+            let mut num = SciNum::ONE;
+            let mut factors = Vec::new();
+            for f in self.to_factors() {
+                let (f_base_num, f_base_factors) = f.base_equivalent();
+                num = num * f_base_num;
+                factors.append(&mut f_base_factors.into_iter().collect());
+            }
+            let new_unit = Unit::new(LinearUnit {
+                id: Unit128::new(
+                    self.id.factor() / num,
+                    self.dimensions(),
+                    (self.id.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
+                ),
+                utype: LinearUnitType::Compound,
+                dimensions: self.dimensions(),
+                symbol: None,
+                name: None,
+                prefix: None,
+                number: SciNum::ONE,
+                factors,
+            });
+            SciQuantity::new(
+                num,
+                new_unit,
+            )
+        }
     }
 }
 
@@ -470,6 +547,8 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
+    use rust_decimal_macros::dec;
+
     use super::*;
 
     #[test]
@@ -575,10 +654,10 @@ mod tests {
             number: SciNum::ONE,
             factors: Vec::new(),
         });
-        let ms = (m.clone() * s.clone()).cancelled_by_unit();
-        let mm = (m.clone() * m.clone()).cancelled_by_unit();
-        let m_per_s = (m.clone() / s.clone()).cancelled_by_unit();
-        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancelled_by_unit();
+        let ms = (m.clone() * s.clone()).cancel_by_unit();
+        let mm = (m.clone() * m.clone()).cancel_by_unit();
+        let m_per_s = (m.clone() / s.clone()).cancel_by_unit();
+        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancel_by_unit();
         assert_eq!(ms.symbol(false), "m s");
         assert_eq!(mm.symbol(false), "m2");
         assert_eq!(m_per_s.symbol(false), "m s-1");
@@ -598,5 +677,34 @@ mod tests {
             factors: Vec::new(),
         });
         assert_eq!(format!("{s:?}"), "Unit { id: 1100, inner: s }");
+    }
+
+    #[test]
+    fn in_base() {
+        let m = Unit::new(LinearUnit {
+            id: Unit128::METRE,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("m")),
+            name: Some(String::from("metre")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
+        let ft = Unit::new(LinearUnit {
+            id: Unit128::from_bits(0xBE7FC0000000000110001),
+            utype: LinearUnitType::Derived,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("ft")),
+            name: Some(String::from("foot")),
+            prefix: None,
+            number: SciNum::new_exact(dec!(0.3048)),
+            factors: m.to_factors(),
+        });
+        dbg!(ft.clone());
+        let base = ft.in_base();
+        dbg!(base.clone());
+        assert_eq!(base, SciNum::new_exact(dec!(0.3048)) * m);
+        assert_eq!(base.to_string(), "0.3048 m");
     }
 }

@@ -63,7 +63,7 @@ impl<T: Num> Mul for Quantity<T> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
-        Self::new(self.number * rhs.number, (self.unit * rhs.unit).cancelled_by_unit())
+        Self::new(self.number * rhs.number, (self.unit * rhs.unit).cancel_by_unit())
     }
 }
 
@@ -71,7 +71,7 @@ impl<T: Num> Div for Quantity<T> {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        Self::new(self.number / rhs.number, (self.unit / rhs.unit).cancelled_by_unit())
+        Self::new(self.number / rhs.number, (self.unit / rhs.unit).cancel_by_unit())
     }
 }
 
@@ -97,6 +97,12 @@ impl SciQuantity {
     #[inline]
     pub fn is_exact(&self) -> bool {
         self.number.is_exact()
+    }
+
+    // This ought to be generic
+    /// Returns the value of the `SciQuantity` when expressed in base units.
+    pub fn in_base(self) -> Self {
+        self.number * self.unit.in_base()
     }
 }
 
@@ -179,7 +185,7 @@ impl SciQuantity {
     {
         Self::new(
             self.number.mul_with_correlation(rhs.number, correlation),
-            (self.unit * rhs.unit).cancelled_by_unit(),
+            (self.unit * rhs.unit).cancel_by_unit(),
         )
     }
 
@@ -191,7 +197,7 @@ impl SciQuantity {
     {
         Self::new(
             self.number.div_with_correlation(rhs.number, correlation),
-            (self.unit / rhs.unit).cancelled_by_unit(),
+            (self.unit / rhs.unit).cancel_by_unit(),
         )
     }
 }
@@ -412,6 +418,11 @@ pub(crate) mod py {
         fn plus_minus(&self, uncertainty: PyIntoSciNum) -> Self {
             self.with_uncertainty(uncertainty)
         }
+
+        /// Returns the value of the `SciQuantity` when expressed in base units.
+        fn in_base(&self) -> Self {
+            self.owned_inner().in_base().into()
+        }
     }
 
     #[derive(Debug, FromPyObject)]
@@ -433,6 +444,8 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
+    use rust_decimal_macros::dec;
+
     use crate::{
         unit::{LinearUnit, LinearUnitType},
         unit128::Unit128,
@@ -529,5 +542,32 @@ mod tests {
         dbg!(&q1);
         dbg!(&q2);
         assert_eq!(q1 / q2, Quantity::new(SciNum::new(5, 0), s.clone()));
+    }
+
+    #[test]
+    fn in_base() {
+        let m = Unit::new(LinearUnit {
+            id: Unit128::METRE,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("m")),
+            name: Some(String::from("metre")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
+        let ft = Unit::new(LinearUnit {
+            id: Unit128::from_bits(0xBE7FC0000000000110001),
+            utype: LinearUnitType::Derived,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("ft")),
+            name: Some(String::from("foot")),
+            prefix: None,
+            number: SciNum::new_exact(dec!(0.3048)),
+            factors: m.to_factors(),
+        });
+        let q1: SciQuantity = (dec!(0.3048) * m).into();
+        let q2: SciQuantity = SciNum::ONE * ft;
+        assert_eq!(q1.in_base(), q2.in_base());
     }
 }

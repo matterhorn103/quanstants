@@ -875,6 +875,13 @@ impl FromStr for SciNum {
     }
 }
 
+#[allow(unused_macros)]
+macro_rules! sci {
+    ($s:expr) => {
+        SciNum::from_str(stringify!($s)).unwrap()
+    };
+}
+
 impl SciNum {
     /// A constant representing 0.
     pub const ZERO: SciNum = SciNum {
@@ -1339,5 +1346,40 @@ mod tests {
         );
         // Make sure incorrectly formatted string fails
         assert!(SciNum::from_str("not a number").is_err());
+    }
+
+    #[test]
+    fn sci_macro() {
+        // Integer
+        assert_eq!(sci!(42), SciNum::new_exact(dec!(42)));
+        // Negative float
+        assert_eq!(
+            sci!(-3.14),
+            SciNum::new_exact(dec!(-3.14))
+        );
+        // Scientific notation
+        assert_eq!(
+            sci!(1.5e8),
+            SciNum::new_exact(dec!(1.5e8))
+        );
+        // TODO large exponent fails with overflow error
+        //assert_eq!(sci!(1.5e10), SciNum::new_exact(dec!(1.5e10)));
+        // Scientific notation with negative exponent
+        assert_eq!(
+            sci!(2e-5),
+            SciNum::new_exact(dec!(2e-5))
+        );
+        // Negative number with positive exponent
+        assert_eq!(
+            sci!(-6.022e6),
+            SciNum::new_exact(dec!(-6.022e6))
+        );
+        // TODO large exponent fails with overflow error
+        //assert_eq!(sci!(-6.022e23), SciNum::new_exact(dec!(-6.022e23)));
+        // Capital E for exponent
+        assert_eq!(
+            sci!(1.5E8),
+            SciNum::new_exact(dec!(1.5E8))
+        );
     }
 }

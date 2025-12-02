@@ -2,34 +2,86 @@
 // SPDX-License-Identifier: MIT
 
 use std::{
-    fmt,
+    fmt::{self, Display},
     ops::{Add, Div, Mul, Sub},
 };
 
+use num_traits::Num;
 use rust_decimal::Decimal;
 
 use crate::{dimensions::Dimensions, scinum::SciNum, unit::Unit};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
-pub struct Quantity {
-    pub number: SciNum,
+pub struct Quantity<T>
+where
+    T: Num
+{
+    pub number: T,
     pub unit: Unit,
 }
 
-impl Quantity {
-    pub fn new(number: SciNum, unit: Unit) -> Self {
+// Specific versions
+pub type SciQuantity = Quantity<SciNum>;
+pub type FloatQuantity = Quantity<f64>;
+pub type DecQuantity = Quantity<Decimal>;
+
+impl<T: Num> Quantity<T> {
+    pub fn new(number: T, unit: Unit) -> Self {
         Self { number, unit }
     }
 
     pub fn dimensions(&self) -> Dimensions {
         self.unit.dimensions()
     }
+}
 
+impl<T: Num> Add for Quantity<T> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        if self.unit == rhs.unit {
+            Self::new(self.number + rhs.number, self.unit)
+        } else {
+            panic!()
+        }
+    }
+}
+
+impl<T: Num> Sub for Quantity<T> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        if self.unit == rhs.unit {
+            Self::new(self.number - rhs.number, self.unit)
+        } else {
+            panic!()
+        }
+    }
+}
+
+impl<T: Num> Mul for Quantity<T> {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        Self::new(self.number * rhs.number, (self.unit * rhs.unit).cancel_by_unit())
+    }
+}
+
+impl<T: Num> Div for Quantity<T> {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        Self::new(self.number / rhs.number, (self.unit / rhs.unit).cancel_by_unit())
+    }
+}
+
+// Additional methods that only apply to SciQuantity
+impl SciQuantity {
     pub fn uncertainty(&self) -> Self {
         Self::new(self.number.uncertainty(), self.unit.clone())
     }
 
-    /// Creates a new `Quantity` with the same number and unit but the provided uncertainty.
+    /// Creates a new `SciQuantity` with the same number and unit but the provided uncertainty.
     ///
     /// Currently panics if the current number and the uncertainty have different values for
     /// `exponent`.
@@ -41,27 +93,52 @@ impl Quantity {
         self
     }
 
-    /// Returns true if the `Quantity` has an uncertainty of zero.
+    /// Returns true if the `SciQuantity` has an uncertainty of zero.
     #[inline]
     pub fn is_exact(&self) -> bool {
         self.number.is_exact()
     }
 }
 
-impl<T> From<T> for Quantity
-where
-    T: Into<SciNum>,
-{
-    fn from(value: T) -> Self {
-        Self {
-            number: value.into(),
-            unit: Unit::unitless(),
+/// Derives From and Into for types that already convert into a `SciNum`.
+macro_rules! impl_from_for_sci_quant {
+    ($t:ty) => {
+        impl From<$t> for SciQuantity {
+            fn from(n: $t) -> SciQuantity {
+                SciQuantity {
+                    number: n.into(),
+                    unit: Unit::unitless(),
+                }
+            }
         }
-    }
+
+        impl From<Quantity<$t>> for SciQuantity {
+            fn from(q: Quantity<$t>) -> SciQuantity {
+                SciQuantity {
+                    number: q.number.into(),
+                    unit: q.unit,
+                }
+            }
+        }
+    };
 }
 
+impl_from_for_sci_quant!(i8);
+impl_from_for_sci_quant!(i16);
+impl_from_for_sci_quant!(i32);
+impl_from_for_sci_quant!(i64);
+impl_from_for_sci_quant!(i128);
+impl_from_for_sci_quant!(isize);
+impl_from_for_sci_quant!(u8);
+impl_from_for_sci_quant!(u16);
+impl_from_for_sci_quant!(u32);
+impl_from_for_sci_quant!(u64);
+impl_from_for_sci_quant!(u128);
+impl_from_for_sci_quant!(usize);
+impl_from_for_sci_quant!(Decimal);
+
 // Arithmetic functions for correlated uncertainties
-impl Quantity {
+impl SciQuantity {
     /// Adds two quantities and propagates the uncertainties as appropriate for the given
     /// correlation.
     pub fn add_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
@@ -119,47 +196,7 @@ impl Quantity {
     }
 }
 
-impl Add for Quantity {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self {
-        if self.unit == rhs.unit {
-            Self::new(self.number + rhs.number, self.unit)
-        } else {
-            panic!()
-        }
-    }
-}
-
-impl Sub for Quantity {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self {
-        if self.unit == rhs.unit {
-            Self::new(self.number - rhs.number, self.unit)
-        } else {
-            panic!()
-        }
-    }
-}
-
-impl Mul for Quantity {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self {
-        Self::new(self.number * rhs.number, (self.unit * rhs.unit).cancel_by_unit())
-    }
-}
-
-impl Div for Quantity {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self {
-        Self::new(self.number / rhs.number, (self.unit / rhs.unit).cancel_by_unit())
-    }
-}
-
-impl fmt::Display for Quantity {
+impl<T: Num + Display> Display for Quantity<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.number, self.unit.symbol(false))
     }
@@ -177,24 +214,24 @@ pub(crate) mod py {
 
     #[pyclass(frozen, name = "Quantity")]
     #[derive(Clone, PartialEq, PartialOrd, Debug)]
-    pub(crate) struct PyQuantity(pub(crate) Quantity);
+    pub(crate) struct PyQuantity(pub(crate) SciQuantity);
 
     impl PyQuantity {
-        pub fn into_inner(self) -> Quantity {
+        pub fn into_inner(self) -> SciQuantity {
             self.0
         }
 
-        pub fn borrow_inner(&self) -> &Quantity {
+        pub fn borrow_inner(&self) -> &SciQuantity {
             &self.0
         }
 
-        pub fn owned_inner(&self) -> Quantity {
+        pub fn owned_inner(&self) -> SciQuantity {
             self.0.clone()
         }
     }
 
-    impl From<Quantity> for PyQuantity {
-        fn from(value: Quantity) -> Self {
+    impl From<SciQuantity> for PyQuantity {
+        fn from(value: SciQuantity) -> Self {
             Self(value)
         }
     }
@@ -366,7 +403,7 @@ pub(crate) mod py {
 
         fn with_uncertainty(&self, uncertainty: PyIntoSciNum) -> Self {
             let uncertainty: SciNum = uncertainty.try_into().unwrap();
-            let new_inner: Quantity = self.owned_inner().with_uncertainty(uncertainty);
+            let new_inner: SciQuantity = self.owned_inner().with_uncertainty(uncertainty);
             Self(new_inner)
         }
 

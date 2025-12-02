@@ -25,12 +25,12 @@ use std::{
     ops::{Div, Mul},
 };
 
-use num_traits::Inv;
+use num_traits::{Inv, Num};
 use rust_decimal::Decimal;
 
 use crate::{
     prefix::Prefix,
-    quantity::Quantity,
+    quantity::{Quantity, SciQuantity},
     scinum::SciNum,
     unit::{LinearUnit, LinearUnitType, Unit},
     unit128::Unit128,
@@ -41,18 +41,18 @@ use crate::{
 macro_rules! impl_mul_div_with_unit {
     ($t:ty) => {
         impl Mul<Unit> for $t {
-            type Output = Quantity;
+            type Output = Quantity<$t>;
 
-            fn mul(self, rhs: Unit) -> Quantity {
-                Quantity::new(self.into(), rhs)
+            fn mul(self, rhs: Unit) -> Quantity<$t> {
+                Quantity::new(self, rhs)
             }
         }
 
         impl Div<Unit> for $t {
-            type Output = Quantity;
+            type Output = Quantity<$t>;
 
-            fn div(self, rhs: Unit) -> Quantity {
-                Quantity::new(self.into(), rhs.inverse())
+            fn div(self, rhs: Unit) -> Quantity<$t> {
+                Quantity::new(self, rhs.inverse())
             }
         }
     };
@@ -75,27 +75,19 @@ impl_mul_div_with_unit!(Decimal);
 
 // U */ N -> Q
 
-impl<T> Mul<T> for Unit
-where
-    T: Into<SciNum>,
-{
-    type Output = Quantity;
+impl<T: Num> Mul<T> for Unit {
+    type Output = Quantity<T>;
 
-    fn mul(self, rhs: T) -> Quantity {
-        let num: SciNum = rhs.into();
-        Quantity::new(num, self)
+    fn mul(self, rhs: T) -> Quantity<T> {
+        Quantity::new(rhs, self)
     }
 }
 
-impl<T> Div<T> for Unit
-where
-    T: Into<SciNum>,
-{
-    type Output = Quantity;
+impl<T: Num + Inv<Output = T>> Div<T> for Unit {
+    type Output = Quantity<T>;
 
-    fn div(self, rhs: T) -> Quantity {
-        let num: SciNum = rhs.into();
-        Quantity::new(num.inv(), self)
+    fn div(self, rhs: T) -> Quantity<T> {
+        Quantity::new(rhs.inv(), self)
     }
 }
 
@@ -151,88 +143,118 @@ impl Mul<Unit> for Prefix {
 
 // N */ Q -> Q
 
-macro_rules! impl_mul_div_with_quantity {
+macro_rules! impl_mul_div_with_sci_quant {
     ($t:ty) => {
-        impl Mul<Quantity> for $t {
-            type Output = Quantity;
+        impl Mul<SciQuantity> for $t {
+            type Output = SciQuantity;
 
-            fn mul(self, rhs: Quantity) -> Quantity {
+            fn mul(self, rhs: SciQuantity) -> SciQuantity {
                 Quantity::new(self * rhs.number, rhs.unit)
             }
         }
 
-        impl Div<Quantity> for $t {
-            type Output = Quantity;
+        impl Div<SciQuantity> for $t {
+            type Output = SciQuantity;
 
-            fn div(self, rhs: Quantity) -> Quantity {
+            fn div(self, rhs: SciQuantity) -> SciQuantity {
                 Quantity::new(self / rhs.number, rhs.unit.inverse())
             }
         }
     };
 }
 
-impl_mul_div_with_quantity!(SciNum);
-impl_mul_div_with_quantity!(i8);
-impl_mul_div_with_quantity!(i16);
-impl_mul_div_with_quantity!(i32);
-impl_mul_div_with_quantity!(i64);
-impl_mul_div_with_quantity!(i128);
-impl_mul_div_with_quantity!(isize);
-impl_mul_div_with_quantity!(u8);
-impl_mul_div_with_quantity!(u16);
-impl_mul_div_with_quantity!(u32);
-impl_mul_div_with_quantity!(u64);
-impl_mul_div_with_quantity!(u128);
-impl_mul_div_with_quantity!(usize);
-//impl_mul_div_with_quantity!(Decimal);
+impl_mul_div_with_sci_quant!(SciNum);
+impl_mul_div_with_sci_quant!(i8);
+impl_mul_div_with_sci_quant!(i16);
+impl_mul_div_with_sci_quant!(i32);
+impl_mul_div_with_sci_quant!(i64);
+impl_mul_div_with_sci_quant!(i128);
+impl_mul_div_with_sci_quant!(isize);
+impl_mul_div_with_sci_quant!(u8);
+impl_mul_div_with_sci_quant!(u16);
+impl_mul_div_with_sci_quant!(u32);
+impl_mul_div_with_sci_quant!(u64);
+impl_mul_div_with_sci_quant!(u128);
+impl_mul_div_with_sci_quant!(usize);
+//impl_mul_div_with_sci_quant!(Decimal);
 
 // Q */ N -> Q
 
-impl<T> Mul<T> for Quantity
-where
-    T: Into<SciNum>,
-{
-    type Output = Quantity;
+// for generic Q
 
-    fn mul(self, rhs: T) -> Quantity {
-        let num: SciNum = rhs.into();
-        Quantity::new(self.number * num, self.unit)
+impl<T: Num> Mul<T> for Quantity<T> {
+    type Output = Quantity<T>;
+
+    fn mul(self, rhs: T) -> Quantity<T> {
+        Quantity::new(self.number * rhs, self.unit)
     }
 }
 
-impl<T> Div<T> for Quantity
-where
-    T: Into<SciNum>,
-{
-    type Output = Quantity;
+impl<T: Num + Inv<Output = T>> Div<T> for Quantity<T> {
+    type Output = Quantity<T>;
 
-    fn div(self, rhs: T) -> Quantity {
-        let num: SciNum = rhs.into();
-        Quantity::new(self.number / num, self.unit)
+    fn div(self, rhs: T) -> Quantity<T> {
+        Quantity::new(self.number / rhs, self.unit)
     }
 }
+
+// for SciQ
+
+macro_rules! impl_mul_div_for_sci_quant {
+    ($t:ty) => {
+        impl Mul<$t> for SciQuantity {
+            type Output = SciQuantity;
+
+            fn mul(self, rhs: $t) -> SciQuantity {
+                Quantity::new(self.number * rhs, self.unit)
+            }
+        }
+
+        impl Div<$t> for SciQuantity {
+            type Output = SciQuantity;
+
+            fn div(self, rhs: $t) -> SciQuantity {
+                Quantity::new(self.number / rhs, self.unit)
+            }
+        }
+    };
+}
+
+impl_mul_div_for_sci_quant!(i8);
+impl_mul_div_for_sci_quant!(i16);
+impl_mul_div_for_sci_quant!(i32);
+impl_mul_div_for_sci_quant!(i64);
+impl_mul_div_for_sci_quant!(i128);
+impl_mul_div_for_sci_quant!(isize);
+impl_mul_div_for_sci_quant!(u8);
+impl_mul_div_for_sci_quant!(u16);
+impl_mul_div_for_sci_quant!(u32);
+impl_mul_div_for_sci_quant!(u64);
+impl_mul_div_for_sci_quant!(u128);
+impl_mul_div_for_sci_quant!(usize);
+//impl_mul_div_with_sci_quant!(Decimal);
 
 // U */ Q -> Q
 
-impl Mul<Quantity> for Unit {
-    type Output = Quantity;
+impl Mul<SciQuantity> for Unit {
+    type Output = SciQuantity;
 
-    fn mul(self, rhs: Quantity) -> Quantity {
-        Quantity::new(rhs.number, self * rhs.unit)
+    fn mul(self, rhs: SciQuantity) -> SciQuantity {
+        SciQuantity::new(rhs.number, self * rhs.unit)
     }
 }
 
-impl Div<Quantity> for Unit {
-    type Output = Quantity;
+impl Div<SciQuantity> for Unit {
+    type Output = SciQuantity;
 
-    fn div(self, rhs: Quantity) -> Quantity {
-        Quantity::new(rhs.number.inv(), self / rhs.unit)
+    fn div(self, rhs: SciQuantity) -> SciQuantity {
+        SciQuantity::new(rhs.number.inv(), self / rhs.unit)
     }
 }
 
 // Q */ U -> Q
 
-impl Mul<Unit> for Quantity {
+impl Mul<Unit> for SciQuantity {
     type Output = Self;
 
     fn mul(self, rhs: Unit) -> Self {
@@ -240,7 +262,7 @@ impl Mul<Unit> for Quantity {
     }
 }
 
-impl Div<Unit> for Quantity {
+impl Div<Unit> for SciQuantity {
     type Output = Self;
 
     fn div(self, rhs: Unit) -> Self {

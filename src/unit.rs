@@ -365,7 +365,7 @@ impl fmt::Display for Unit {
 pub(crate) mod py {
     use std::str::FromStr;
 
-    use crate::{quantity::py::PyQuantity, unit128::py::PyUnitId};
+    use crate::{quantity::{SciQuantity, py::PyQuantity}, unit128::py::PyUnitId};
 
     use super::*;
     use pyo3::prelude::*;
@@ -412,11 +412,11 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() * self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => (i * self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Int(i) => SciQuantity::from(i * self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
                     (SciNum::from_f64_exact(f).unwrap() * self.owned_inner()).into()
                 }
-                PyUnitArithmeticEnum::Decimal(d) => (d * self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Decimal(d) => SciQuantity::from(d * self.owned_inner()).into(),
                 PyUnitArithmeticEnum::String(s) => {
                     (SciNum::from_str(&s).unwrap() * self.owned_inner()).into()
                 }
@@ -432,11 +432,11 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() / self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => (i / self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Int(i) => SciQuantity::from(i / self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
                     (SciNum::from_f64_exact(f).unwrap() / self.owned_inner()).into()
                 }
-                PyUnitArithmeticEnum::Decimal(d) => (d / self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Decimal(d) => SciQuantity::from(d / self.owned_inner()).into(),
                 PyUnitArithmeticEnum::String(s) => {
                     (SciNum::from_str(&s).unwrap() / self.owned_inner()).into()
                 }

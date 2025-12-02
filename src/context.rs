@@ -3,8 +3,10 @@
 
 use std::str::FromStr;
 
+use num_traits::Num;
+
 use crate::{
-    error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::Quantity, reg::UnitRegistry,
+    error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::{Quantity, SciQuantity}, reg::UnitRegistry,
     scinum::SciNum, unit::Unit, unit128::Unit128,
 };
 
@@ -53,12 +55,12 @@ impl Default for Context {
 impl Context {
     /// Creates a new `Quantity` from a number and a unit.
     #[inline]
-    pub fn quantity(&self, number: SciNum, unit: Unit) -> Quantity {
+    pub fn quantity<T: Num>(&self, number: T, unit: Unit) -> Quantity<T> {
         Quantity { number, unit }
     }
 
-    /// Creates a new `Quantity` from a string.
-    pub fn quantity_from_str(&self, s: &str) -> Result<Quantity, QuanstantsError> {
+    /// Creates a new `SciQuantity` from a string.
+    pub fn quantity_from_str(&self, s: &str) -> Result<SciQuantity, QuanstantsError> {
         let s = s.to_owned();
         let mut parts = s.split_whitespace();
         if s.contains("+/-") || s.contains("±") {

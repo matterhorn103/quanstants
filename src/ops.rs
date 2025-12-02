@@ -25,6 +25,7 @@ use std::{
     ops::{Div, Mul},
 };
 
+use num_traits::Inv;
 use rust_decimal::Decimal;
 
 use crate::{
@@ -94,7 +95,7 @@ where
 
     fn div(self, rhs: T) -> Quantity {
         let num: SciNum = rhs.into();
-        Quantity::new(num.inverse(), self)
+        Quantity::new(num.inv(), self)
     }
 }
 
@@ -225,7 +226,7 @@ impl Div<Quantity> for Unit {
     type Output = Quantity;
 
     fn div(self, rhs: Quantity) -> Quantity {
-        Quantity::new(rhs.number.inverse(), self / rhs.unit)
+        Quantity::new(rhs.number.inv(), self / rhs.unit)
     }
 }
 

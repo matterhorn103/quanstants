@@ -7,6 +7,7 @@ use std::ops::{Div, Mul, Neg};
 use std::sync::Arc;
 
 use indexmap::IndexMap;
+use num_traits::Inv;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
@@ -277,7 +278,7 @@ impl Unit {
             symbol: None,
             name: None,
             prefix: None,
-            number: self.number().inverse(),
+            number: self.number().inv(),
             factors: self.to_inverse_factors(),
         })
     }

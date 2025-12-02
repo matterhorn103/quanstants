@@ -7,6 +7,7 @@ use std::{
     str::FromStr,
 };
 
+use num_traits::Inv;
 use serde::{Deserialize, Serialize};
 
 use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac, scinum::SciNum};
@@ -264,7 +265,7 @@ impl Unit128 {
             panic!()
         } else {
             Unit128::new(
-                self.factor().inverse(),
+                self.factor().inv(),
                 self.dimensions().inverse(),
                 (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
             )

@@ -3,11 +3,11 @@
 
 use std::{
     fmt::{self, Debug},
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Div, Mul, Rem, Sub},
     str::FromStr,
 };
 
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, Inv, Num, One, Pow, Zero};
 use regex::Regex;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
@@ -309,12 +309,6 @@ impl SciNum {
         self.uncertainty_lo | self.uncertainty_mid | self.uncertainty_hi == 0
     }
 
-    /// Returns true if the `SciNum` is equal to zero, regardless of any uncertainty.
-    #[inline]
-    pub fn is_zero(&self) -> bool {
-        self.number_lo | self.number_mid | self.number_hi == 0
-    }
-
     /// Returns true if the sign bit is negative.
     /// Zero is considered positive.
     #[inline(always)]
@@ -417,11 +411,6 @@ impl SciNum {
     }
 
     #[inline]
-    pub fn inverse(self) -> Self {
-        Self::ONE / self
-    }
-
-    #[inline]
     pub fn powi(self, rhs: i64) -> Self {
         self.powd(rhs.into())
     }
@@ -482,6 +471,36 @@ impl SciNum {
         let number = self.number_dec().exp();
         let uncertainty = number.abs() * self.uncertainty_dec();
         Self::new(number, uncertainty)
+    }
+}
+
+impl Num for SciNum {
+    type FromStrRadixErr = rust_decimal::Error;
+
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, rust_decimal::Error> {
+        // For now, just make use of the Decimal implementation
+        let dec = Decimal::from_str_radix(str, radix)?;
+        Ok(Self::new(dec, Decimal::ZERO))
+    }
+}
+
+impl Zero for SciNum {
+    #[inline]
+    fn zero() -> Self {
+        Self::ZERO
+    }
+
+    /// Returns true if the `SciNum` is equal to zero, regardless of any uncertainty.
+    #[inline]
+    fn is_zero(&self) -> bool {
+        self.number_lo | self.number_mid | self.number_hi == 0
+    }
+}
+
+impl One for SciNum {
+    #[inline]
+    fn one() -> Self {
+        Self::ONE
     }
 }
 
@@ -654,6 +673,66 @@ impl Div for &SciNum {
 
     fn div(self, rhs: Self) -> SciNum {
         self.div_with_correlation(*rhs, Decimal::ZERO)
+    }
+}
+
+impl Rem for SciNum {
+    type Output = Self;
+
+    /// Performs the `%` operation.
+    /// 
+    /// WARNING: Uncertainty propagation is not yet implemented for this method, and the returned
+    /// result will be exact.
+    fn rem(self, rhs: Self) -> Self {
+        let number = self.number_dec() % rhs.number_dec();
+        Self::new_exact(number)
+    }
+}
+
+impl Rem for &SciNum {
+    type Output = SciNum;
+
+    /// Performs the `%` operation.
+    /// 
+    /// WARNING: Uncertainty propagation is not yet implemented for this method, and the returned
+    /// result will be exact.
+    fn rem(self, rhs: Self) -> SciNum {
+        let number = self.number_dec() % rhs.number_dec();
+        SciNum::new_exact(number)
+    }
+}
+
+impl Pow<Self> for SciNum {
+    type Output = Self;
+
+    fn pow(self, rhs: Self) -> Self {
+        self.pow_with_correlation(rhs, Decimal::ZERO)
+    }
+}
+
+impl Pow<Self> for &SciNum {
+    type Output = SciNum;
+
+    fn pow(self, rhs: Self) -> SciNum {
+        self.pow_with_correlation(*rhs, Decimal::ZERO)
+    }
+}
+
+impl Inv for SciNum {
+    type Output = Self;
+
+    #[inline]
+    fn inv(self) -> Self {
+        Self::ONE / self
+    }
+}
+
+impl Inv for &SciNum {
+    type Output = SciNum;
+
+    #[inline]
+    fn inv(self) -> SciNum {
+        SciNum::ONE / *self
     }
 }
 

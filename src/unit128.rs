@@ -110,6 +110,18 @@ impl UnitType {
             _ => Self::CataloguedDerived(nibble as u8),
         }
     }
+
+    pub fn to_nibble(&self) -> Nibble {
+        match self {
+            Self::Base => Nibble::X0,
+            Self::Normalized => Nibble::XA,
+            Self::BinaryDerived => Nibble::XB,
+            Self::GenericCompound => Nibble::XC,
+            Self::UnknownDerived => Nibble::XD,
+            Self::Private(n) => Nibble::try_from(*n).expect("Inner u8 will always fit into a nibble"),
+            Self::CataloguedDerived(n) => Nibble::try_from(*n).expect("Inner u8 will always fit into a nibble"),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -178,6 +190,12 @@ impl Unit128 {
     }
 
     #[inline]
+    pub(crate) fn as_unit_type(mut self, utype: UnitType) -> Self {
+        self.dim = (self.dim & !0xF) | (utype.to_nibble() as u64);
+        self
+    }
+
+    #[inline]
     pub fn utype(&self) -> UnitType {
         UnitType::from_nibble(
             ((self.dim & 0xF) as u8)
@@ -242,10 +260,7 @@ impl Unit128 {
 
     pub fn normalize(self) -> Self {
         // Will need to normalize the number as well I guess
-        Self {
-            num: self.num,
-            dim: (self.dim & 0xFFFFFFFFFFFFFFF0) | 0xA,
-        }
+        self.as_unit_type(UnitType::Normalized)
     }
 
     pub fn from_bits(b: u128) -> Self {
@@ -267,8 +282,8 @@ impl Unit128 {
             Unit128::new(
                 self.factor().inv(),
                 self.dimensions().inverse(),
-                (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
-            )
+                self.least_significant_byte(),
+            ).as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
         }
     }
 
@@ -281,8 +296,8 @@ impl Unit128 {
             Unit128::new(
                 self.factor().powfrac(exp),
                 self.dimensions().pow(exp),
-                (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
-            )
+                self.least_significant_byte(),
+            ).as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
         }
     }
 }
@@ -298,8 +313,8 @@ impl Mul for Unit128 {
             Unit128::new(
                 self.factor() * rhs.factor(),
                 self.dimensions() * rhs.dimensions(),
-                (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
-            )
+                self.least_significant_byte(),
+            ).as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
         }
     }
 }
@@ -315,8 +330,8 @@ impl Div for Unit128 {
             Unit128::new(
                 self.factor() / rhs.factor(),
                 self.dimensions() / rhs.dimensions(),
-                (self.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
-            )
+                self.least_significant_byte(),
+            ).as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
         }
     }
 }

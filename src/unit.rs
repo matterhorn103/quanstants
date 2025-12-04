@@ -14,7 +14,7 @@ use crate::fraction::Frac;
 use crate::prefix::Prefix;
 use crate::quantity::SciQuantity;
 use crate::scinum::SciNum;
-use crate::unit128::Unit128;
+use crate::unit128::{Unit128, UnitType};
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum LinearUnitType {
@@ -141,6 +141,9 @@ impl LinearFactor {
         match self.unit.utype {
             LinearUnitType::Base | LinearUnitType::One => (SciNum::ONE, vec![self]),
             LinearUnitType::Derived | LinearUnitType::Compound => {
+                // TODO
+                // This would likely be faster if we just get the factor from the ID,
+                // since the ID always has the appropriate numerical factor times for the base rep.
                 let prefix_value = match self.unit.prefix {
                     Some(p) => p.value(),
                     None => SciNum::ONE,
@@ -171,13 +174,6 @@ impl Unit {
         Self {
             id: inner.id,
             inner: Arc::new(inner),
-        }
-    }
-
-    pub fn one() -> Self {
-        Self {
-            id: Unit128::ONE,
-            inner: Arc::new(LinearUnit::ONE),
         }
     }
 
@@ -222,11 +218,21 @@ impl Unit {
         self.inner.number
     }
 
+    /// Returns the actual `LinearFactor` terms used to define the unit.
     #[inline]
     pub fn defining_factors(&self) -> Vec<LinearFactor> {
         self.inner.factors.clone()
     }
 
+    /// Returns the effective unit factors of the unit in a `Vec`.
+    /// 
+    /// For a base or derived unit, returns a `Vec` of a single `LinearFactor`, where that factor
+    /// is the unit itself to the power of 1.
+    /// 
+    /// For a compound unit, returns the factors that the unit is comprised of, which is the same
+    /// as the unit's defining factors.
+    /// 
+    /// For one, returns an empty `Vec`.
     pub fn to_factors(&self) -> Vec<LinearFactor> {
         match self.inner.utype {
             LinearUnitType::Base | LinearUnitType::Derived => {
@@ -270,12 +276,64 @@ impl Unit {
             symbol: None,
             name: None,
             prefix: None,
-            number: self.number(),
+            number: SciNum::ONE,
             factors: new_factors,
         })
     }
 
+    /// Combines factors of a compound unit that contain units of the same dimensionality.
+    /// As this will generally result in a unit with a different value, returns a `Quantity` with
+    /// the appropriate scaling factor.
+    /// 
+    /// The unit kept for each dimension is that of the first term of that dimension. 
+    /// 
+    /// For example, `m ft` becomes `0.3048 m²`, and `ft m` becomes `3.2808398… ft²`
+    /// 
+    /// Has no effect for non-compound units.
+    pub fn cancel_by_dimension(self) -> SciQuantity {
+        if !self.is_compound() { return self.value() }
+        let old_factors = self.to_factors();
+        let mut num_factor = SciNum::ONE;
+        // Use an IndexMap so that order is retained
+        let mut factors_map: IndexMap<Dimensions, LinearFactor> = IndexMap::with_capacity(old_factors.len());
+        for old_factor in old_factors {
+            let k = old_factor.unit.dimensions;
+            factors_map.entry(k)
+            .and_modify(|new_factor| {
+                // `new_factor` is the target unit, u0, and `old_factor` is some derived unit, u1
+                // u0 and u1 have same dimensions, so there is some c such that u1 = c * u0
+                // Thus u1^n = (c * u0)^n = c^n * u0^n
+                // We want to combine some term in u0 with the u1 term
+                // u0^m * u1^n becomes u0^m * (c^n * u0^n) = c^n * u0^(m + n)
+                // First work out the multiplying factor c: u1 = c * u0, so c = u1 / u0
+                let conversion_factor = old_factor.unit.id.factor() / new_factor.unit.id.factor();
+                // c^n
+                num_factor = num_factor * (conversion_factor).powfrac(old_factor.exponent);
+                // Add n to m
+                new_factor.exponent += old_factor.exponent;
+            })
+            .or_insert(old_factor);
+        }
+        // Drop any terms which after cancelling are 0th order
+        let new_factors = factors_map.into_values().filter(|f| f.exponent != 0).collect();
+
+        SciQuantity::new(
+            num_factor, 
+            Unit::new(LinearUnit {
+                id: self.id, // Value is unchanged
+                utype: LinearUnitType::Compound,
+                dimensions: self.dimensions(),
+                symbol: None,
+                name: None,
+                prefix: None,
+                number: SciNum::ONE,
+                factors: new_factors,
+            }),
+        )
+    }
+
     /// Returns the equivalent of the unit as a quantity.
+    #[inline]
     pub fn value(&self) -> SciQuantity {
         SciQuantity::new(SciNum::ONE, self.clone())
     }
@@ -438,6 +496,107 @@ impl fmt::Display for Unit {
     }
 }
 
+// Base units, just for internal use
+impl Unit {
+    pub(crate) fn one() -> Self {
+        Self {
+            id: Unit128::ONE,
+            inner: Arc::new(LinearUnit::ONE),
+        }
+    }
+
+    pub(crate) fn second() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::SECOND,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::TIME,
+            symbol: Some(String::from("s")),
+            name: Some(String::from("second")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        })
+    }
+
+    pub(crate) fn metre() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::METRE,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("m")),
+            name: Some(String::from("metre")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        })
+    }
+
+    pub(crate) fn kilogram() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::KILOGRAM,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::MASS,
+            symbol: Some(String::from("kg")),
+            name: Some(String::from("kilogram")),
+            prefix: Some(Prefix::kilo),
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        })
+    }
+
+    pub(crate) fn ampere() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::AMPERE,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::ELECTRIC_CURRENT,
+            symbol: Some(String::from("A")),
+            name: Some(String::from("ampere")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        })
+    }
+
+    pub(crate) fn kelvin() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::KELVIN,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::THERMODYNAMIC_TEMPERATURE,
+            symbol: Some(String::from("K")),
+            name: Some(String::from("kelvin")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        })
+    }
+
+    pub(crate) fn mole() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::MOLE,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::AMOUNT_OF_SUBSTANCE,
+            symbol: Some(String::from("mol")),
+            name: Some(String::from("mole")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        })
+    }
+
+    pub(crate) fn candela() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::CANDELA,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::LUMINOUS_INTENSITY,
+            symbol: Some(String::from("cd")),
+            name: Some(String::from("candela")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        })
+    }
+}
+
 #[cfg(feature = "python")]
 pub(crate) mod py {
     use std::str::FromStr;
@@ -551,44 +710,45 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn equality() {
-        let s = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
+    // Functions to create additional units for testing
+
+    fn hertz() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::HERTZ,
+            utype: LinearUnitType::Derived,
+            dimensions: Dimensions::TIME.inverse(),
+            symbol: Some(String::from("Hz")),
+            name: Some(String::from("hertz")),
             prefix: None,
             number: SciNum::ONE,
-            factors: Vec::new(),
-        });
+            factors: Unit::second().to_inverse_factors(),
+        })
+    }
+
+    fn foot() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::from_bits(0xBE7FC0000000000110001),
+            utype: LinearUnitType::Derived,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("ft")),
+            name: Some(String::from("foot")),
+            prefix: None,
+            number: SciNum::new_exact(dec!(0.3048)),
+            factors: Unit::metre().to_factors(),
+        })
+    }
+
+    #[test]
+    fn equality() {
+        let s = Unit::second();
         let s2 = s.clone();
         assert_eq!(s, s2);
     }
 
     #[test]
     fn mul() {
-        let s = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciNum::ONE,
-            factors: Vec::new(),
-        });
-        let m = Unit::new(LinearUnit {
-            id: Unit128::METRE,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::LENGTH,
-            symbol: Some(String::from("m")),
-            name: Some(String::from("metre")),
-            prefix: None,
-            number: SciNum::ONE,
-            factors: Vec::new(),
-        });
+        let m = Unit::metre();
+        let s = Unit::second();
         let ms = m.clone() * s.clone();
         let mm = m.clone() * m.clone();
         assert_eq!(ms.symbol(false), "m s");
@@ -601,106 +761,63 @@ mod tests {
 
     #[test]
     fn symbol() {
-        let s = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciNum::ONE,
-            factors: Vec::new(),
-        });
+        let s = Unit::second();
         dbg!(&s.inner.symbol);
         assert_eq!(s.symbol(false), "s");
     }
 
     #[test]
     fn symbol_compound() {
-        let s = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciNum::ONE,
-            factors: Vec::new(),
-        });
+        let s = Unit::second();
         let s2 = s.clone() * s.clone();
         dbg!(&s2.inner.symbol);
         assert_eq!(s2.symbol(false), "s s");
     }
 
     #[test]
-    fn cancel() {
-        let s = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciNum::ONE,
-            factors: Vec::new(),
-        });
-        let m = Unit::new(LinearUnit {
-            id: Unit128::METRE,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::LENGTH,
-            symbol: Some(String::from("m")),
-            name: Some(String::from("metre")),
-            prefix: None,
-            number: SciNum::ONE,
-            factors: Vec::new(),
-        });
+    fn cancel_by_unit() {
+        let s = Unit::second();
+        let m = Unit::metre();
         let ms = (m.clone() * s.clone()).cancel_by_unit();
         let mm = (m.clone() * m.clone()).cancel_by_unit();
         let m_per_s = (m.clone() / s.clone()).cancel_by_unit();
         let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancel_by_unit();
+        let m_ft = (m.clone() * foot()).cancel_by_unit();
+        let s_hz = (s.clone() * hertz()).cancel_by_unit();
         assert_eq!(ms.symbol(false), "m s");
         assert_eq!(mm.symbol(false), "m2");
         assert_eq!(m_per_s.symbol(false), "m s-1");
         assert_eq!(s_m_per_s.symbol(false), "m");
+        assert_eq!(m_ft.symbol(false), "m ft");
+        assert_eq!(s_hz.symbol(false), "s Hz");
+    }
+
+    #[test]
+    fn cancel_by_dimension() {
+        let s = Unit::second();
+        let m = Unit::metre();
+        let ms = (m.clone() * s.clone()).cancel_by_dimension();
+        let mm = (m.clone() * m.clone()).cancel_by_dimension();
+        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancel_by_dimension();
+        let m_ft = (m.clone() * foot()).cancel_by_dimension();
+        let s_hz = (s.clone() * hertz()).cancel_by_dimension();
+        assert_eq!(format!("{ms}"), "1 m s");
+        assert_eq!(format!("{mm}"), "1 m2");
+        assert_eq!(format!("{s_m_per_s}"), "1 m");
+        assert_eq!(format!("{m_ft}"), "0.3048 m2");
+        assert_eq!(format!("{s_hz}"), "1");
     }
 
     #[test]
     fn debug() {
-        let s = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciNum::ONE,
-            factors: Vec::new(),
-        });
+        let s = Unit::second();
         assert_eq!(format!("{s:?}"), "Unit { id: 1100, inner: s }");
     }
 
     #[test]
     fn in_base() {
-        let m = Unit::new(LinearUnit {
-            id: Unit128::METRE,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::LENGTH,
-            symbol: Some(String::from("m")),
-            name: Some(String::from("metre")),
-            prefix: None,
-            number: SciNum::ONE,
-            factors: Vec::new(),
-        });
-        let ft = Unit::new(LinearUnit {
-            id: Unit128::from_bits(0xBE7FC0000000000110001),
-            utype: LinearUnitType::Derived,
-            dimensions: Dimensions::LENGTH,
-            symbol: Some(String::from("ft")),
-            name: Some(String::from("foot")),
-            prefix: None,
-            number: SciNum::new_exact(dec!(0.3048)),
-            factors: m.to_factors(),
-        });
+        let m = Unit::metre();
+        let ft = foot();
         dbg!(ft.clone());
         let base = ft.in_base();
         dbg!(base.clone());

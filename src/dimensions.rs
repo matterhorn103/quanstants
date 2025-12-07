@@ -78,6 +78,21 @@ impl Dimensions {
     pub fn is_dimensionless(&self) -> bool {
         self.exponents().iter().all(|&x| x.is_zero())
     }
+
+    /// Returns a new `Dimensions` with an exponent of 1 for each dimension that has a non-zero exponent in `self`.
+    /// 
+    /// For example, `T L⁻¹ I² N⁻³` will return `T L I N`.
+    pub fn nonzero(&self) -> Dimensions {
+        Self {
+            T: (!self.T.is_zero() as i8).into(),
+            L: (!self.L.is_zero() as i8).into(),
+            M: (!self.M.is_zero() as i8).into(),
+            I: (!self.I.is_zero() as i8).into(),
+            Θ: (!self.Θ.is_zero() as i8).into(),
+            N: (!self.N.is_zero() as i8).into(),
+            J: (!self.J.is_zero() as i8).into(),
+        }
+    }
 }
 
 impl Mul for Dimensions {
@@ -413,5 +428,13 @@ mod tests {
             Dimensions::from_str("(dimensionless)").unwrap(),
             Dimensions::DIMENSIONLESS
         );
+    }
+
+    #[test]
+    fn nonzero() {
+        let dim1 = Dimensions::new(1, -1, 0, 2, 0, -3, 0);
+        let dim2 = Dimensions::new(0, -2, 1, 0, 2, 0, -1);
+        assert_eq!(dim1.nonzero(), Dimensions::new(1, 1, 0, 1, 0, 1, 0));
+        assert_eq!(dim2.nonzero(), Dimensions::new(0, 1, 1, 0, 1, 0, 1));
     }
 }

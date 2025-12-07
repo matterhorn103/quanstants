@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
 // SPDX-License-Identifier: MIT
 
-//! Implementations of mathematical operations for the main components of `quanstants` (`SciNum`,
-//! `Unit`, and `Quantity`) with each other as well as with the foreign types valid for those
-//! operations (`isize`, `f64`, `Decimal`, and `String`).
-//! Operations between a type and itself are implemented in the type's own file.
+//! Implementations of mathematical operations for the main components of
+//! `quanstants` (`SciNum`, `Unit`, and `Quantity`) with each other as well as
+//! with the foreign types valid for those operations (`isize`, `f64`,
+//! `Decimal`, and `String`). Operations between a type and itself are
+//! implemented in the type's own file.
 //!
-//! Multiplication and division operations are implemented for the following (where N is a numeric
-//! type -- meaning `SciNum` or a type that implements `Into<SciNum>` -- P is `Prefix`, U is `Unit`,
-//! and Q is `Quantity`):
+//! Multiplication and division operations are implemented for the following
+//! (where N is a numeric type -- meaning `SciNum` or a type that implements
+//! `Into<SciNum>` -- P is `Prefix`, U is `Unit`, and Q is `Quantity`):
 //!
 //! N */ U -> Q
 //! U */ N -> Q
@@ -21,9 +22,7 @@
 //! U */ Q -> Q
 //! Q */ U -> Q
 
-use std::{
-    ops::{Div, Mul},
-};
+use std::ops::{Div, Mul};
 
 use num_traits::{Inv, Num};
 use rust_decimal::Decimal;

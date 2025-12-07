@@ -225,7 +225,8 @@ impl Unit128 {
     #[inline]
     pub fn is_referenced(&self) -> bool {
         // Tried to be efficient but logic is incorrect
-        //((self.dim & 0b10000000) == 0b10000000) // 0xA* to 0xF* are for other systems entirely
+        //((self.dim & 0b10000000) == 0b10000000) // 0xA* to 0xF* are for other systems
+        //((self.dim entirely
         //|| ((self.dim & 0xF0) == 0) // 0x0* is for normal linear units
 
         // Just keep it simple for now
@@ -288,7 +289,8 @@ impl Unit128 {
                 self.dimensions().inverse(),
                 self.least_significant_byte(),
             )
-            .as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
+            .as_unit_type(UnitType::GenericCompound) // Set as generic compound
+                                                     // unit
         }
     }
 
@@ -303,7 +305,8 @@ impl Unit128 {
                 self.dimensions().pow(exp),
                 self.least_significant_byte(),
             )
-            .as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
+            .as_unit_type(UnitType::GenericCompound) // Set as generic compound
+                                                     // unit
         }
     }
 }
@@ -321,7 +324,8 @@ impl Mul for Unit128 {
                 self.dimensions() * rhs.dimensions(),
                 self.least_significant_byte(),
             )
-            .as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
+            .as_unit_type(UnitType::GenericCompound) // Set as generic compound
+                                                     // unit
         }
     }
 }
@@ -339,7 +343,8 @@ impl Div for Unit128 {
                 self.dimensions() / rhs.dimensions(),
                 self.least_significant_byte(),
             )
-            .as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
+            .as_unit_type(UnitType::GenericCompound) // Set as generic compound
+                                                     // unit
         }
     }
 }
@@ -367,18 +372,20 @@ impl FromStr for Unit128 {
 }
 
 #[allow(dead_code)]
-// Functions for converting between `SciNum`s and the 64-bit numeric component of `Unit128`
+// Functions for converting between `SciNum`s and the 64-bit numeric component
+// of `Unit128`
 impl Unit128 {
     // Maximum and minimum values for a simple numeric component
     // Though the bias of -1 means that actually a mantissa 1 higher than this is
-    // theoretically possible, restrict to these values so that they always fit into other
-    // formats with the same width but no bias
+    // theoretically possible, restrict to these values so that they always fit into
+    // other formats with the same width but no bias
     const MAX_MANTISSA_FACTOR: i64 = 0x7FFFFFFFFFFFFF;
     const MIN_MANTISSA_FACTOR: i64 = -0x7FFFFFFFFFFFFF;
     const MAX_EXPONENT_FACTOR: i8 = 0x7F;
     const MIN_EXPONENT_FACTOR: i8 = -0x80;
 
-    /// Calculates the 64-bit simple numeric component that encodes the provided `SciNum`.
+    /// Calculates the 64-bit simple numeric component that encodes the provided
+    /// `SciNum`.
     ///
     /// Currently panics if the factor is too large to be represented.
     pub(crate) fn factor_to_bits(factor: SciNum) -> u64 {
@@ -414,9 +421,11 @@ impl Unit128 {
     const MAX_EXPONENT_REFERENCE: i8 = 0x7F;
     const MIN_EXPONENT_REFERENCE: i8 = -0x80;
 
-    /// Calculates the 64-bit referenced numeric component that encodes the provided `SciNum`s.
+    /// Calculates the 64-bit referenced numeric component that encodes the
+    /// provided `SciNum`s.
     ///
-    /// Currently panics if either the factor or reference are too large to be represented.
+    /// Currently panics if either the factor or reference are too large to be
+    /// represented.
     pub(crate) fn factor_and_reference_to_bits(factor: SciNum, reference: SciNum) -> u64 {
         let shortened_factor: SciNum = if factor.sigfigs() > 6 {
             SciNum::new_exact(
@@ -444,14 +453,16 @@ impl Unit128 {
             | (Unit128::factor_to_bits(shortened_reference) << 32)
     }
 
-    /// Determines the `SciNum` encoded by the provided 64-bit numeric component.
+    /// Determines the `SciNum` encoded by the provided 64-bit numeric
+    /// component.
     pub(crate) fn bits_to_factor(b: u64) -> SciNum {
         let exponent = (b & 0x0000_0000_0000_00FF) as i8;
         let significand = ((b as i64) >> 8) + 1;
         SciNum::exact_from_scientific_parts(significand, exponent.into())
     }
 
-    /// Determines the `SciNum`s encoded by the provided 64-bit referenced numeric component.
+    /// Determines the `SciNum`s encoded by the provided 64-bit referenced
+    /// numeric component.
     pub(crate) fn bits_to_factor_and_reference(b: u64) -> (SciNum, SciNum) {
         let factor_exponent = (b & 0x0000_0000_0000_00FF) as i8;
         let factor_significand = ((b & 0x0000_0000_FFFF_FF00) >> 8) + 1;
@@ -752,9 +763,11 @@ mod tests {
     fn factor_to_bits() {
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1)), 0x0);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(2)), 0x100);
-        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x1); // Fails for now, gives:
+        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x1); // Fails for
+        // now, gives:
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x900);
-        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3); // Fails for now, gives:
+        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3); // Fails
+        // for now, gives:
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3E700);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(0.1))), 0xFF);
         assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(dec!(1e-3))), 0xFD);
@@ -776,9 +789,11 @@ mod tests {
     fn bits_to_factor() {
         assert_eq!(Unit128::bits_to_factor(0x0), SciNum::new_exact(1));
         assert_eq!(Unit128::bits_to_factor(0x100), SciNum::new_exact(2));
-        //assert_eq!(Unit128::bits_to_factor(0x1, SciNum::new_exact(10)); // Fails for now, gives:
+        //assert_eq!(Unit128::bits_to_factor(0x1, SciNum::new_exact(10)); // Fails for
+        // now, gives:
         assert_eq!(Unit128::bits_to_factor(0x900), SciNum::new_exact(10));
-        //assert_eq!(Unit128::bits_to_factor(0x3, SciNum::new_exact(1000)); // Fails for now, gives:
+        //assert_eq!(Unit128::bits_to_factor(0x3, SciNum::new_exact(1000)); // Fails
+        // for now, gives:
         assert_eq!(Unit128::bits_to_factor(0x3E700), SciNum::new_exact(1000));
         assert_eq!(Unit128::bits_to_factor(0xFF), SciNum::new_exact(dec!(0.1)));
         assert_eq!(Unit128::bits_to_factor(0xFD), SciNum::new_exact(dec!(1e-3)));
@@ -802,7 +817,10 @@ mod tests {
         let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
         assert_eq!(ft.factor(), SciNum::new_exact(dec!(0.3048)));
         // Calling factor() on this is currently broken
-        let x = Unit128 { num: 0x20789937226C9F0, dim: 0x1214F40D };
+        let x = Unit128 {
+            num: 0x20789937226C9F0,
+            dim: 0x1214F40D,
+        };
         let _ = x.factor();
         // What factor should this correspond to?
     }

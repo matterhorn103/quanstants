@@ -23,7 +23,8 @@ pub struct UnitRegistry {
 }
 
 impl UnitRegistry {
-    /// Creates a new `UnitRegistry` with minimal pre-population (just the SI base units).
+    /// Creates a new `UnitRegistry` with minimal pre-population (just the SI
+    /// base units).
     #[inline]
     pub fn new_minimal() -> Self {
         let mut reg = Self {
@@ -64,14 +65,16 @@ impl Default for UnitRegistry {
 }
 
 impl UnitRegistry {
-    /// Adds the unit to string_map under the normalized lowercase form of the provided name.
+    /// Adds the unit to string_map under the normalized lowercase form of the
+    /// provided name.
     #[inline]
     fn insert_under_string(&mut self, name: String, unit: Unit) {
         let normalized = name.to_lowercase();
         self.string_map.insert(normalized, unit);
     }
 
-    /// Adds the unit to symbol_map under the provided symbol if not already present.
+    /// Adds the unit to symbol_map under the provided symbol if not already
+    /// present.
     #[inline]
     fn insert_under_symbol_checked(&mut self, symbol: String, unit: Unit) {
         self.symbol_map.entry(symbol).or_insert(unit);
@@ -184,10 +187,11 @@ impl UnitRegistry {
         proportionality_factor: SciNum,
         unit_factors: &[(Unit, Frac)],
     ) -> Unit128 {
-        // Build the compound unit representing the unit terms only, ignoring any prefix or
-        // numerical factor
-        // This is just the easiest way to obtain the proportionality factor that results from
-        // expressing the unit terms in SI base units, which we need
+        // Build the compound unit representing the unit terms only, ignoring any prefix
+        // or numerical factor
+        // This is just the easiest way to obtain the proportionality factor that
+        // results from expressing the unit terms in SI base units, which we
+        // need
         let cmpd = Unit128::new_compound(unit_factors.iter().map(|x| (x.0.id, x.1)).collect());
         if let Some(p) = prefix {
             if p.is_binary()
@@ -215,10 +219,12 @@ impl UnitRegistry {
 
     /// Adds a derived unit to the registry.
     ///
-    /// The symbol and name of the unit should include the prefix, if there is one.
+    /// The symbol and name of the unit should include the prefix, if there is
+    /// one.
     ///
-    /// On the other hand, the proportionality factor should not include the value of the prefix.
-    /// The overall value of the unit is then (prefix * number * factors[0] * … * factors[-1])
+    /// On the other hand, the proportionality factor should not include the
+    /// value of the prefix. The overall value of the unit is then (prefix *
+    /// number * factors[0] * … * factors[-1])
     pub fn add_derived(
         &mut self,
         id: Option<Unit128>,
@@ -248,17 +254,19 @@ impl UnitRegistry {
 
     /// Adds a derived unit to the registry under multiple alternative names.
     ///
-    /// The `name` and each `alt_name` then all refer to separate `Unit`s with identical values.
+    /// The `name` and each `alt_name` then all refer to separate `Unit`s with
+    /// identical values.
     ///
-    /// Localized and translated names are equally valid spellings, so it is important that
-    /// the unit returned from a lookup has the name expected by the user and not the "canonical"
-    /// (English) one.
+    /// Localized and translated names are equally valid spellings, so it is
+    /// important that the unit returned from a lookup has the name expected
+    /// by the user and not the "canonical" (English) one.
     /// This includes distinguishing between "metre" and "meter".
     ///
-    /// Calling `Unit.name()` on the alternative units then returns a different name in each case.
-    /// The symbol and value of each alternative unit is the same.
-    /// The ID of each alternative unit is also identical, but lookup in the registry using the ID
-    /// will always return the canonical unit.
+    /// Calling `Unit.name()` on the alternative units then returns a different
+    /// name in each case. The symbol and value of each alternative unit is
+    /// the same. The ID of each alternative unit is also identical, but
+    /// lookup in the registry using the ID will always return the canonical
+    /// unit.
     #[allow(clippy::too_many_arguments)]
     pub fn add_derived_with_alt_names(
         &mut self,
@@ -300,10 +308,11 @@ impl UnitRegistry {
         id
     }
 
-    /// Adds a derived unit to the registry along with aliases that point to the same unit.
+    /// Adds a derived unit to the registry along with aliases that point to the
+    /// same unit.
     ///
-    /// Unlike `alt_names`, `aliases` refer to the exact same `Unit`, they just allow the unit
-    /// to be found using several different names.
+    /// Unlike `alt_names`, `aliases` refer to the exact same `Unit`, they just
+    /// allow the unit to be found using several different names.
     ///
     /// For example:
     /// - the "percent" unit can also be found under "per cent"
@@ -342,10 +351,11 @@ impl UnitRegistry {
         id
     }
 
-    /// Adds a `Prefix` to the provided `Unit`, gives it an ID with the least significant byte
-    /// indicated, and inserts it into the registry.
+    /// Adds a `Prefix` to the provided `Unit`, gives it an ID with the least
+    /// significant byte indicated, and inserts it into the registry.
     ///
-    /// Only possible with metric prefixes and panics if attempted with a binary prefix.
+    /// Only possible with metric prefixes and panics if attempted with a binary
+    /// prefix.
     fn add_prefixed(&mut self, prefix: Prefix, unit: Unit, least_significant_byte: u8) {
         if prefix.is_binary() {
             panic!("Can't add a unit with a binary prefix to a unit registry!")
@@ -361,12 +371,13 @@ impl UnitRegistry {
         self.units.insert(id, new_unit);
     }
 
-    /// Creates a `Unit` (base or derived, as appropriate) from the definition and inserts it into
-    /// the registry.
+    /// Creates a `Unit` (base or derived, as appropriate) from the definition
+    /// and inserts it into the registry.
     ///
-    /// Returns an error if the definition is invalid, either because the definition is missing
-    /// fields necessary for the type of unit, or because the units used in the definition cannot
-    /// be found in the registry.
+    /// Returns an error if the definition is invalid, either because the
+    /// definition is missing fields necessary for the type of unit, or
+    /// because the units used in the definition cannot be found in the
+    /// registry.
     pub(crate) fn add_from_def(&mut self, def: UnitDef) -> Result<Unit128, QuanstantsError> {
         let id = if def.base {
             if !def.alt_names.is_empty() {
@@ -744,7 +755,8 @@ mod tests {
         );
         //assert_eq!(
         //    reg.get_by_name("litre").unwrap(),
-        //    m.clone() * m.clone() * m.clone()// * SciNum::new_exact(dec!(0.001))
+        //    m.clone() * m.clone() * m.clone()// *
+        // SciNum::new_exact(dec!(0.001))
         //);
     }
 

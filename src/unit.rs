@@ -24,10 +24,11 @@ pub(crate) enum LinearUnitType {
     Compound,
 }
 
-// Intended to be stored on the heap, with user-facing units then carrying reference-counted smart
-// pointers to them to allow reuse
-// Base, unitless, derived, and compound units i.e. normal ones that work in multiplication
-// A LinearUnit should not be cloned, it should be used and passed around only behind a pointer
+// Intended to be stored on the heap, with user-facing units then carrying
+// reference-counted smart pointers to them to allow reuse
+// Base, unitless, derived, and compound units i.e. normal ones that work in
+// multiplication A LinearUnit should not be cloned, it should be used and
+// passed around only behind a pointer
 #[derive(Debug)]
 pub struct LinearUnit {
     pub(crate) id: Unit128,
@@ -70,7 +71,8 @@ impl LinearUnit {
         matches!(self.utype, LinearUnitType::Base | LinearUnitType::One)
     }
 
-    /// Returns `true` if the unit is a compound unit and all its factors are base units.
+    /// Returns `true` if the unit is a compound unit and all its factors are
+    /// base units.
     #[inline]
     pub fn is_compound_base(&self) -> bool {
         matches!(self.utype, LinearUnitType::Compound)
@@ -98,8 +100,8 @@ pub struct LinearFactor {
     pub exponent: Frac,
 }
 
-// Some logic is implemented on a per-LinearFactor basis to make it easier for a Unit to
-// iterate over its factors
+// Some logic is implemented on a per-LinearFactor basis to make it easier for a
+// Unit to iterate over its factors
 impl LinearFactor {
     /// Takes the inverse of the linear factor by multiplying the exponent by −1
     pub(crate) fn inverse(self) -> Self {
@@ -119,7 +121,8 @@ impl LinearFactor {
     }
 
     /// Returns the combined symbol of the unit and its exponent.
-    /// If `use_superscripts` is `true`, uses Unicode superscript characters for the exponent.
+    /// If `use_superscripts` is `true`, uses Unicode superscript characters for
+    /// the exponent.
     pub(crate) fn symbol(&self, use_superscripts: bool) -> String {
         // This will be fine as long as we don't allow LinearFactors to hold
         // a Compound unit with a non-unity exponent
@@ -136,14 +139,16 @@ impl LinearFactor {
         }
     }
 
-    /// Returns the equivalent of the factor as a tuple of a SciNum and its factors as base units.
+    /// Returns the equivalent of the factor as a tuple of a SciNum and its
+    /// factors as base units.
     fn base_equivalent(self) -> (SciNum, Vec<LinearFactor>) {
         match self.unit.utype {
             LinearUnitType::Base | LinearUnitType::One => (SciNum::ONE, vec![self]),
             LinearUnitType::Derived | LinearUnitType::Compound => {
                 // TODO
                 // This would likely be faster if we just get the factor from the ID,
-                // since the ID always has the appropriate numerical factor times for the base rep.
+                // since the ID always has the appropriate numerical factor times for the base
+                // rep.
                 let prefix_value = match self.unit.prefix {
                     Some(p) => p.value(),
                     None => SciNum::ONE,
@@ -257,11 +262,11 @@ impl Unit {
 
     /// Returns the effective unit factors of the unit in a `Vec`.
     ///
-    /// For a base or derived unit, returns a `Vec` of a single `LinearFactor`, where that factor
-    /// is the unit itself to the power of 1.
+    /// For a base or derived unit, returns a `Vec` of a single `LinearFactor`,
+    /// where that factor is the unit itself to the power of 1.
     ///
-    /// For a compound unit, returns the factors that the unit is comprised of, which is the same
-    /// as the unit's defining factors.
+    /// For a compound unit, returns the factors that the unit is comprised of,
+    /// which is the same as the unit's defining factors.
     ///
     /// For one, returns an empty `Vec`.
     pub fn to_factors(&self) -> Vec<LinearFactor> {
@@ -319,13 +324,16 @@ impl Unit {
         })
     }
 
-    /// Combines factors of a compound unit that contain units of the same dimensionality.
-    /// As this will generally result in a unit with a different value, returns a `Quantity` with
-    /// the appropriate scaling factor.
+    /// Combines factors of a compound unit that contain units of the same
+    /// dimensionality. As this will generally result in a unit with a
+    /// different value, returns a `Quantity` with the appropriate scaling
+    /// factor.
     ///
-    /// The unit kept for each dimension is that of the first term of that dimension.
+    /// The unit kept for each dimension is that of the first term of that
+    /// dimension.
     ///
-    /// For example, `m ft` becomes `0.3048 m²`, and `ft m` becomes `3.2808398… ft²`
+    /// For example, `m ft` becomes `0.3048 m²`, and `ft m` becomes `3.2808398…
+    /// ft²`
     ///
     /// Has no effect for non-compound units.
     pub fn cancel_by_dimension(self) -> SciQuantity {
@@ -342,9 +350,9 @@ impl Unit {
             factors_map
                 .entry(k)
                 .and_modify(|new_factor| {
-                    // `new_factor` is the target unit, u0, and `old_factor` is some derived unit, u1
-                    // u0 and u1 have same dimensions, so there is some c such that u1 = c * u0
-                    // Thus u1^n = (c * u0)^n = c^n * u0^n
+                    // `new_factor` is the target unit, u0, and `old_factor` is some derived unit,
+                    // u1 u0 and u1 have same dimensions, so there is some c
+                    // such that u1 = c * u0 Thus u1^n = (c * u0)^n = c^n * u0^n
                     // We want to combine some term in u0 with the u1 term
                     // u0^m * u1^n becomes u0^m * (c^n * u0^n) = c^n * u0^(m + n)
                     // First work out the multiplying factor c: u1 = c * u0, so c = u1 / u0
@@ -409,7 +417,8 @@ impl Unit {
                 id: Unit128::new(
                     self.id.factor() / num,
                     self.dimensions(),
-                    (self.id.least_significant_byte() & 0xF0) | 0x0C, // Set as generic compound unit
+                    (self.id.least_significant_byte() & 0xF0) | 0x0C, /* Set as generic compound
+                                                                       * unit */
                 ),
                 utype: LinearUnitType::Compound,
                 dimensions: self.dimensions(),
@@ -429,8 +438,8 @@ impl Unit {
 impl Unit {
     /// Returns `true` if the two units are exactly the same.
     ///
-    /// `identical()` differs from `eq()` in that it returns `false` for two different units
-    /// that have the same value.
+    /// `identical()` differs from `eq()` in that it returns `false` for two
+    /// different units that have the same value.
     pub fn identical(&self, other: &Self) -> bool {
         self.id == other.id
     }
@@ -697,8 +706,9 @@ pub(crate) mod py {
             Self(self.owned_inner() * other.owned_inner())
         }
 
-        // Only 3 * m is valid, not m * 3, so only define rmul and rtruediv for mixed ops
-        // Operations between units and quantities are all handled by PyQuantity
+        // Only 3 * m is valid, not m * 3, so only define rmul and rtruediv for mixed
+        // ops Operations between units and quantities are all handled by
+        // PyQuantity
         fn __rmul__(&self, other: PyUnitArithmeticEnum) -> PyQuantity {
             match other {
                 PyUnitArithmeticEnum::Quantity(q) => {
@@ -796,9 +806,18 @@ mod tests {
             prefix: None,
             number: SciNum::ONE,
             factors: vec![
-                LinearFactor{ unit: Unit::kilogram().inner, exponent: Frac::new(1, 1) },
-                LinearFactor{ unit: Unit::metre().inner, exponent: Frac::new(2, 1) },
-                LinearFactor{ unit: Unit::second().inner, exponent: Frac::new(-2, 1) },
+                LinearFactor {
+                    unit: Unit::kilogram().inner,
+                    exponent: Frac::new(1, 1),
+                },
+                LinearFactor {
+                    unit: Unit::metre().inner,
+                    exponent: Frac::new(2, 1),
+                },
+                LinearFactor {
+                    unit: Unit::second().inner,
+                    exponent: Frac::new(-2, 1),
+                },
             ],
         })
     }
@@ -840,7 +859,10 @@ mod tests {
             name: Some(String::from("d")),
             prefix: None,
             number: SciNum::ONE,
-            factors: vec![LinearFactor{ unit: c.inner.clone(), exponent: Frac::from(-2) }],
+            factors: vec![LinearFactor {
+                unit: c.inner.clone(),
+                exponent: Frac::from(-2),
+            }],
         })
     }
 
@@ -872,7 +894,10 @@ mod tests {
         let one_over_s = SciNum::ONE / s;
         assert_eq!(one_over_s, SciNum::ONE * hz);
         assert_eq!(one_over_s.to_string(), "1 s-1");
-        assert_eq!(one_over_s.dimensions(), Dimensions::new(-1, 0, 0, 0, 0, 0, 0));
+        assert_eq!(
+            one_over_s.dimensions(),
+            Dimensions::new(-1, 0, 0, 0, 0, 0, 0)
+        );
     }
 
     #[test]

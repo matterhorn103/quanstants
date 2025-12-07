@@ -79,8 +79,9 @@ impl Dimensions {
         self.exponents().iter().all(|&x| x.is_zero())
     }
 
-    /// Returns a new `Dimensions` with an exponent of 1 for each dimension that has a non-zero exponent in `self`.
-    /// 
+    /// Returns a new `Dimensions` with an exponent of 1 for each dimension that
+    /// has a non-zero exponent in `self`.
+    ///
     /// For example, `T L⁻¹ I² N⁻³` will return `T L I N`.
     pub fn nonzero(&self) -> Dimensions {
         Self {

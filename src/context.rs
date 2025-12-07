@@ -6,8 +6,14 @@ use std::str::FromStr;
 use num_traits::Num;
 
 use crate::{
-    error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::{Quantity, SciQuantity}, reg::UnitRegistry,
-    scinum::SciNum, unit::Unit, unit128::Unit128,
+    error::QuanstantsError,
+    fraction::Frac,
+    prefix::Prefix,
+    quantity::{Quantity, SciQuantity},
+    reg::UnitRegistry,
+    scinum::SciNum,
+    unit::Unit,
+    unit128::Unit128,
 };
 
 #[derive(Debug)]
@@ -16,10 +22,12 @@ pub struct Context {
 }
 
 impl Context {
-    /// Creates a new `Context` with minimal pre-population (just the SI base units).
+    /// Creates a new `Context` with minimal pre-population (just the SI base
+    /// units).
     ///
-    /// WARNING: It is important to note that most of the convenience getters will panic if called
-    /// on a `Context` created in this way, as the respective items will not have been loaded.
+    /// WARNING: It is important to note that most of the convenience getters
+    /// will panic if called on a `Context` created in this way, as the
+    /// respective items will not have been loaded.
     pub fn new_minimal() -> Self {
         Self {
             units: UnitRegistry::new_minimal(),
@@ -37,7 +45,8 @@ impl Context {
 }
 
 impl Default for Context {
-    /// Creates a new `Context` pre-populated with the same items as for `Context::new()`:
+    /// Creates a new `Context` pre-populated with the same items as for
+    /// `Context::new()`:
     /// - the SI base units
     /// - the SI derived units
     ///
@@ -249,7 +258,8 @@ pub(crate) mod py {
             PyUnits { parent: slf }
         }
 
-        /// Makes the `Prefix` enum conveniently accessible as a class attribute.
+        /// Makes the `Prefix` enum conveniently accessible as a class
+        /// attribute.
         #[classattr]
         fn Prefix() -> PyResult<Py<PyType>> {
             Python::attach(|py| Ok(py.get_type::<PyPrefix>().unbind()))
@@ -858,7 +868,8 @@ mod tests {
 
     #[test]
     fn unit_getters() {
-        // Just make sure that a default context has all the SI units in it and their getters work
+        // Just make sure that a default context has all the SI units in it and their
+        // getters work
         let context = Context::new();
         context.second();
         context.metre();

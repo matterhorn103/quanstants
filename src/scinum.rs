@@ -20,11 +20,11 @@ use crate::{error::QuanstantsError, fraction::Frac};
 ///
 /// Essentially a `Decimal` from `rust_decimal` extended to have an uncertainty.
 ///
-/// A `SciNum` also contains an associated exponent, which is the exponent for an
-/// additional scaling factor of 10<sup><i>exponent</i></sup>, which applies to both the number
-/// and uncertainty.
-/// For now, the scaling factor exponent must always be 0, so the range of representable values is
-/// exactly the same as `rust_decimal::Decimal`.
+/// A `SciNum` also contains an associated exponent, which is the exponent for
+/// an additional scaling factor of 10<sup><i>exponent</i></sup>, which applies
+/// to both the number and uncertainty.
+/// For now, the scaling factor exponent must always be 0, so the range of
+/// representable values is exactly the same as `rust_decimal::Decimal`.
 #[derive(Copy, Clone, serde_with::DeserializeFromStr, serde_with::SerializeDisplay)]
 pub struct SciNum {
     negative: bool,
@@ -65,7 +65,8 @@ impl SciNum {
         }
     }
 
-    /// Creates a `SciNum` with an uncertainty of zero from any `Decimal`-compatible type.
+    /// Creates a `SciNum` with an uncertainty of zero from any
+    /// `Decimal`-compatible type.
     pub fn new_exact<T>(number: T) -> Self
     where
         T: Into<Decimal>,
@@ -86,10 +87,11 @@ impl SciNum {
         }
     }
 
-    /// Creates an exact `SciNum` from parts corresponding to _m_ × 10<sup><i>n</i></sup>.
+    /// Creates an exact `SciNum` from parts corresponding to _m_ ×
+    /// 10<sup><i>n</i></sup>.
     ///
-    /// Currently, this will panic if the exponent is large or small enough to cause the overall
-    /// number to exceed `Decimal::MAX`.
+    /// Currently, this will panic if the exponent is large or small enough to
+    /// cause the overall number to exceed `Decimal::MAX`.
     pub fn exact_from_scientific_parts<T>(significand: T, exponent: i16) -> Self
     where
         T: Into<Decimal>,
@@ -104,10 +106,12 @@ impl SciNum {
         }
     }
 
-    /// Creates a new `SciNum` with the same number but the provided uncertainty.
+    /// Creates a new `SciNum` with the same number but the provided
+    /// uncertainty.
     ///
-    /// Currently panics if the current `SciNum` and the uncertainty have different values for
-    /// `exponent`; however, this should currently be impossible.
+    /// Currently panics if the current `SciNum` and the uncertainty have
+    /// different values for `exponent`; however, this should currently be
+    /// impossible.
     pub fn with_uncertainty(mut self, uncertainty: Self) -> Self {
         if self.exponent != uncertainty.exponent {
             todo!()
@@ -187,7 +191,8 @@ impl SciNum {
         self.uncertainty_dec() / self.number_dec().abs()
     }
 
-    /// Returns the significand _m_ of the number when represented with _m_ as an integer.
+    /// Returns the significand _m_ of the number when represented with _m_ as
+    /// an integer.
     ///
     /// Corresponds to representation of the number as `mmmmm × 10^nn`.
     #[inline]
@@ -202,7 +207,8 @@ impl SciNum {
         }
     }
 
-    /// Returns the exponent _n_ of the number when represented with _m_ as an integer.
+    /// Returns the exponent _n_ of the number when represented with _m_ as an
+    /// integer.
     ///
     /// Corresponds to representation of the number as `mmmmm × 10^nn`.
     #[inline]
@@ -210,8 +216,8 @@ impl SciNum {
         self.exponent - (i16::from(self.number_scale))
     }
 
-    /// Returns the significand _m_ of the number when represented with normalized notation
-    /// i.e. with 10 > _m_ >= 1.
+    /// Returns the significand _m_ of the number when represented with
+    /// normalized notation i.e. with 10 > _m_ >= 1.
     ///
     /// Corresponds to `iffff` when the number is notated as `i.ffff × 10^nn`.
     #[inline]
@@ -226,18 +232,20 @@ impl SciNum {
         }
     }
 
-    /// Returns a tuple of the integer, fractional, and exponent parts of the significand _m_ of the
-    /// number when represented with normalized notation i.e. with 10 > _m_ >= 1.
+    /// Returns a tuple of the integer, fractional, and exponent parts of the
+    /// significand _m_ of the number when represented with normalized
+    /// notation i.e. with 10 > _m_ >= 1.
     ///
-    /// Corresponds to `(i, ffff, nn)` when the number is notated as `i.ffff × 10^nn`.
+    /// Corresponds to `(i, ffff, nn)` when the number is notated as `i.ffff ×
+    /// 10^nn`.
     #[inline]
     pub fn scientific_parts_normalized_split(&self) -> (i8, Option<i128>, i16) {
         if self.is_zero() {
             return (0, None, 0);
         }
         let significand = self.significand_integral();
-        // Work out the number of places the decimal point needs to move to the left in the
-        // significand to get the correct representation
+        // Work out the number of places the decimal point needs to move to the left in
+        // the significand to get the correct representation
         let (shifted_places, divisor, exponent) = if self.number_dec().abs() < Decimal::ONE {
             // For small numbers decimal already provides us with the scale
             let shifted_places = significand.abs().ilog10() as i16;
@@ -268,8 +276,8 @@ impl SciNum {
         (int_part as i8, Some(frac_part), exp_part)
     }
 
-    /// Returns the exponent _n_ of the number when represented with normalized notation
-    /// i.e. with 10 > _m_ >= 1.
+    /// Returns the exponent _n_ of the number when represented with normalized
+    /// notation i.e. with 10 > _m_ >= 1.
     ///
     /// Corresponds to `nn` when the number is notated as `i.ffff × 10^nn`.
     #[inline]
@@ -299,7 +307,8 @@ impl SciNum {
     /// - 200 returns 2 or 1 or 0, depending on the precision of the number
     #[inline]
     pub fn precision(&self) -> i32 {
-        // For now, the exponent is guaranteed to be zero, so equal to the scale of the decimal rep
+        // For now, the exponent is guaranteed to be zero, so equal to the scale of the
+        // decimal rep
         -(i32::from(self.number_scale))
     }
 
@@ -490,7 +499,8 @@ impl Zero for SciNum {
         Self::ZERO
     }
 
-    /// Returns true if the `SciNum` is equal to zero, regardless of any uncertainty.
+    /// Returns true if the `SciNum` is equal to zero, regardless of any
+    /// uncertainty.
     #[inline]
     fn is_zero(&self) -> bool {
         self.number_lo | self.number_mid | self.number_hi == 0
@@ -680,9 +690,9 @@ impl Rem for SciNum {
     type Output = Self;
 
     /// Performs the `%` operation.
-    /// 
-    /// WARNING: Uncertainty propagation is not yet implemented for this method, and the returned
-    /// result will be exact.
+    ///
+    /// WARNING: Uncertainty propagation is not yet implemented for this method,
+    /// and the returned result will be exact.
     fn rem(self, rhs: Self) -> Self {
         let number = self.number_dec() % rhs.number_dec();
         Self::new_exact(number)
@@ -693,9 +703,9 @@ impl Rem for &SciNum {
     type Output = SciNum;
 
     /// Performs the `%` operation.
-    /// 
-    /// WARNING: Uncertainty propagation is not yet implemented for this method, and the returned
-    /// result will be exact.
+    ///
+    /// WARNING: Uncertainty propagation is not yet implemented for this method,
+    /// and the returned result will be exact.
     fn rem(self, rhs: Self) -> SciNum {
         let number = self.number_dec() % rhs.number_dec();
         SciNum::new_exact(number)
@@ -913,7 +923,8 @@ impl SciNum {
 
     /// The largest supported number.
     ///
-    /// Identical to Decimal::MAX for the time being, until SciNum supports non-zero exponents.
+    /// Identical to Decimal::MAX for the time being, until SciNum supports
+    /// non-zero exponents.
     pub const MAX: SciNum = SciNum {
         negative: false,
         number_scale: 0,
@@ -929,7 +940,8 @@ impl SciNum {
 
     /// The smallest supported number.
     ///
-    /// Identical to Decimal::MIN for the time being, until SciNum supports non-zero exponents.
+    /// Identical to Decimal::MIN for the time being, until SciNum supports
+    /// non-zero exponents.
     pub const MIN: SciNum = SciNum {
         negative: true,
         number_scale: 0,
@@ -1108,7 +1120,8 @@ mod tests {
         assert_eq!(SciNum::new_exact(dec!(0.02)).precision(), -2);
         assert_eq!(SciNum::new_exact(dec!(0.020)).precision(), -3);
         assert_eq!(SciNum::new_exact(dec!(2)).precision(), 0);
-        //assert_eq!(SciNum::new_exact(dec!(2e3)).precision(), 3); // Fails for now
+        //assert_eq!(SciNum::new_exact(dec!(2e3)).precision(), 3); // Fails for
+        // now
     }
 
     #[test]
@@ -1304,9 +1317,9 @@ mod tests {
         assert_eq!(SciNum::new_exact(dec!(0.000000432)).to_string(), "4.32e-7");
         // Explicit zeros should be treated as significant
         assert_eq!(SciNum::new_exact(1295800).to_string(), "1.295800e6");
-        // Here they shouldn't be but the problem is that Decimal does treat them as significant...
-        //assert_eq!(SciNum::new_exact(dec!(1.2958e6)).to_string(), "1.2958e6");
-        // Check uncertainty formatting
+        // Here they shouldn't be but the problem is that Decimal does treat them as
+        // significant... assert_eq!(SciNum::new_exact(dec!(1.2958e6)).
+        // to_string(), "1.2958e6"); Check uncertainty formatting
         assert_eq!(SciNum::new(20, 2).to_string(), "20±2");
         // TODO: More uncertainty display tests
     }
@@ -1326,8 +1339,9 @@ mod tests {
             SciNum::new_exact(dec!(1.5e8))
         );
         // TODO large exponent fails with overflow error
-        //assert_eq!(SciNum::from_str("1.5e10").unwrap(), SciNum::new_exact(dec!(1.5e10)));
-        // Scientific notation with negative exponent
+        //assert_eq!(SciNum::from_str("1.5e10").unwrap(),
+        // SciNum::new_exact(dec!(1.5e10))); Scientific notation with negative
+        // exponent
         assert_eq!(
             SciNum::from_str("2e-5").unwrap(),
             SciNum::new_exact(dec!(2e-5))
@@ -1338,8 +1352,8 @@ mod tests {
             SciNum::new_exact(dec!(-6.022e6))
         );
         // TODO large exponent fails with overflow error
-        //assert_eq!(SciNum::from_str("-6.022e23").unwrap(), SciNum::new_exact(dec!(-6.022e23)));
-        // Capital E for exponent
+        //assert_eq!(SciNum::from_str("-6.022e23").unwrap(),
+        // SciNum::new_exact(dec!(-6.022e23))); Capital E for exponent
         assert_eq!(
             SciNum::from_str("1.5E8").unwrap(),
             SciNum::new_exact(dec!(1.5E8))
@@ -1353,33 +1367,18 @@ mod tests {
         // Integer
         assert_eq!(sci!(42), SciNum::new_exact(dec!(42)));
         // Negative float
-        assert_eq!(
-            sci!(-3.14),
-            SciNum::new_exact(dec!(-3.14))
-        );
+        assert_eq!(sci!(-3.14), SciNum::new_exact(dec!(-3.14)));
         // Scientific notation
-        assert_eq!(
-            sci!(1.5e8),
-            SciNum::new_exact(dec!(1.5e8))
-        );
+        assert_eq!(sci!(1.5e8), SciNum::new_exact(dec!(1.5e8)));
         // TODO large exponent fails with overflow error
         //assert_eq!(sci!(1.5e10), SciNum::new_exact(dec!(1.5e10)));
         // Scientific notation with negative exponent
-        assert_eq!(
-            sci!(2e-5),
-            SciNum::new_exact(dec!(2e-5))
-        );
+        assert_eq!(sci!(2e-5), SciNum::new_exact(dec!(2e-5)));
         // Negative number with positive exponent
-        assert_eq!(
-            sci!(-6.022e6),
-            SciNum::new_exact(dec!(-6.022e6))
-        );
+        assert_eq!(sci!(-6.022e6), SciNum::new_exact(dec!(-6.022e6)));
         // TODO large exponent fails with overflow error
         //assert_eq!(sci!(-6.022e23), SciNum::new_exact(dec!(-6.022e23)));
         // Capital E for exponent
-        assert_eq!(
-            sci!(1.5E8),
-            SciNum::new_exact(dec!(1.5E8))
-        );
+        assert_eq!(sci!(1.5E8), SciNum::new_exact(dec!(1.5E8)));
     }
 }

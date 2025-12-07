@@ -258,11 +258,11 @@ impl Prefix {
         )
     }
 
-    /// Returns the power _n_ such that the prefix's value is 10<sup>_n_</sup>, or in the case of
-    /// a binary prefix, 1024<sup>_n_/3</sup>.
+    /// Returns the power _n_ such that the prefix's value is 10<sup>_n_</sup>,
+    /// or in the case of a binary prefix, 1024<sup>_n_/3</sup>.
     ///
-    /// For example, `Prefix::milli` returns `-3`, `Prefix::mega` returns `6`, and `Prefix::mebi`
-    /// also returns `6`.
+    /// For example, `Prefix::milli` returns `-3`, `Prefix::mega` returns `6`,
+    /// and `Prefix::mebi` also returns `6`.
     pub fn equivalent_power(&self) -> i8 {
         match self {
             Self::quecto => -30,

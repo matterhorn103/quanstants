@@ -452,7 +452,8 @@ mod tests {
 
     #[test]
     fn from_bits_zeroes() {
-        // All zeroes is defined as being 0 even though 0 would properly be represented as 0/1
+        // All zeroes is defined as being 0 even though 0 would properly be represented
+        // as 0/1
         let f = Frac::from_bits(0x00);
         assert!(f.is_zero());
     }

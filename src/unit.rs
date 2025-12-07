@@ -74,7 +74,7 @@ impl LinearUnit {
     #[inline]
     pub fn is_compound_base(&self) -> bool {
         matches!(self.utype, LinearUnitType::Compound)
-        && self.factors.iter().all(|f| f.unit.is_base())
+            && self.factors.iter().all(|f| f.unit.is_base())
     }
 }
 
@@ -92,7 +92,7 @@ impl LinearUnit {
     };
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct LinearFactor {
     pub unit: Arc<LinearUnit>,
     pub exponent: Frac,
@@ -148,17 +148,48 @@ impl LinearFactor {
                     Some(p) => p.value(),
                     None => SciNum::ONE,
                 };
-                let mut number = self.unit.number * prefix_value;
-                let mut base_factors = Vec::new();
+                // e.g. if self = (c, -2) where c = 4.184 J-1
+                // we want to return
+                // (4.184, [{kg, -1}, {m, -2}, {s, 2}])^-2
+                // = (0.0571..., [{kg, 2}, {m, 4}, {s, -4}])
+                // First just work out the base equivalent of c
+                let mut unit_number = self.unit.number * prefix_value;
+                let mut unit_base_factors = Vec::new();
+                //dbg!(self.unit.factors.clone());
                 for f in self.unit.factors.clone() {
-                    let exponent = f.exponent;
-                    let (u_base_num, u_base_factors) = f.base_equivalent();
-                    number = number * (u_base_num.powfrac(exponent));
-                    base_factors.append(&mut u_base_factors.into_iter().map(|g| g.pow(exponent)).collect());
-                };
+                    // First (and only) factor for example is {J, -1}
+                    // Get base equivalent of {J, -1}
+                    // = (1, [{kg, -1}, {m, -2}, {s, 2}])
+                    let (f_base_num, mut f_base_factors) = f.base_equivalent();
+                    //dbg!(f_base_factors.clone());
+                    unit_number = unit_number * f_base_num;
+                    unit_base_factors.append(&mut f_base_factors);
+                }
+                // Now we have the unit as its base equivalent
+                // But need to return the whole factor as its base equivalent
+                dbg!(unit_number);
+                let number = unit_number.powfrac(self.exponent);
+                dbg!(unit_base_factors.clone());
+                let base_factors = unit_base_factors
+                    .into_iter()
+                    .map(|f| f.pow(self.exponent))
+                    .collect();
+                dbg!("Made it here");
                 (number, base_factors)
-            },
+            }
         }
+    }
+}
+
+impl Debug for LinearFactor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "LinearFactor {{ unit: {:X} ({}), exponent: {} }}",
+            self.unit.id.to_bits(),
+            self.unit.symbol(true),
+            self.exponent,
+        )
     }
 }
 
@@ -225,13 +256,13 @@ impl Unit {
     }
 
     /// Returns the effective unit factors of the unit in a `Vec`.
-    /// 
+    ///
     /// For a base or derived unit, returns a `Vec` of a single `LinearFactor`, where that factor
     /// is the unit itself to the power of 1.
-    /// 
+    ///
     /// For a compound unit, returns the factors that the unit is comprised of, which is the same
     /// as the unit's defining factors.
-    /// 
+    ///
     /// For one, returns an empty `Vec`.
     pub fn to_factors(&self) -> Vec<LinearFactor> {
         match self.inner.utype {
@@ -251,23 +282,30 @@ impl Unit {
     }
 
     /// Combines factors of a compound unit that contain identical units.
-    /// 
+    ///
     /// For example, `m s² m⁻¹` becomes `s²`, and `J K⁻¹ J` becomes `J² K⁻¹`
-    /// 
+    ///
     /// Has no effect for non-compound units.
     pub fn cancel_by_unit(self) -> Self {
-        if !self.is_compound() { return self }
+        if !self.is_compound() {
+            return self;
+        }
         let old_factors = self.to_factors();
         // Use an IndexMap so that order is retained
-        let mut factors_map: IndexMap<Unit128, LinearFactor> = IndexMap::with_capacity(old_factors.len());
+        let mut factors_map: IndexMap<Unit128, LinearFactor> =
+            IndexMap::with_capacity(old_factors.len());
         for old_factor in old_factors {
             let k = old_factor.unit.id;
-            factors_map.entry(k)
-            .and_modify(|new_factor| new_factor.exponent += old_factor.exponent)
-            .or_insert(old_factor);
+            factors_map
+                .entry(k)
+                .and_modify(|new_factor| new_factor.exponent += old_factor.exponent)
+                .or_insert(old_factor);
         }
         // Drop any terms which after cancelling are 0th order
-        let new_factors = factors_map.into_values().filter(|f| f.exponent != 0).collect();
+        let new_factors = factors_map
+            .into_values()
+            .filter(|f| f.exponent != 0)
+            .collect();
 
         Self::new(LinearUnit {
             id: self.id,
@@ -284,41 +322,49 @@ impl Unit {
     /// Combines factors of a compound unit that contain units of the same dimensionality.
     /// As this will generally result in a unit with a different value, returns a `Quantity` with
     /// the appropriate scaling factor.
-    /// 
-    /// The unit kept for each dimension is that of the first term of that dimension. 
-    /// 
+    ///
+    /// The unit kept for each dimension is that of the first term of that dimension.
+    ///
     /// For example, `m ft` becomes `0.3048 m²`, and `ft m` becomes `3.2808398… ft²`
-    /// 
+    ///
     /// Has no effect for non-compound units.
     pub fn cancel_by_dimension(self) -> SciQuantity {
-        if !self.is_compound() { return self.value() }
+        if !self.is_compound() {
+            return self.value();
+        }
         let old_factors = self.to_factors();
         let mut num_factor = SciNum::ONE;
         // Use an IndexMap so that order is retained
-        let mut factors_map: IndexMap<Dimensions, LinearFactor> = IndexMap::with_capacity(old_factors.len());
+        let mut factors_map: IndexMap<Dimensions, LinearFactor> =
+            IndexMap::with_capacity(old_factors.len());
         for old_factor in old_factors {
-            let k = old_factor.unit.dimensions;
-            factors_map.entry(k)
-            .and_modify(|new_factor| {
-                // `new_factor` is the target unit, u0, and `old_factor` is some derived unit, u1
-                // u0 and u1 have same dimensions, so there is some c such that u1 = c * u0
-                // Thus u1^n = (c * u0)^n = c^n * u0^n
-                // We want to combine some term in u0 with the u1 term
-                // u0^m * u1^n becomes u0^m * (c^n * u0^n) = c^n * u0^(m + n)
-                // First work out the multiplying factor c: u1 = c * u0, so c = u1 / u0
-                let conversion_factor = old_factor.unit.id.factor() / new_factor.unit.id.factor();
-                // c^n
-                num_factor = num_factor * (conversion_factor).powfrac(old_factor.exponent);
-                // Add n to m
-                new_factor.exponent += old_factor.exponent;
-            })
-            .or_insert(old_factor);
+            let k = old_factor.unit.dimensions.nonzero();
+            factors_map
+                .entry(k)
+                .and_modify(|new_factor| {
+                    // `new_factor` is the target unit, u0, and `old_factor` is some derived unit, u1
+                    // u0 and u1 have same dimensions, so there is some c such that u1 = c * u0
+                    // Thus u1^n = (c * u0)^n = c^n * u0^n
+                    // We want to combine some term in u0 with the u1 term
+                    // u0^m * u1^n becomes u0^m * (c^n * u0^n) = c^n * u0^(m + n)
+                    // First work out the multiplying factor c: u1 = c * u0, so c = u1 / u0
+                    let conversion_factor =
+                        old_factor.unit.id.factor() / new_factor.unit.id.factor();
+                    // c^n
+                    num_factor = num_factor * (conversion_factor).powfrac(old_factor.exponent);
+                    // Add n to m
+                    new_factor.exponent += old_factor.exponent;
+                })
+                .or_insert(old_factor);
         }
         // Drop any terms which after cancelling are 0th order
-        let new_factors = factors_map.into_values().filter(|f| f.exponent != 0).collect();
+        let new_factors = factors_map
+            .into_values()
+            .filter(|f| f.exponent != 0)
+            .collect();
 
         SciQuantity::new(
-            num_factor, 
+            num_factor,
             Unit::new(LinearUnit {
                 id: self.id, // Value is unchanged
                 utype: LinearUnitType::Compound,
@@ -346,10 +392,19 @@ impl Unit {
             let mut num = SciNum::ONE;
             let mut factors = Vec::new();
             for f in self.to_factors() {
+                // dbg!(f.clone());
+                // dbg!(&f.unit.factors);
                 let (f_base_num, f_base_factors) = f.base_equivalent();
                 num = num * f_base_num;
+                dbg!("Made it to this point");
+                // dbg!(f_base_factors.clone());
                 factors.append(&mut f_base_factors.into_iter().collect());
             }
+            dbg!(self.name());
+            dbg!(self.id);
+            dbg!("Up to here is fine");
+            dbg!(self.id.factor());
+            dbg!("This isn't");
             let new_unit = Unit::new(LinearUnit {
                 id: Unit128::new(
                     self.id.factor() / num,
@@ -364,10 +419,8 @@ impl Unit {
                 number: SciNum::ONE,
                 factors,
             });
-            SciQuantity::new(
-                num,
-                new_unit,
-            )
+            dbg!("Don't make it to this point...");
+            SciQuantity::new(num, new_unit)
         }
     }
 }
@@ -375,7 +428,7 @@ impl Unit {
 // Equality and ordering functions not covered by traits
 impl Unit {
     /// Returns `true` if the two units are exactly the same.
-    /// 
+    ///
     /// `identical()` differs from `eq()` in that it returns `false` for two different units
     /// that have the same value.
     pub fn identical(&self, other: &Self) -> bool {
@@ -601,7 +654,10 @@ impl Unit {
 pub(crate) mod py {
     use std::str::FromStr;
 
-    use crate::{quantity::{SciQuantity, py::PyQuantity}, unit128::py::PyUnitId};
+    use crate::{
+        quantity::{py::PyQuantity, SciQuantity},
+        unit128::py::PyUnitId,
+    };
 
     use super::*;
     use pyo3::prelude::*;
@@ -652,7 +708,9 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Float(f) => {
                     (SciNum::from_f64_exact(f).unwrap() * self.owned_inner()).into()
                 }
-                PyUnitArithmeticEnum::Decimal(d) => SciQuantity::from(d * self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Decimal(d) => {
+                    SciQuantity::from(d * self.owned_inner()).into()
+                }
                 PyUnitArithmeticEnum::String(s) => {
                     (SciNum::from_str(&s).unwrap() * self.owned_inner()).into()
                 }
@@ -672,7 +730,9 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Float(f) => {
                     (SciNum::from_f64_exact(f).unwrap() / self.owned_inner()).into()
                 }
-                PyUnitArithmeticEnum::Decimal(d) => SciQuantity::from(d / self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Decimal(d) => {
+                    SciQuantity::from(d / self.owned_inner()).into()
+                }
                 PyUnitArithmeticEnum::String(s) => {
                     (SciNum::from_str(&s).unwrap() / self.owned_inner()).into()
                 }
@@ -706,6 +766,7 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     use super::*;
@@ -725,6 +786,23 @@ mod tests {
         })
     }
 
+    fn joule() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::JOULE,
+            utype: LinearUnitType::Derived,
+            dimensions: Dimensions::new(-2, 2, 1, 0, 0, 0, 0),
+            symbol: Some(String::from("J")),
+            name: Some(String::from("joule")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: vec![
+                LinearFactor{ unit: Unit::kilogram().inner, exponent: Frac::new(1, 1) },
+                LinearFactor{ unit: Unit::metre().inner, exponent: Frac::new(2, 1) },
+                LinearFactor{ unit: Unit::second().inner, exponent: Frac::new(-2, 1) },
+            ],
+        })
+    }
+
     fn foot() -> Unit {
         Unit::new(LinearUnit {
             id: Unit128::from_bits(0xBE7FC0000000000110001),
@@ -735,6 +813,34 @@ mod tests {
             prefix: None,
             number: SciNum::new_exact(dec!(0.3048)),
             factors: Unit::metre().to_factors(),
+        })
+    }
+
+    fn complicated_derived() -> Unit {
+        // A unit d, defined as d = 1 c^-2, where c = 4.184 J-1
+        let j = joule();
+        let c_num = SciNum::new_exact(dec!(4.184));
+        let c_dim = Dimensions::new(2, -2, -1, 0, 0, 0, 0);
+        let c = Unit::new(LinearUnit {
+            id: Unit128::new(c_num, c_dim, 0x0D),
+            utype: LinearUnitType::Derived,
+            dimensions: c_dim,
+            symbol: Some(String::from("c")),
+            name: Some(String::from("c")),
+            prefix: None,
+            number: c_num,
+            factors: j.to_inverse_factors(),
+        });
+        let d_dim = c_dim.pow(-2);
+        Unit::new(LinearUnit {
+            id: Unit128::new(c_num.powi(-2), d_dim, 0x0D),
+            utype: LinearUnitType::Derived,
+            dimensions: d_dim,
+            symbol: Some(String::from("d")),
+            name: Some(String::from("d")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: vec![LinearFactor{ unit: c.inner.clone(), exponent: Frac::from(-2) }],
         })
     }
 
@@ -760,10 +866,22 @@ mod tests {
     }
 
     #[test]
+    fn div() {
+        let s = Unit::second();
+        let hz = hertz();
+        let one_over_s = SciNum::ONE / s;
+        assert_eq!(one_over_s, SciNum::ONE * hz);
+        assert_eq!(one_over_s.to_string(), "1 s-1");
+        assert_eq!(one_over_s.dimensions(), Dimensions::new(-1, 0, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
     fn symbol() {
         let s = Unit::second();
         dbg!(&s.inner.symbol);
         assert_eq!(s.symbol(false), "s");
+        let j = joule();
+        assert_eq!(j.symbol(false), "J");
     }
 
     #[test]
@@ -816,12 +934,30 @@ mod tests {
 
     #[test]
     fn in_base() {
+        let j = joule();
+        dbg!(j.defining_factors());
+        let base = j.in_base();
+        assert_eq!(base.to_string(), "1 kg m2 s-2");
+
+        let s = Unit::second();
+        let hz = hertz();
+        dbg!(hz.defining_factors());
+        let base = hz.in_base();
+        dbg!(base.unit.defining_factors());
+        assert_eq!(base, SciNum::ONE / s);
+        assert_eq!(base.to_string(), "1 s-1");
+
         let m = Unit::metre();
         let ft = foot();
         dbg!(ft.clone());
         let base = ft.in_base();
         dbg!(base.clone());
         assert_eq!(base, SciNum::new_exact(dec!(0.3048)) * m);
+        assert_eq!(base.to_string(), "0.3048 m");
+
+        let d = complicated_derived();
+        let base = d.in_base();
+        assert_eq!(base.number, SciNum::new_exact(dec!(4.184).powi(-2)));
         assert_eq!(base.to_string(), "0.3048 m");
     }
 }

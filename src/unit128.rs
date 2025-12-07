@@ -118,8 +118,12 @@ impl UnitType {
             Self::BinaryDerived => Nibble::XB,
             Self::GenericCompound => Nibble::XC,
             Self::UnknownDerived => Nibble::XD,
-            Self::Private(n) => Nibble::try_from(*n).expect("Inner u8 will always fit into a nibble"),
-            Self::CataloguedDerived(n) => Nibble::try_from(*n).expect("Inner u8 will always fit into a nibble"),
+            Self::Private(n) => {
+                Nibble::try_from(*n).expect("Inner u8 will always fit into a nibble")
+            }
+            Self::CataloguedDerived(n) => {
+                Nibble::try_from(*n).expect("Inner u8 will always fit into a nibble")
+            }
         }
     }
 }
@@ -283,7 +287,8 @@ impl Unit128 {
                 self.factor().inv(),
                 self.dimensions().inverse(),
                 self.least_significant_byte(),
-            ).as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
+            )
+            .as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
         }
     }
 
@@ -297,7 +302,8 @@ impl Unit128 {
                 self.factor().powfrac(exp),
                 self.dimensions().pow(exp),
                 self.least_significant_byte(),
-            ).as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
+            )
+            .as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
         }
     }
 }
@@ -314,7 +320,8 @@ impl Mul for Unit128 {
                 self.factor() * rhs.factor(),
                 self.dimensions() * rhs.dimensions(),
                 self.least_significant_byte(),
-            ).as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
+            )
+            .as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
         }
     }
 }
@@ -331,7 +338,8 @@ impl Div for Unit128 {
                 self.factor() / rhs.factor(),
                 self.dimensions() / rhs.dimensions(),
                 self.least_significant_byte(),
-            ).as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
+            )
+            .as_unit_type(UnitType::GenericCompound) // Set as generic compound unit
         }
     }
 }
@@ -793,6 +801,10 @@ mod tests {
         assert_eq!(Unit128::KILOGRAM.factor(), SciNum::ONE);
         let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
         assert_eq!(ft.factor(), SciNum::new_exact(dec!(0.3048)));
+        // Calling factor() on this is currently broken
+        let x = Unit128 { num: 0x20789937226C9F0, dim: 0x1214F40D };
+        let _ = x.factor();
+        // What factor should this correspond to?
     }
 
     #[test]

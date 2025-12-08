@@ -33,6 +33,12 @@ impl<T: Num> Quantity<T> {
     pub fn dimensions(&self) -> Dimensions {
         self.unit.dimensions()
     }
+
+    /// Returns `true` if the quantity's unit is simply one.
+    #[inline]
+    pub fn is_unitless(&self) -> bool {
+        self.unit.is_one()
+    }
 }
 
 impl<T: Num> Add for Quantity<T> {
@@ -211,7 +217,11 @@ impl SciQuantity {
 
 impl<T: Num + Display> Display for Quantity<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.number, self.unit.symbol(false))
+        if self.is_unitless() {
+            write!(f, "{}", self.number)
+        } else {
+            write!(f, "{} {}", self.number, self.unit.symbol(false))
+        }
     }
 }
 

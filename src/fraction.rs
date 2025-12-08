@@ -226,6 +226,32 @@ fn char_to_superscript(character: char) -> char {
     }
 }
 
+fn _gcd(mut a: i8, mut b: i8) -> i8 {
+    a = a.abs();
+    b = b.abs();
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
+fn _lcm(a: i8, b: i8) -> i8 {
+    if a == 0 || b == 0 {
+        return 0;
+    }
+    (a.abs() / _gcd(a, b)) * b.abs()
+}
+
+impl Frac {
+    pub fn gcd(a: Frac, b: Frac) -> Frac {
+        let num = _gcd(*a.numer(), *b.numer());
+        let den = _lcm(*a.denom(), *b.denom());
+        Frac::new(num, den)
+    }
+}
+
 #[cfg(feature = "python")]
 pub(crate) mod py {
     use super::*;

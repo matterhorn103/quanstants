@@ -100,9 +100,9 @@ impl SciNum {
         if exponent == 0 {
             Self::new_exact(significand)
         } else if exponent.is_positive() {
-            Self::new_exact(significand * Decimal::from(10_u32.pow(exponent as u32)))
+            Self::new_exact(significand * Decimal::from(10_u64.pow(exponent as u32)))
         } else {
-            Self::new_exact(significand / Decimal::from(10_u32.pow(exponent.unsigned_abs() as u32)))
+            Self::new_exact(significand / Decimal::from(10_u64.pow(exponent.unsigned_abs() as u32)))
         }
     }
 
@@ -246,32 +246,22 @@ impl SciNum {
         let significand = self.significand_integral();
         // Work out the number of places the decimal point needs to move to the left in
         // the significand to get the correct representation
-        let (shifted_places, divisor, exponent) = if self.number_dec().abs() < Decimal::ONE {
+        let (divisor, exponent) = if self.number_dec().abs() < Decimal::ONE {
             // For small numbers decimal already provides us with the scale
             let shifted_places = significand.abs().ilog10() as i16;
             let divisor = 10_i128.pow(shifted_places as u32);
             let exponent = -(self.number_scale as i16) + shifted_places;
-            (shifted_places, divisor, exponent)
+            (divisor, exponent)
         } else {
             // For large integers Decimal's scale is 0 so we take the base 10 logarithm
             let shifted_places = (significand.abs().ilog10() as i16) + (self.number_scale as i16);
             let divisor = 10_i128.pow(shifted_places as u32);
             let exponent = self.exponent_integral() + shifted_places;
-            (shifted_places, divisor, exponent)
+            (divisor, exponent)
         };
         let int_part = significand / divisor;
         let frac_part = significand.abs() % divisor;
         let exp_part = exponent;
-
-        dbg!(self);
-        dbg!(significand);
-        dbg!(self.number_scale);
-        dbg!(shifted_places);
-        dbg!(divisor);
-        dbg!(int_part);
-        dbg!(frac_part);
-        dbg!(exp_part);
-        println!("{int_part}.{frac_part}e{exp_part}");
 
         (int_part as i8, Some(frac_part), exp_part)
     }

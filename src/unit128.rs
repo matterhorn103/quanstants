@@ -816,13 +816,14 @@ mod tests {
         assert_eq!(Unit128::KILOGRAM.factor(), SciNum::ONE);
         let ft = Unit128::new(SciNum::new_exact(dec!(0.3048)), Dimensions::LENGTH, 0x01);
         assert_eq!(ft.factor(), SciNum::new_exact(dec!(0.3048)));
-        // Calling factor() on this is currently broken
+        // Calling factor() on this was broken, keep as regression test
         let x = Unit128 {
             num: 0x20789937226C9F0,
             dim: 0x1214F40D,
         };
-        let _ = x.factor();
-        // What factor should this correspond to?
+        // The above should correspond to:
+        // 4.184^-2 = 0.05712374190670824665757561355… = 571237419067082 * 10^-16
+        assert_eq!(x.factor(), SciNum::new_exact(dec!(571237419067082e-16)));
     }
 
     #[test]

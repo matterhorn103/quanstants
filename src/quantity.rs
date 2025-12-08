@@ -546,8 +546,6 @@ mod tests {
         });
         let q1 = Quantity::new(SciNum::new(40, 0), s.clone() * s.clone());
         let q2 = Quantity::new(SciNum::new(8, 0), s.clone());
-        dbg!(&q1);
-        dbg!(&q2);
         assert_eq!(q1 / q2, Quantity::new(SciNum::new(5, 0), s.clone()));
     }
 

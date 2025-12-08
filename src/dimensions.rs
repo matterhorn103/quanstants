@@ -94,6 +94,31 @@ impl Dimensions {
             J: (!self.J.is_zero() as i8).into(),
         }
     }
+
+    /// Returns the `Dimensions` _red_ such that _n_ is maximal for `self` = _red_<sup>_n_</sup>,
+    /// and the most fundamental dimension is positive.
+    /// 
+    /// For example:
+    /// - `L⁻¹` returns `L¹` (_n_ = −1)
+    /// - `T L⁻¹` returns `T L⁻¹` (_n_ = 1)
+    /// - `T⁻¹ L` returns `T L⁻¹` (_n_ = −1)
+    /// - `T⁻¹/² L` returns `T L⁻²` (_n_ = −1/2)
+    /// - `T² L⁻² I²` returns `T L⁻¹ I` (_n_ = 2)
+    /// - `T⁻² L² I⁻²` also returns `T L⁻¹ I` (_n_ = −2)
+    /// - `T L⁻¹ I² N⁻³` just returns `T L⁻¹ I² N⁻³` (_n_ = 1)
+    pub fn reduce(&self) -> Self {
+        let mut gcd = self.T;
+        for e in self.exponents() {
+            gcd = Frac::gcd(gcd, e);
+        };
+        let mut reduced_exponents: [Frac; 7] = [Frac::ZERO; 7];
+        for (i, e) in self.exponents().iter().enumerate() {
+            reduced_exponents[i] = *e / gcd;
+        };
+        #[allow(non_snake_case)]
+        let [T, L, M, I, Θ, N, J] = reduced_exponents;
+        Self::new(T, L, M, I, Θ, N, J)
+    }
 }
 
 impl Mul for Dimensions {

@@ -30,8 +30,15 @@ impl<T: Num> Quantity<T> {
         Self { number, unit }
     }
 
+    #[inline]
     pub fn dimensions(&self) -> Dimensions {
         self.unit.dimensions()
+    }
+
+    /// Returns `true` if the quantity's unit has the dimensions of a simple number.
+    #[inline]
+    pub fn is_dimensionless(&self) -> bool {
+        self.dimensions().is_dimensionless()
     }
 
     /// Returns `true` if the quantity's unit is simply one.
@@ -322,14 +329,16 @@ pub(crate) mod py {
         }
 
         fn __repr__(&self) -> String {
-            if self.0.is_exact() {
-                format!("Quantity({}, {})", self.0.number, self.0.unit.symbol(true))
+            let inner = self.borrow_inner();
+            let unit_symbol = if inner.is_unitless() { "(unitless)".to_string() } else { inner.unit.symbol(true) };
+            if inner.is_exact() {
+                format!("Quantity({}, {})", inner.number, unit_symbol)
             } else {
                 format!(
                     "Quantity({}, {}, uncertainty={})",
-                    self.0.number.number(),
-                    self.0.unit.symbol(true),
-                    self.0.number.uncertainty()
+                    inner.number.number(),
+                    unit_symbol,
+                    inner.number.uncertainty()
                 )
             }
         }
@@ -519,6 +528,11 @@ pub(crate) mod py {
         /// Returns the value of the quantity when expressed in base units.
         fn in_base(&self) -> Self {
             self.owned_inner().in_base().into()
+        }
+
+        /// Returns `true` if the quantity's unit has the dimensions of a simple number.
+        fn is_dimensionless(&self) -> bool {
+            self.borrow_inner().is_dimensionless()
         }
     }
 

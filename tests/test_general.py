@@ -176,11 +176,12 @@ class TestUncertainties:
     def test_plus_minus(self):
         assert repr(("4.2" * qu.m).plus_minus("0.2")) == "Quantity(4.2, m, uncertainty=0.2)"
 
-    def test_uncertainty_as_quantity(self):
-        assert (
-            repr(("4.2" * qu.metre).plus_minus("20" * qu.centimetre))
-            == "Quantity(4.2, m, uncertainty=0.20)"
-        )
+    # Quantity as argument for with_uncertainty() no longer supported (at least not for now)
+    #def test_uncertainty_as_quantity(self):
+    #    assert (
+    #        repr(("4.2" * qu.metre).plus_minus("20" * qu.centimetre))
+    #        == "Quantity(4.2, m, uncertainty=0.20)"
+    #    )
 
     def test_str_parentheses(self):
         assert (
@@ -227,7 +228,7 @@ class TestArithmetic:
 
     def test_3(self):
         result = repr((200 * qu.megajoule) / (70 * qu.kilogram))
-        assert result == "Quantity(2.857142857142857142857142857, MJ kg⁻¹)"
+        assert result == "Quantity(2.8571428571428571428571428571, MJ kg⁻¹)"
 
     def test_4(self):
         result = repr((3 * qu.watt) ** 2)
@@ -246,6 +247,7 @@ class TestArithmetic:
         assert result == "Quantity(3.50, m)"
 
     def test_8(self):
+        qu.units.load_module(UnitModule.Imperial)
         result = repr((4 * qu.metre) + (2 * qu["foot"]))
         assert result == "Quantity(4.6096, m)"
 
@@ -382,6 +384,7 @@ class TestConversion:
         assert repr(result) == "Quantity(0.00015, kW²)"
 
     def test_fully_cancel_2(self):
+        qu.units.load_module(UnitModule.Imperial)
         result = ((3000 * qu.metre**2) / (20 * qu["foot"])).fully_cancel()
         assert repr(result) == "Quantity(492.1259842519685039370078740, m)"
 

@@ -112,10 +112,45 @@ impl SciQuantity {
         self.number.is_exact()
     }
 
+    /// If the quantity has a compound unit, returns a new quantity with the
+    /// terms that contain identical units combined.
+    ///
+    /// For example, `3 m s² m⁻¹` becomes `3 s²`,
+    /// and `0.78 J K⁻¹ J` becomes `0.78 J² K⁻¹`
+    ///
+    /// Has no effect for quantities with non-compound units.
+    pub fn cancelled_by_unit(self) -> Self {
+        Self { number: self.number, unit: self.unit.cancelled_by_unit() }
+    }
+
+    /// If the quantity has a compound unit, returns a new quantity with the
+    /// terms that contain units of the same dimensionality combined.
+    ///
+    /// The unit kept for each dimension is that of the first term of that
+    /// dimension.
+    ///
+    /// For example, `1 m ft` becomes `0.3048 m²`,
+    /// and `1 ft m` becomes `3.2808398… ft²`.
+    ///
+    /// Units are combined if they have either identical dimensions, or one has
+    /// the inverse dimensions of the other.
+    /// This means that, for example, `s² Hz` becomes `s` (because `Hz = s⁻¹`),
+    /// but `N m` does _not_ become `J` (even though `J = N m`).
+    ///
+    /// Has no effect for quantities with non-compound units.
+    pub fn cancelled_by_dimension(self) -> Self {
+        let cancelled = self.unit.cancelled_by_dimension();
+        Self { number: self.number * cancelled.number, unit: cancelled.unit }
+    }
+
     // This ought to be generic
     /// Returns the value of the `SciQuantity` when expressed in base units.
-    pub fn in_base(self) -> Self {
-        self.number * self.unit.in_base()
+    pub fn in_base(&self) -> Self {
+        if self.unit.is_base() || self.unit.is_compound_base() {
+            self.clone()
+        } else {
+            self.number * self.unit.in_base()
+        }
     }
 }
 
@@ -229,7 +264,7 @@ impl<T: Num + Display> Display for Quantity<T> {
 pub(crate) mod py {
     use std::str::FromStr;
 
-    use crate::{scinum::py::PyIntoSciNum, unit::py::PyUnit};
+    use crate::{scinum::py::{PyIntoSciNum, PySciNum}, unit::py::PyUnit};
 
     use super::*;
     use pyo3::prelude::*;
@@ -237,7 +272,7 @@ pub(crate) mod py {
 
     #[pyclass(frozen, name = "Quantity")]
     #[derive(Clone, PartialEq, PartialOrd, Debug)]
-    pub(crate) struct PyQuantity(pub(crate) SciQuantity);
+    pub(crate) struct PyQuantity(SciQuantity);
 
     impl PyQuantity {
         pub fn into_inner(self) -> SciQuantity {
@@ -265,6 +300,21 @@ pub(crate) mod py {
         fn new(number: PyIntoSciNum, unit: PyUnit) -> Self {
             let number: SciNum = number.try_into().unwrap();
             Self(Quantity::new(number, unit.into_inner()))
+        }
+
+        #[getter]
+        fn number(&self) -> PySciNum {
+            self.borrow_inner().number.into()
+        }
+
+        #[getter]
+        fn uncertainty(&self) -> Self {
+            self.borrow_inner().uncertainty().into()
+        }
+
+        #[getter]
+        fn unit(&self) -> PyUnit {
+            self.borrow_inner().unit.clone().into()
         }
 
         fn __str__(&self) -> String {
@@ -436,7 +486,37 @@ pub(crate) mod py {
             self.with_uncertainty(uncertainty)
         }
 
-        /// Returns the value of the `SciQuantity` when expressed in base units.
+        /// If the quantity has a compound unit, returns a new quantity with the
+        /// terms that contain identical units combined.
+        ///
+        /// For example, `3 m s² m⁻¹` becomes `3 s²`,
+        /// and `0.78 J K⁻¹ J` becomes `0.78 J² K⁻¹`
+        ///
+        /// Has no effect for quantities with non-compound units.
+        fn cancelled_by_unit(&self) -> Self {
+            self.owned_inner().cancelled_by_unit().into()
+        }
+
+        /// If the quantity has a compound unit, returns a new quantity with the
+        /// terms that contain units of the same dimensionality combined.
+        ///
+        /// The unit kept for each dimension is that of the first term of that
+        /// dimension.
+        ///
+        /// For example, `1 m ft` becomes `0.3048 m²`,
+        /// and `1 ft m` becomes `3.2808398… ft²`.
+        ///
+        /// Units are combined if they have either identical dimensions, or one has
+        /// the inverse dimensions of the other.
+        /// This means that, for example, `s² Hz` becomes `s` (because `Hz = s⁻¹`),
+        /// but `N m` does _not_ become `J` (even though `J = N m`).
+        ///
+        /// Has no effect for quantities with non-compound units.
+        fn cancelled_by_dimension(&self) -> Self {
+            self.owned_inner().cancelled_by_dimension().into()
+        }
+
+        /// Returns the value of the quantity when expressed in base units.
         fn in_base(&self) -> Self {
             self.owned_inner().in_base().into()
         }

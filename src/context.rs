@@ -209,6 +209,20 @@ pub(crate) mod py {
     use super::*;
     use pyo3::{prelude::*, types::PyType};
 
+    /// The `Context` object is used to access units and constants and to create new
+    /// quantities.
+    /// 
+    /// A Python `Context` in `quanstants` is always pre-populated with:
+    /// - the SI base units
+    /// - the SI derived units
+    /// - the non-SI units officially approved for use with the SI
+    /// - common prefixed units
+    /// - the seven defining fundamental constants of the SI (not yet implemented)
+    /// 
+    /// All of the pre-populated units and constants can be accessed as properties
+    /// of the `Context`.
+    /// Additionally, properties are defined for the symbols of the SI base and
+    /// derived units.
     #[pyclass(name = "Context")]
     #[derive(Debug, Default)]
     pub(crate) struct PyContext(pub(crate) Context);
@@ -277,9 +291,10 @@ pub(crate) mod py {
             self.0.second().into()
         }
 
+        /// second
         #[getter]
         fn s(&self) -> PyUnit {
-            self.0.second().into()
+            self.second()
         }
 
         #[getter]
@@ -287,14 +302,16 @@ pub(crate) mod py {
             self.0.metre().into()
         }
 
+        /// metre with the alternative spelling
         #[getter]
         fn meter(&self) -> PyUnit {
             self.0.meter().into()
         }
 
+        /// metre
         #[getter]
         fn m(&self) -> PyUnit {
-            self.0.metre().into()
+            self.metre()
         }
 
         #[getter]
@@ -302,9 +319,10 @@ pub(crate) mod py {
             self.0.kilogram().into()
         }
 
+        /// kilogram
         #[getter]
         fn kg(&self) -> PyUnit {
-            self.0.kilogram().into()
+            self.kilogram()
         }
 
         #[getter]
@@ -312,14 +330,16 @@ pub(crate) mod py {
             self.0.ampere().into()
         }
 
+        /// ampere
         #[getter]
         fn amp(&self) -> PyUnit {
-            self.0.ampere().into()
+            self.ampere()
         }
 
+        /// ampere
         #[getter]
         fn A(&self) -> PyUnit {
-            self.0.ampere().into()
+            self.ampere()
         }
 
         #[getter]
@@ -327,9 +347,10 @@ pub(crate) mod py {
             self.0.kelvin().into()
         }
 
+        /// kelvin
         #[getter]
         fn K(&self) -> PyUnit {
-            self.0.kelvin().into()
+            self.kelvin()
         }
 
         #[getter]
@@ -337,9 +358,10 @@ pub(crate) mod py {
             self.0.mole().into()
         }
 
+        /// mole
         #[getter]
         fn mol(&self) -> PyUnit {
-            self.0.mole().into()
+            self.mole()
         }
 
         #[getter]
@@ -347,9 +369,10 @@ pub(crate) mod py {
             self.0.candela().into()
         }
 
+        /// candela
         #[getter]
         fn cd(&self) -> PyUnit {
-            self.0.candela().into()
+            self.candela()
         }
 
         #[getter]
@@ -357,9 +380,10 @@ pub(crate) mod py {
             self.0.radian().into()
         }
 
+        /// radian
         #[getter]
         fn rad(&self) -> PyUnit {
-            self.0.radian().into()
+            self.radian()
         }
 
         #[getter]
@@ -367,9 +391,10 @@ pub(crate) mod py {
             self.0.steradian().into()
         }
 
+        /// steradian
         #[getter]
         fn sr(&self) -> PyUnit {
-            self.0.steradian().into()
+            self.steradian()
         }
 
         #[getter]
@@ -377,9 +402,10 @@ pub(crate) mod py {
             self.0.hertz().into()
         }
 
+        /// hertz
         #[getter]
         fn Hz(&self) -> PyUnit {
-            self.0.hertz().into()
+            self.hertz()
         }
 
         #[getter]
@@ -387,9 +413,10 @@ pub(crate) mod py {
             self.0.newton().into()
         }
 
+        /// newton
         #[getter]
         fn N(&self) -> PyUnit {
-            self.0.newton().into()
+            self.newton()
         }
 
         #[getter]
@@ -397,9 +424,10 @@ pub(crate) mod py {
             self.0.pascal().into()
         }
 
+        /// pascal
         #[getter]
         fn Pa(&self) -> PyUnit {
-            self.0.pascal().into()
+            self.pascal()
         }
 
         #[getter]
@@ -407,9 +435,10 @@ pub(crate) mod py {
             self.0.joule().into()
         }
 
+        /// joule
         #[getter]
         fn J(&self) -> PyUnit {
-            self.0.joule().into()
+            self.joule()
         }
 
         #[getter]
@@ -417,9 +446,10 @@ pub(crate) mod py {
             self.0.watt().into()
         }
 
+        /// watt
         #[getter]
         fn W(&self) -> PyUnit {
-            self.0.watt().into()
+            self.watt()
         }
 
         #[getter]
@@ -427,9 +457,10 @@ pub(crate) mod py {
             self.0.coulomb().into()
         }
 
+        /// coulomb
         #[getter]
         fn C(&self) -> PyUnit {
-            self.0.coulomb().into()
+            self.coulomb()
         }
 
         #[getter]
@@ -437,9 +468,10 @@ pub(crate) mod py {
             self.0.volt().into()
         }
 
+        /// volt
         #[getter]
         fn V(&self) -> PyUnit {
-            self.0.volt().into()
+            self.volt()
         }
 
         #[getter]
@@ -447,9 +479,10 @@ pub(crate) mod py {
             self.0.farad().into()
         }
 
+        /// farad
         #[getter]
         fn F(&self) -> PyUnit {
-            self.0.farad().into()
+            self.farad()
         }
 
         #[getter]
@@ -457,9 +490,10 @@ pub(crate) mod py {
             self.0.ohm().into()
         }
 
+        /// ohm
         #[getter]
         fn Ω(&self) -> PyUnit {
-            self.0.ohm().into()
+            self.ohm()
         }
 
         #[getter]
@@ -467,9 +501,10 @@ pub(crate) mod py {
             self.0.siemens().into()
         }
 
+        /// siemens
         #[getter]
         fn S(&self) -> PyUnit {
-            self.0.siemens().into()
+            self.siemens()
         }
 
         #[getter]
@@ -477,9 +512,10 @@ pub(crate) mod py {
             self.0.weber().into()
         }
 
+        /// weber
         #[getter]
         fn Wb(&self) -> PyUnit {
-            self.0.weber().into()
+            self.weber()
         }
 
         #[getter]
@@ -487,9 +523,10 @@ pub(crate) mod py {
             self.0.tesla().into()
         }
 
+        /// tesla
         #[getter]
         fn T(&self) -> PyUnit {
-            self.0.tesla().into()
+            self.tesla()
         }
 
         #[getter]
@@ -497,9 +534,10 @@ pub(crate) mod py {
             self.0.henry().into()
         }
 
+        /// henry
         #[getter]
         fn H(&self) -> PyUnit {
-            self.0.henry().into()
+            self.henry()
         }
 
         //#[getter]
@@ -512,9 +550,10 @@ pub(crate) mod py {
             self.0.lumen().into()
         }
 
+        /// lumen
         #[getter]
         fn lm(&self) -> PyUnit {
-            self.0.lumen().into()
+            self.lumen()
         }
 
         #[getter]
@@ -522,9 +561,10 @@ pub(crate) mod py {
             self.0.lux().into()
         }
 
+        /// lux
         #[getter]
         fn lx(&self) -> PyUnit {
-            self.0.lux().into()
+            self.lux()
         }
 
         #[getter]
@@ -532,9 +572,10 @@ pub(crate) mod py {
             self.0.becquerel().into()
         }
 
+        /// becquerel
         #[getter]
         fn Bq(&self) -> PyUnit {
-            self.0.becquerel().into()
+            self.becquerel()
         }
 
         #[getter]
@@ -542,9 +583,10 @@ pub(crate) mod py {
             self.0.gray().into()
         }
 
+        /// gray
         #[getter]
         fn Gy(&self) -> PyUnit {
-            self.0.gray().into()
+            self.gray()
         }
 
         #[getter]
@@ -552,9 +594,10 @@ pub(crate) mod py {
             self.0.sievert().into()
         }
 
+        /// sievert
         #[getter]
         fn Sv(&self) -> PyUnit {
-            self.0.sievert().into()
+            self.sievert()
         }
 
         #[getter]
@@ -562,9 +605,10 @@ pub(crate) mod py {
             self.0.katal().into()
         }
 
+        /// katal
         #[getter]
         fn kat(&self) -> PyUnit {
-            self.0.katal().into()
+            self.katal()
         }
 
         #[getter]
@@ -572,9 +616,124 @@ pub(crate) mod py {
             self.0.gram().into()
         }
 
+        /// gram
         #[getter]
         fn g(&self) -> PyUnit {
-            self.0.gram().into()
+            self.gram()
+        }
+
+        #[getter]
+        fn minute(&self) -> PyUnit {
+            self.0
+                .units
+                .get_by_id(Unit128 {
+                    num: 0x3C00,
+                    dim: 0x1101,
+                })
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
+        }
+
+        /// minute
+        #[getter]
+        fn min(&self) -> PyUnit {
+            self.minute()
+        }
+
+        #[getter]
+        fn hour(&self) -> PyUnit {
+            self.0
+                .units
+                .get_by_id(Unit128 {
+                    num: 0xE1000,
+                    dim: 0x1101,
+                })
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
+        }
+
+        /// hour
+        #[getter]
+        fn h(&self) -> PyUnit {
+            self.hour()
+        }
+
+        #[getter]
+        fn day(&self) -> PyUnit {
+            self.0
+                .units
+                .get_by_id(Unit128 {
+                    num: 0x1518000,
+                    dim: 0x1101,
+                })
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
+        }
+
+        /// day
+        #[getter]
+        fn d(&self) -> PyUnit {
+            self.day()
+        }
+
+        #[getter]
+        fn astronomical_unit(&self) -> PyUnit {
+            self.0
+                .units
+                .get_by_id(Unit128 {
+                    num: 0x22D4BA5A6C00,
+                    dim: 0x0000000000110001,
+                })
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
+        }
+
+        /// astronomical unit
+        #[getter]
+        fn au(&self) -> PyUnit {
+            self.astronomical_unit()
+        }
+
+        #[getter]
+        fn degree(&self) -> PyUnit {
+            self.0
+                .units
+                .get_by_name("degree")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
+        }
+
+        #[getter]
+        fn arcminute(&self) -> PyUnit {
+            self.0
+                .units
+                .get_by_name("arcminute")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
+        }
+
+        #[getter]
+        fn arcsecond(&self) -> PyUnit {
+            self.0
+                .units
+                .get_by_name("arcminute")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
+        }
+
+        #[getter]
+        fn hectare(&self) -> PyUnit {
+            self.0
+                .units
+                .get_by_name("hectare")
+                .expect("A Quantext in Python should always have this unit loaded")
+                .into()
+        }
+
+        /// hectare
+        #[getter]
+        fn ha(&self) -> PyUnit {
+            self.hectare()
         }
 
         #[getter]
@@ -589,6 +748,7 @@ pub(crate) mod py {
                 .into()
         }
 
+        /// litre with the alternative spelling
         #[getter]
         fn liter(&self) -> PyUnit {
             self.0
@@ -598,16 +758,25 @@ pub(crate) mod py {
                 .into()
         }
 
+        /// litre
         #[getter]
         fn L(&self) -> PyUnit {
+            self.litre()
+        }
+
+        #[getter]
+        fn tonne(&self) -> PyUnit {
             self.0
                 .units
-                .get_by_id(Unit128 {
-                    num: 0xFD,
-                    dim: 0x130001,
-                })
+                .get_by_name("tonne")
                 .expect("A Quantext in Python should always have this unit loaded")
                 .into()
+        }
+
+        /// tonne
+        #[getter]
+        fn t(&self) -> PyUnit {
+            self.tonne()
         }
 
         // Prefix getters

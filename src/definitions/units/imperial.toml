@@ -163,11 +163,13 @@ value.number = "4.54609"
 value.unit = [["litre", "2"]]
 
 [units.peck]
+symbol = "peck"
 name = "peck"
 value.number = "9.09218"
 value.unit = [["litre", "2"]]
 
 [units.bushel]
+symbol = "bushel"
 name = "bushel"
 value.number = "36.36872"
 value.unit = [["litre", "2"]]

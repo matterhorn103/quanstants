@@ -290,7 +290,7 @@ impl Unit128 {
                 self.least_significant_byte(),
             )
             .as_unit_type(UnitType::GenericCompound) // Set as generic compound
-                                                     // unit
+            // unit
         }
     }
 
@@ -306,7 +306,7 @@ impl Unit128 {
                 self.least_significant_byte(),
             )
             .as_unit_type(UnitType::GenericCompound) // Set as generic compound
-                                                     // unit
+            // unit
         }
     }
 }
@@ -325,7 +325,7 @@ impl Mul for Unit128 {
                 self.least_significant_byte(),
             )
             .as_unit_type(UnitType::GenericCompound) // Set as generic compound
-                                                     // unit
+            // unit
         }
     }
 }
@@ -344,7 +344,7 @@ impl Div for Unit128 {
                 self.least_significant_byte(),
             )
             .as_unit_type(UnitType::GenericCompound) // Set as generic compound
-                                                     // unit
+            // unit
         }
     }
 }
@@ -407,7 +407,10 @@ impl Unit128 {
             Ok(exponent) => {
                 exponent as u8 as u64 | ((shortened_factor.significand_integral() - 1) as u64) << 8
             }
-            Err(_) => panic!("Exponent of provided SciNum {} exceeds the range of the i8 used for Unit128's numeric factor's exponent", shortened_factor.exponent_integral()),
+            Err(_) => panic!(
+                "Exponent of provided SciNum {} exceeds the range of the i8 used for Unit128's numeric factor's exponent",
+                shortened_factor.exponent_integral()
+            ),
         }
     }
 

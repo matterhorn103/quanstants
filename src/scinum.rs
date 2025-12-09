@@ -225,11 +225,7 @@ impl SciNum {
         let unsigned = (self.number_hi as i128) << 64
             | (self.number_mid as i128) << 32
             | self.number_lo as i128;
-        if self.negative {
-            -unsigned
-        } else {
-            unsigned
-        }
+        if self.negative { -unsigned } else { unsigned }
     }
 
     /// Returns a tuple of the integer, fractional, and exponent parts of the

@@ -123,7 +123,7 @@ impl Mul<Unit> for Prefix {
             // Set as non-unique derived unit
             let dim = rhs.id.dim & !0xF | 0xD;
             let old_exponent = rhs.id.num as u8 as i8; // Go via u8 so that it gets truncated
-                                                       // Increase/decrease decimal exponent appropriately
+            // Increase/decrease decimal exponent appropriately
             let num = rhs.id.num & !0xF | ((old_exponent + self.equivalent_power()) as u8 as u64);
             Unit128 { num, dim }
         };

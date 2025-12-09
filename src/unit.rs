@@ -333,7 +333,7 @@ impl Unit {
     ///
     /// The unit kept for each dimension is that of the first term of that
     /// dimension.
-    /// 
+    ///
     /// For example, `m ft` becomes `0.3048 m²`, and `ft m` becomes `3.2808398…
     /// ft²`.
     ///
@@ -357,8 +357,7 @@ impl Unit {
         for old_factor in old_factors {
             let k = old_factor.unit.dimensions;
             if factors_map.contains_key(&k) {
-                factors_map.entry(k)
-                .and_modify(|new_factor| {
+                factors_map.entry(k).and_modify(|new_factor| {
                     // `new_factor` is the target unit, u0, and `old_factor` is some derived unit,
                     // u1.
                     // u0 and u1 have terms of the same dimensions, so there is some c such that
@@ -376,14 +375,13 @@ impl Unit {
                 });
             // Alternatively, check for inverse
             } else if factors_map.contains_key(&k.inverse()) {
-                factors_map.entry(k.inverse())
-                .and_modify(|new_factor| {
-                // u1^n = (c * u0^-1)^n = c^n * u0^-n
-                // u0^m * u1^n becomes u0^m * (c^n * u0^-n) = c^n * u0^(m - n)
-                let conversion_factor =
-                    old_factor.unit.id.factor() / new_factor.unit.id.factor();
-                num_factor = num_factor * (conversion_factor).powfrac(old_factor.exponent);
-                new_factor.exponent += -old_factor.exponent;
+                factors_map.entry(k.inverse()).and_modify(|new_factor| {
+                    // u1^n = (c * u0^-1)^n = c^n * u0^-n
+                    // u0^m * u1^n becomes u0^m * (c^n * u0^-n) = c^n * u0^(m - n)
+                    let conversion_factor =
+                        old_factor.unit.id.factor() / new_factor.unit.id.factor();
+                    num_factor = num_factor * (conversion_factor).powfrac(old_factor.exponent);
+                    new_factor.exponent += -old_factor.exponent;
                 });
             // Only then actually retain the unit without combining
             } else {
@@ -398,10 +396,7 @@ impl Unit {
             .collect();
 
         if new_factors.is_empty() && self.is_dimensionless() && num_factor == SciNum::ONE {
-            SciQuantity::new(
-                SciNum::ONE,
-                Unit::one(),
-            )
+            SciQuantity::new(SciNum::ONE, Unit::one())
         } else {
             SciQuantity::new(
                 num_factor,
@@ -694,7 +689,7 @@ pub(crate) mod py {
     use std::str::FromStr;
 
     use crate::{
-        quantity::{py::PyQuantity, SciQuantity},
+        quantity::{SciQuantity, py::PyQuantity},
         unit128::py::PyUnitId,
     };
 

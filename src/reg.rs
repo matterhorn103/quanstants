@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    defs::{units::UnitModule, DefFile, UnitDef},
+    defs::{DefFile, UnitDef, units::UnitModule},
     dimensions::Dimensions,
     error::QuanstantsError,
     fraction::Frac,

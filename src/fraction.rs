@@ -244,7 +244,7 @@ pub(crate) mod py {
         }
 
         fn __repr__(&self) -> String {
-            format!("Frac({}, {})", self.0 .0.numer(), self.0 .0.denom())
+            format!("Frac({}, {})", self.0.0.numer(), self.0.0.denom())
         }
 
         fn __str__(&self) -> String {

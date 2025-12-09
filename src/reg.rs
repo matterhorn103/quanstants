@@ -361,7 +361,7 @@ impl UnitRegistry {
             panic!("Can't add a unit with a binary prefix to a unit registry!")
         }
         // Create the unit in the normal way, but need to adjust the ID afterwards.
-        let mut new_unit = Prefix::from(prefix) * unit;
+        let mut new_unit = prefix * unit;
         let id = Unit128 {
             num: new_unit.id.num,
             dim: new_unit.id.dim & !0xFF | (least_significant_byte as u64),

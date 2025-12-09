@@ -351,7 +351,7 @@ impl Div for Unit128 {
 
 impl Debug for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Unit128 {{ num: {:X}, dim: {:X} }}", self.num, self.dim)
+        write!(f, "Unit128 {{ num: 0x{:X}, dim: 0x{:X} }}", self.num, self.dim)
     }
 }
 
@@ -879,7 +879,7 @@ mod tests {
     fn debug() {
         assert_eq!(
             format!("{:?}", Unit128::SECOND),
-            "Unit128 { num: 0, dim: 1100 }"
+            "Unit128 { num: 0x0, dim: 0x1100 }"
         );
     }
 

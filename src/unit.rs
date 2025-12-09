@@ -569,8 +569,8 @@ impl Debug for Unit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Unit {{ id: {:X}, inner: {} }}",
-            self.id.to_bits(),
+            r#"Unit {{ id: {}, symbol: "{}" }}"#,
+            self.id,
             self.inner.symbol(true)
         )
     }
@@ -728,11 +728,7 @@ pub(crate) mod py {
         }
 
         fn __repr__(&self) -> String {
-            format!(
-                "Unit {{ id: {:X}, symbol: {} }}",
-                self.borrow_inner().id.to_bits(),
-                self.borrow_inner().symbol(true),
-            )
+            format!("{:?}", self.borrow_inner())
         }
 
         fn __eq__(&self, other: &Self) -> bool {
@@ -989,7 +985,7 @@ mod tests {
     #[test]
     fn debug() {
         let s = Unit::second();
-        assert_eq!(format!("{s:?}"), "Unit { id: 1100, inner: s }");
+        assert_eq!(format!("{s:?}"), r#"Unit { id: 0x1100, symbol: "s" }"#);
     }
 
     #[test]

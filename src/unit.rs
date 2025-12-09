@@ -723,6 +723,18 @@ pub(crate) mod py {
 
     #[pymethods]
     impl PyUnit {
+        fn __str__(&self) -> String {
+            format!("{}", self.borrow_inner())
+        }
+
+        fn __repr__(&self) -> String {
+            format!(
+                "Unit {{ id: {:X}, symbol: {} }}",
+                self.borrow_inner().id.to_bits(),
+                self.borrow_inner().symbol(true),
+            )
+        }
+
         fn __eq__(&self, other: &Self) -> bool {
             self.0 == other.0
         }

@@ -1001,21 +1001,6 @@ pub(crate) mod py {
     #[derive(Clone, PartialEq, PartialOrd, Debug)]
     pub(crate) struct PySciNum(pub(crate) SciNum);
 
-    #[allow(dead_code)]
-    impl PySciNum {
-        pub fn into_inner(self) -> SciNum {
-            self.0
-        }
-
-        pub fn borrow_inner(&self) -> &SciNum {
-            &self.0
-        }
-
-        pub fn owned_inner(&self) -> SciNum {
-            self.0
-        }
-    }
-
     impl From<SciNum> for PySciNum {
         #[inline]
         fn from(n: SciNum) -> Self {
@@ -1042,14 +1027,14 @@ pub(crate) mod py {
         /// Returns the number as an exact `SciNum` without its uncertainty.
         #[getter]
         fn number(&self) -> Self {
-            self.borrow_inner().number().into()
+            self.0.number().into()
         }
 
         /// Returns the absolute uncertainty as an exact `SciNum`.
         /// The uncertainty is always positive.
         #[getter]
         fn uncertainty(&self) -> Self {
-            self.borrow_inner().uncertainty().into()
+            self.0.uncertainty().into()
         }
     }
 }

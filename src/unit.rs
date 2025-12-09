@@ -293,7 +293,7 @@ impl Unit {
     /// For example, `m s² m⁻¹` becomes `s²`, and `J K⁻¹ J` becomes `J² K⁻¹`
     ///
     /// Has no effect for non-compound units.
-    pub fn cancel_by_unit(self) -> Self {
+    pub fn cancelled_by_unit(self) -> Self {
         if !self.is_compound() {
             return self;
         }
@@ -343,7 +343,7 @@ impl Unit {
     /// but `N m` does _not_ become `J` (even though `J = N m`).
     ///
     /// Has no effect for non-compound units.
-    pub fn cancel_by_dimension(self) -> SciQuantity {
+    pub fn cancelled_by_dimension(self) -> SciQuantity {
         if !self.is_compound() {
             return self.value();
         }
@@ -956,12 +956,12 @@ mod tests {
     fn cancel_by_unit() {
         let s = Unit::second();
         let m = Unit::metre();
-        let ms = (m.clone() * s.clone()).cancel_by_unit();
-        let mm = (m.clone() * m.clone()).cancel_by_unit();
-        let m_per_s = (m.clone() / s.clone()).cancel_by_unit();
-        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancel_by_unit();
-        let m_ft = (m.clone() * foot()).cancel_by_unit();
-        let s_hz = (s.clone() * hertz()).cancel_by_unit();
+        let ms = (m.clone() * s.clone()).cancelled_by_unit();
+        let mm = (m.clone() * m.clone()).cancelled_by_unit();
+        let m_per_s = (m.clone() / s.clone()).cancelled_by_unit();
+        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancelled_by_unit();
+        let m_ft = (m.clone() * foot()).cancelled_by_unit();
+        let s_hz = (s.clone() * hertz()).cancelled_by_unit();
         assert_eq!(ms.symbol(false), "m s");
         assert_eq!(mm.symbol(false), "m2");
         assert_eq!(m_per_s.symbol(false), "m s-1");
@@ -974,11 +974,11 @@ mod tests {
     fn cancel_by_dimension() {
         let s = Unit::second();
         let m = Unit::metre();
-        let ms = (m.clone() * s.clone()).cancel_by_dimension();
-        let mm = (m.clone() * m.clone()).cancel_by_dimension();
-        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancel_by_dimension();
-        let m_ft = (m.clone() * foot()).cancel_by_dimension();
-        let s_hz = (s.clone() * hertz()).cancel_by_dimension();
+        let ms = (m.clone() * s.clone()).cancelled_by_dimension();
+        let mm = (m.clone() * m.clone()).cancelled_by_dimension();
+        let s_m_per_s = (s.clone() * (m.clone() / s.clone())).cancelled_by_dimension();
+        let m_ft = (m.clone() * foot()).cancelled_by_dimension();
+        let s_hz = (s.clone() * hertz()).cancelled_by_dimension();
         assert_eq!(format!("{ms}"), "1 m s");
         assert_eq!(format!("{mm}"), "1 m2");
         assert_eq!(format!("{s_m_per_s}"), "1 m");

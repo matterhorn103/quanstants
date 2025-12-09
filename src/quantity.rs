@@ -71,7 +71,7 @@ impl<T: Num> Mul for Quantity<T> {
     fn mul(self, rhs: Self) -> Self {
         Self::new(
             self.number * rhs.number,
-            (self.unit * rhs.unit).cancel_by_unit(),
+            (self.unit * rhs.unit).cancelled_by_unit(),
         )
     }
 }
@@ -82,7 +82,7 @@ impl<T: Num> Div for Quantity<T> {
     fn div(self, rhs: Self) -> Self {
         Self::new(
             self.number / rhs.number,
-            (self.unit / rhs.unit).cancel_by_unit(),
+            (self.unit / rhs.unit).cancelled_by_unit(),
         )
     }
 }
@@ -198,7 +198,7 @@ impl SciQuantity {
     {
         Self::new(
             self.number.mul_with_correlation(rhs.number, correlation),
-            (self.unit * rhs.unit).cancel_by_unit(),
+            (self.unit * rhs.unit).cancelled_by_unit(),
         )
     }
 
@@ -210,7 +210,7 @@ impl SciQuantity {
     {
         Self::new(
             self.number.div_with_correlation(rhs.number, correlation),
-            (self.unit / rhs.unit).cancel_by_unit(),
+            (self.unit / rhs.unit).cancelled_by_unit(),
         )
     }
 }

@@ -25,6 +25,7 @@ mod bindings {
     fn _quanstants(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_class::<crate::fraction::py::PyFrac>()?;
         m.add_class::<crate::dimensions::py::PyDimensions>()?;
+        m.add_class::<crate::scinum::py::PySciNum>()?;
         m.add_class::<crate::unit128::py::PyUnitId>()?;
         m.add_class::<crate::unit::py::PyUnit>()?;
         m.add_class::<crate::prefix::py::PyPrefix>()?;

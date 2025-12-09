@@ -996,6 +996,62 @@ pub(crate) mod py {
             }
         }
     }
+
+    #[pyclass(frozen, name = "SciNum")]
+    #[derive(Clone, PartialEq, PartialOrd, Debug)]
+    pub(crate) struct PySciNum(pub(crate) SciNum);
+
+    #[allow(dead_code)]
+    impl PySciNum {
+        pub fn into_inner(self) -> SciNum {
+            self.0
+        }
+
+        pub fn borrow_inner(&self) -> &SciNum {
+            &self.0
+        }
+
+        pub fn owned_inner(&self) -> SciNum {
+            self.0
+        }
+    }
+
+    impl From<SciNum> for PySciNum {
+        #[inline]
+        fn from(n: SciNum) -> Self {
+            Self(n)
+        }
+    }
+
+    #[pymethods]
+    impl PySciNum {
+        #[new]
+        fn new(number: PyIntoSciNum) -> Self {
+            let inner: SciNum = number.try_into().unwrap();
+            Self(inner)
+        }
+
+        fn __str__(&self) -> String {
+            format!("{}", self.0)
+        }
+
+        fn __repr__(&self) -> String {
+            format!("{:?}", self.0)
+        }
+
+        /// Returns the number as an exact `SciNum` without its uncertainty.
+        #[getter]
+        fn number(&self) -> Self {
+            self.borrow_inner().number().into()
+        }
+
+        /// Returns the absolute uncertainty as an exact `SciNum`.
+        /// The uncertainty is always positive.
+        #[getter]
+        fn uncertainty(&self) -> Self {
+            self.borrow_inner().uncertainty().into()
+        }
+    }
 }
 
 #[cfg(test)]

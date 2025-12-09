@@ -6,7 +6,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use num_traits::Num;
+use num_traits::{Num, Zero};
 use rust_decimal::Decimal;
 
 use crate::{dimensions::Dimensions, scinum::SciNum, unit::Unit};
@@ -157,6 +157,28 @@ impl SciQuantity {
             self.clone()
         } else {
             self.number * self.unit.in_base()
+        }
+    }
+
+    // This ought to be generic
+    /// Returns the value of the `SciQuantity` when expressed in the given unit.
+    /// 
+    /// Returns `None` if the units have different dimensionality.
+    pub fn in_unit(&self, unit: &Unit) -> Option<Self> {
+        if self.number.is_zero() && self.number.is_exact() {
+            return Some(Self { number: SciNum::ZERO, unit: unit.clone() })
+        };
+        // Original quantity q0 = n0 * u0
+        // The desired new unit is u1
+        // If there is a number n1 such that u0 = n1 * u1,
+        // the new quantity is then q1 = n0 * (n1 * u1) = (n0 * n1) * u1
+        // Find n1 by: n1 = u0 / u1
+        let ratio = (self.unit.value() / unit.value()).cancelled_by_dimension();
+        dbg!(&ratio);
+        if ratio.is_unitless() {
+            Some(Self { number: self.number * ratio.number, unit: unit.clone() })
+        } else {
+            None
         }
     }
 }
@@ -558,8 +580,7 @@ mod tests {
     use rust_decimal_macros::dec;
 
     use crate::{
-        unit::{LinearUnit, LinearUnitType},
-        unit128::Unit128,
+        prefix::Prefix, unit::{LinearUnit, LinearUnitType}, unit128::Unit128
     };
 
     use super::*;
@@ -678,5 +699,22 @@ mod tests {
         let q1: SciQuantity = (dec!(0.3048) * m).into();
         let q2: SciQuantity = SciNum::ONE * ft;
         assert_eq!(q1.in_base(), q2.in_base());
+    }
+
+    #[test]
+    fn in_unit() {
+        let m = Unit::new(LinearUnit {
+            id: Unit128::METRE,
+            utype: LinearUnitType::Base,
+            dimensions: Dimensions::LENGTH,
+            symbol: Some(String::from("m")),
+            name: Some(String::from("metre")),
+            prefix: None,
+            number: SciNum::ONE,
+            factors: Vec::new(),
+        });
+        let km = Prefix::kilo * m.clone();
+        let q: SciQuantity = SciNum::new_exact(3000) * m;
+        assert_eq!(q.in_unit(&km).unwrap(), SciNum::new_exact(3) * km);
     }
 }

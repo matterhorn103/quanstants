@@ -61,16 +61,19 @@ pub mod units {
     pub enum UnitModule {
         Si,
         SiCompatible,
+        Imperial,
     }
 
     impl UnitModule {
         const SI: &str = include_str!("definitions/units/si.toml");
         const SI_COMPATIBLE: &str = include_str!("definitions/units/si_compatible.toml");
+        const IMPERIAL: &str = include_str!("definitions/units/imperial.toml");
 
         pub fn toml(self) -> &'static str {
             match self {
-                Self::Si => Self::SI,
-                Self::SiCompatible => Self::SI_COMPATIBLE,
+                UnitModule::Si => UnitModule::SI,
+                UnitModule::SiCompatible => UnitModule::SI_COMPATIBLE,
+                UnitModule::Imperial => UnitModule::IMPERIAL,
             }
         }
     }
@@ -85,6 +88,7 @@ pub mod units {
         pub(crate) enum PyUnitModule {
             Si,
             SiCompatible,
+            Imperial,
         }
 
         impl From<PyUnitModule> for UnitModule {
@@ -92,6 +96,7 @@ pub mod units {
                 match m {
                     PyUnitModule::Si => UnitModule::Si,
                     PyUnitModule::SiCompatible => UnitModule::SiCompatible,
+                    PyUnitModule::Imperial => UnitModule::Imperial,
                 }
             }
         }
@@ -101,6 +106,7 @@ pub mod units {
                 match m {
                     UnitModule::Si => PyUnitModule::Si,
                     UnitModule::SiCompatible => PyUnitModule::SiCompatible,
+                    UnitModule::Imperial => PyUnitModule::Imperial,
                 }
             }
         }

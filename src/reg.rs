@@ -383,9 +383,9 @@ impl UnitRegistry {
             if !def.alt_names.is_empty() {
                 self.add_base_with_alt_names(
                     def.dimensions
-                        .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid dimensions for: {}", def.name)))?,
                     def.symbol
-                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
                     def.name,
                     def.prefix,
                     def.alt_names,
@@ -393,9 +393,9 @@ impl UnitRegistry {
             } else if !def.aliases.is_empty() {
                 self.add_base_with_aliases(
                     def.dimensions
-                        .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid dimensions for: {}", def.name)))?,
                     def.symbol
-                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
                     def.name,
                     def.prefix,
                     def.aliases,
@@ -403,9 +403,9 @@ impl UnitRegistry {
             } else {
                 self.add_base(
                     def.dimensions
-                        .ok_or(QuanstantsError::Definition("dimensions".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid dimensions for: {}", def.name)))?,
                     def.symbol
-                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
                     def.name,
                     def.prefix,
                 )
@@ -428,7 +428,7 @@ impl UnitRegistry {
                 self.add_derived_with_alt_names(
                     def.id,
                     def.symbol
-                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
                     def.name,
                     def.prefix,
                     proportionality_factor,
@@ -439,7 +439,7 @@ impl UnitRegistry {
                 self.add_derived_with_aliases(
                     def.id,
                     def.symbol
-                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
                     def.name,
                     def.prefix,
                     proportionality_factor,
@@ -450,7 +450,7 @@ impl UnitRegistry {
                 self.add_derived(
                     def.id,
                     def.symbol
-                        .ok_or(QuanstantsError::Definition("symbol".to_string()))?,
+                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
                     def.name,
                     def.prefix,
                     proportionality_factor,

@@ -19,7 +19,7 @@ pub struct DefFile {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UnitDef {
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub id: Option<Unit128>,
@@ -38,7 +38,7 @@ pub struct UnitDef {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ConstantDef {
     pub source: Option<String>,
     pub symbol: Option<String>,
@@ -49,7 +49,7 @@ pub struct ConstantDef {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QuantityDef {
     pub number: SciNum,
     pub unit: Vec<(String, Frac)>,

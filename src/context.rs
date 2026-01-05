@@ -4,14 +4,14 @@
 use std::str::FromStr;
 
 use num_traits::Num;
+use scinum::SciDecimal;
 
 use crate::{
     error::QuanstantsError,
     fraction::Frac,
     prefix::Prefix,
-    quantity::{Quantity, SciQuantity},
+    quantity::{Quantity},
     reg::UnitRegistry,
-    scinum::SciNum,
     unit::Unit,
     unit128::Unit128,
 };
@@ -68,14 +68,14 @@ impl Context {
         Quantity { number, unit }
     }
 
-    /// Creates a new `SciQuantity` from a string.
-    pub fn quantity_from_str(&self, s: &str) -> Result<SciQuantity, QuanstantsError> {
+    /// Creates a new `Quantity<SciDecimal>` from a string.
+    pub fn quantity_from_str(&self, s: &str) -> Result<Quantity<SciDecimal>, QuanstantsError> {
         let s = s.to_owned();
         let mut parts = s.split_whitespace();
         if s.contains("+/-") || s.contains("±") {
             todo!("Uncertainties must be denoted using parentheses for now")
         }
-        let number = SciNum::from_str(parts.next().expect("String shouldn't be empty"))?;
+        let number = SciDecimal::from_str(parts.next().expect("String shouldn't be empty"))?;
         let mut unit_vec = Vec::new();
         for term_string in parts {
             let mut unit_string = String::new();
@@ -253,8 +253,8 @@ pub(crate) mod py {
             unit: PyUnit,
             uncertainty: Option<PyIntoSciNum>,
         ) -> PyQuantity {
-            let num: SciNum = if let Some(u) = uncertainty {
-                let num: SciNum = number.try_into().unwrap();
+            let num: SciDecimal = if let Some(u) = uncertainty {
+                let num: SciDecimal = number.try_into().unwrap();
                 num.with_uncertainty(u.try_into().unwrap())
             } else {
                 number.try_into().unwrap()
@@ -1077,15 +1077,15 @@ mod tests {
         let context = Context::new();
         assert_eq!(
             context.quantity_from_str("3 m").unwrap(),
-            SciNum::new_exact(3) * context.metre()
+            SciDecimal::new(3, 0) * context.metre()
         );
         assert_eq!(
             context.quantity_from_str("3 metre").unwrap(),
-            SciNum::new_exact(3) * context.metre()
+            SciDecimal::new(3, 0) * context.metre()
         );
         assert_eq!(
             context.quantity_from_str("3 m2").unwrap(),
-            SciNum::new_exact(3) * context.metre().pow(2)
+            SciDecimal::new(3, 0) * context.metre().pow(2)
         );
     }
 }

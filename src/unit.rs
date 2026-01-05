@@ -7,13 +7,13 @@ use std::ops::{Div, Mul, Neg};
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use num_traits::Inv;
+use num_traits::{Inv, Pow};
+use scinum::SciDecimal;
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
 use crate::prefix::Prefix;
-use crate::quantity::SciQuantity;
-use crate::scinum::SciNum;
+use crate::quantity::Quantity;
 use crate::unit128::Unit128;
 
 #[derive(Copy, Clone, Debug)]
@@ -37,7 +37,7 @@ pub struct LinearUnit {
     pub(crate) symbol: Option<String>, // Compound units have None for this
     pub(crate) name: Option<String>,   // Compound units have None for this
     pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
-    pub(crate) number: SciNum,         // 1 for everything except derived units
+    pub(crate) number: SciDecimal,         // 1 for everything except derived units
     pub(crate) factors: Vec<LinearFactor>, // Empty for base units and one
 }
 
@@ -89,7 +89,7 @@ impl LinearUnit {
         symbol: None,
         name: None,
         prefix: None,
-        number: SciNum::ONE,
+        number: SciDecimal::ONE,
         factors: vec![],
     };
 }
@@ -141,9 +141,9 @@ impl LinearFactor {
 
     /// Returns the equivalent of the factor as a tuple of a SciNum and its
     /// factors as base units.
-    fn base_equivalent(self) -> (SciNum, Vec<LinearFactor>) {
+    fn base_equivalent(self) -> (SciDecimal, Vec<LinearFactor>) {
         match self.unit.utype {
-            LinearUnitType::Base | LinearUnitType::One => (SciNum::ONE, vec![self]),
+            LinearUnitType::Base | LinearUnitType::One => (SciDecimal::ONE, vec![self]),
             LinearUnitType::Derived | LinearUnitType::Compound => {
                 // TODO
                 // This would likely be faster if we just get the factor from the ID,
@@ -151,7 +151,7 @@ impl LinearFactor {
                 // rep.
                 let prefix_value = match self.unit.prefix {
                     Some(p) => p.value(),
-                    None => SciNum::ONE,
+                    None => SciDecimal::ONE,
                 };
                 // e.g. if d = (c, -2) where c = 4.184 J-1
                 // we want to return
@@ -172,7 +172,7 @@ impl LinearFactor {
                 }
                 // Now we have the unit as its base equivalent
                 // But need to return the whole factor as its base equivalent
-                let number = unit_number.powfrac(self.exponent);
+                let number = unit_number.pow(self.exponent);
                 let base_factors = unit_base_factors
                     .into_iter()
                     .map(|f| f.pow(self.exponent))
@@ -252,7 +252,7 @@ impl Unit {
     }
 
     #[inline]
-    pub fn number(&self) -> SciNum {
+    pub fn number(&self) -> SciDecimal {
         self.inner.number
     }
 
@@ -321,7 +321,7 @@ impl Unit {
             symbol: None,
             name: None,
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: new_factors,
         })
     }
@@ -343,14 +343,14 @@ impl Unit {
     /// but `N m` does _not_ become `J` (even though `J = N m`).
     ///
     /// Has no effect for non-compound units.
-    pub fn cancelled_by_dimension(self) -> SciQuantity {
+    pub fn cancelled_by_dimension(self) -> Quantity<SciDecimal> {
         if !self.is_compound() {
             return self.value();
         }
         dbg!(&self);
         let old_factors = self.to_factors();
         dbg!(old_factors.clone());
-        let mut num_factor = SciNum::ONE;
+        let mut num_factor = SciDecimal::ONE;
         // Use an IndexMap so that order is retained
         let mut factors_map: IndexMap<Dimensions, LinearFactor> =
             IndexMap::with_capacity(old_factors.len());
@@ -369,7 +369,7 @@ impl Unit {
                     let conversion_factor =
                         old_factor.unit.id.factor() / new_factor.unit.id.factor();
                     // c^n
-                    num_factor = num_factor * (conversion_factor).powfrac(old_factor.exponent);
+                    num_factor = num_factor * (conversion_factor).pow(old_factor.exponent);
                     // m + n
                     new_factor.exponent += old_factor.exponent;
                 });
@@ -380,7 +380,7 @@ impl Unit {
                     // u0^m * u1^n becomes u0^m * (c^n * u0^-n) = c^n * u0^(m - n)
                     let conversion_factor =
                         old_factor.unit.id.factor() / new_factor.unit.id.factor();
-                    num_factor = num_factor * (conversion_factor).powfrac(old_factor.exponent);
+                    num_factor = num_factor * (conversion_factor).pow(old_factor.exponent);
                     new_factor.exponent += -old_factor.exponent;
                 });
             // Only then actually retain the unit without combining
@@ -395,10 +395,10 @@ impl Unit {
             .filter(|f| f.exponent != 0)
             .collect();
 
-        if new_factors.is_empty() && self.is_dimensionless() && num_factor == SciNum::ONE {
-            SciQuantity::new(SciNum::ONE, Unit::one())
+        if new_factors.is_empty() && self.is_dimensionless() && num_factor == SciDecimal::ONE {
+            Quantity::new(SciDecimal::ONE, Unit::one())
         } else {
-            SciQuantity::new(
+            Quantity::new(
                 num_factor,
                 Unit::new(LinearUnit {
                     id: self.id, // Value is unchanged
@@ -416,16 +416,16 @@ impl Unit {
 
     /// Returns the equivalent of the unit as a quantity.
     #[inline]
-    pub fn value(&self) -> SciQuantity {
-        SciQuantity::new(SciNum::ONE, self.clone())
+    pub fn value(&self) -> Quantity<SciDecimal> {
+        Quantity::new(SciDecimal::ONE, self.clone())
     }
 
     /// Returns the equivalent of the unit as a quantity in base units.
-    pub fn in_base(&self) -> SciQuantity {
+    pub fn in_base(&self) -> Quantity<SciDecimal> {
         if self.is_base() || self.is_compound_base() {
             self.value()
         } else {
-            let mut num = SciNum::ONE;
+            let mut num = SciDecimal::ONE;
             let mut factors = Vec::new();
             for f in self.to_factors() {
                 // dbg!(f.clone());
@@ -447,10 +447,10 @@ impl Unit {
                 symbol: None,
                 name: None,
                 prefix: None,
-                number: SciNum::ONE,
+                number: SciDecimal::ONE,
                 factors,
             });
-            SciQuantity::new(num, new_unit)
+            Quantity::new(num, new_unit)
         }
     }
 }
@@ -513,7 +513,7 @@ impl Unit {
             symbol: None,
             name: None,
             prefix: None,
-            number: self.number().powf(exponent.to_f64()),
+            number: self.number().pow(exponent),
             factors: self
                 .to_factors()
                 .into_iter()
@@ -600,7 +600,7 @@ impl Unit {
             symbol: Some(String::from("s")),
             name: Some(String::from("second")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         })
     }
@@ -613,7 +613,7 @@ impl Unit {
             symbol: Some(String::from("m")),
             name: Some(String::from("metre")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         })
     }
@@ -626,7 +626,7 @@ impl Unit {
             symbol: Some(String::from("kg")),
             name: Some(String::from("kilogram")),
             prefix: Some(Prefix::kilo),
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         })
     }
@@ -639,7 +639,7 @@ impl Unit {
             symbol: Some(String::from("A")),
             name: Some(String::from("ampere")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         })
     }
@@ -652,7 +652,7 @@ impl Unit {
             symbol: Some(String::from("K")),
             name: Some(String::from("kelvin")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         })
     }
@@ -665,7 +665,7 @@ impl Unit {
             symbol: Some(String::from("mol")),
             name: Some(String::from("mole")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         })
     }
@@ -678,7 +678,7 @@ impl Unit {
             symbol: Some(String::from("cd")),
             name: Some(String::from("candela")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         })
     }
@@ -749,13 +749,13 @@ pub(crate) mod py {
                 }
                 PyUnitArithmeticEnum::Int(i) => SciQuantity::from(i * self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
-                    (SciNum::from_f64_exact(f).unwrap() * self.owned_inner()).into()
+                    (SciDecimal::from_f64_exact(f).unwrap() * self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::Decimal(d) => {
                     SciQuantity::from(d * self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::String(s) => {
-                    (SciNum::from_str(&s).unwrap() * self.owned_inner()).into()
+                    (SciDecimal::from_str(&s).unwrap() * self.owned_inner()).into()
                 }
             }
         }
@@ -771,13 +771,13 @@ pub(crate) mod py {
                 }
                 PyUnitArithmeticEnum::Int(i) => SciQuantity::from(i / self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
-                    (SciNum::from_f64_exact(f).unwrap() / self.owned_inner()).into()
+                    (SciDecimal::from_f64_exact(f).unwrap() / self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::Decimal(d) => {
                     SciQuantity::from(d / self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::String(s) => {
-                    (SciNum::from_str(&s).unwrap() / self.owned_inner()).into()
+                    (SciDecimal::from_str(&s).unwrap() / self.owned_inner()).into()
                 }
             }
         }
@@ -809,8 +809,8 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
-    use rust_decimal::MathematicalOps;
-    use rust_decimal_macros::dec;
+    use scinum::sci;
+    use std::str::FromStr;
 
     use super::*;
 
@@ -824,7 +824,7 @@ mod tests {
             symbol: Some(String::from("Hz")),
             name: Some(String::from("hertz")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Unit::second().to_inverse_factors(),
         })
     }
@@ -837,7 +837,7 @@ mod tests {
             symbol: Some(String::from("J")),
             name: Some(String::from("joule")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: vec![
                 LinearFactor {
                     unit: Unit::kilogram().inner,
@@ -863,7 +863,7 @@ mod tests {
             symbol: Some(String::from("ft")),
             name: Some(String::from("foot")),
             prefix: None,
-            number: SciNum::new_exact(dec!(0.3048)),
+            number: sci!(0.3048),
             factors: Unit::metre().to_factors(),
         })
     }
@@ -871,7 +871,7 @@ mod tests {
     fn complicated_derived() -> Unit {
         // A unit d, defined as d = 1 c^-2, where c = 4.184 J-1
         let j = joule();
-        let c_num = SciNum::new_exact(dec!(4.184));
+        let c_num = sci!(4.184);
         let c_dim = Dimensions::new(2, -2, -1, 0, 0, 0, 0);
         let c = Unit::new(LinearUnit {
             id: Unit128::new(c_num, c_dim, 0x0D),
@@ -891,7 +891,7 @@ mod tests {
             symbol: Some(String::from("d")),
             name: Some(String::from("d")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: vec![LinearFactor {
                 unit: c.inner.clone(),
                 exponent: Frac::from(-2),
@@ -924,8 +924,8 @@ mod tests {
     fn div() {
         let s = Unit::second();
         let hz = hertz();
-        let one_over_s = SciNum::ONE / s;
-        assert_eq!(one_over_s, SciNum::ONE * hz);
+        let one_over_s = SciDecimal::ONE / s;
+        assert_eq!(one_over_s, SciDecimal::ONE * hz);
         assert_eq!(one_over_s.to_string(), "1 s-1");
         assert_eq!(
             one_over_s.dimensions(),
@@ -998,18 +998,18 @@ mod tests {
         let s = Unit::second();
         let hz = hertz();
         let base = hz.in_base();
-        assert_eq!(base, SciNum::ONE / s);
+        assert_eq!(base, SciDecimal::ONE / s);
         assert_eq!(base.to_string(), "1 s-1");
 
         let m = Unit::metre();
         let ft = foot();
         let base = ft.in_base();
-        assert_eq!(base, SciNum::new_exact(dec!(0.3048)) * m);
+        assert_eq!(base, sci!(0.3048) * m);
         assert_eq!(base.to_string(), "0.3048 m");
 
         let d = complicated_derived();
         let base = d.in_base();
-        assert_eq!(base.number, SciNum::new_exact(dec!(4.184).powi(-2)));
+        assert_eq!(base.number, sci!(4.184).powi(-2));
         assert_eq!(base.unit.symbol(false), "kg2 m4 s-4");
     }
 }

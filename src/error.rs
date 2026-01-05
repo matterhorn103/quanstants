@@ -3,6 +3,8 @@
 
 use std::{error::Error, fmt, num::TryFromIntError};
 
+use scinum::SciNumError;
+
 use crate::unit::Unit;
 
 #[derive(Clone, Debug)]
@@ -48,5 +50,14 @@ impl Error for QuanstantsError {}
 impl From<TryFromIntError> for QuanstantsError {
     fn from(_err: TryFromIntError) -> Self {
         QuanstantsError::Cast
+    }
+}
+
+impl From<SciNumError> for QuanstantsError {
+    fn from(e: SciNumError) -> Self {
+        match e {
+            SciNumError::Parse(s) => QuanstantsError::Parse(s),
+            SciNumError::Cast(_) => QuanstantsError::Cast,
+        }
     }
 }

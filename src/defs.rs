@@ -5,9 +5,10 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as, skip_serializing_none};
+use scinum::SciDecimal;
 
 use crate::{
-    dimensions::Dimensions, fraction::Frac, prefix::Prefix, scinum::SciNum, unit128::Unit128,
+    dimensions::Dimensions, fraction::Frac, prefix::Prefix, unit128::Unit128,
 };
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -51,9 +52,9 @@ pub struct ConstantDef {
 #[skip_serializing_none]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QuantityDef {
-    pub number: SciNum,
+    pub number: SciDecimal,
     pub unit: Vec<(String, Frac)>,
-    pub uncertainty: Option<SciNum>,
+    pub uncertainty: Option<SciDecimal>,
 }
 
 pub mod units {

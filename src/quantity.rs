@@ -7,9 +7,9 @@ use std::{
 };
 
 use num_traits::{Num, Zero};
-use rust_decimal::Decimal;
+use scinum::{SciNum, SciDecimal};
 
-use crate::{dimensions::Dimensions, scinum::SciNum, unit::Unit};
+use crate::{dimensions::Dimensions, unit::Unit};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub struct Quantity<T>
@@ -19,11 +19,6 @@ where
     pub number: T,
     pub unit: Unit,
 }
-
-// Specific versions
-pub type SciQuantity = Quantity<SciNum>;
-pub type FloatQuantity = Quantity<f64>;
-pub type DecQuantity = Quantity<Decimal>;
 
 impl<T: Num> Quantity<T> {
     pub fn new(number: T, unit: Unit) -> Self {
@@ -94,21 +89,16 @@ impl<T: Num> Div for Quantity<T> {
     }
 }
 
-// Additional methods that only apply to SciQuantity
-impl SciQuantity {
+// Additional methods that only apply when the numeric type is SciNum
+//impl<T: SciNum> Quantity<T> {
+impl Quantity<SciDecimal> {
     pub fn uncertainty(&self) -> Self {
-        Self::new(self.number.uncertainty(), self.unit.clone())
+        Self::new(self.number.uncertainty().into(), self.unit.clone())
     }
 
     /// Creates a new `SciQuantity` with the same number and unit but the
     /// provided uncertainty.
-    ///
-    /// Currently panics if the current number and the uncertainty have
-    /// different values for `exponent`.
-    pub fn with_uncertainty(mut self, uncertainty: SciNum) -> Self {
-        if self.number.exponent != uncertainty.exponent {
-            todo!()
-        };
+    pub fn with_uncertainty(mut self, uncertainty: SciDecimal) -> Self {
         self.number = self.number.with_uncertainty(uncertainty);
         self
     }
@@ -161,12 +151,12 @@ impl SciQuantity {
     }
 
     // This ought to be generic
-    /// Returns the value of the `SciQuantity` when expressed in the given unit.
+    /// Returns the value of the `Quantity` when expressed in the given unit.
     /// 
     /// Returns `None` if the units have different dimensionality.
     pub fn in_unit(&self, unit: &Unit) -> Option<Self> {
         if self.number.is_zero() && self.number.is_exact() {
-            return Some(Self { number: SciNum::ZERO, unit: unit.clone() })
+            return Some(Self { number: SciDecimal::zero(), unit: unit.clone() })
         };
         // Original quantity q0 = n0 * u0
         // The desired new unit is u1
@@ -174,7 +164,6 @@ impl SciQuantity {
         // the new quantity is then q1 = n0 * (n1 * u1) = (n0 * n1) * u1
         // Find n1 by: n1 = u0 / u1
         let ratio = (self.unit.value() / unit.value()).cancelled_by_dimension();
-        dbg!(&ratio);
         if ratio.is_unitless() {
             Some(Self { number: self.number * ratio.number, unit: unit.clone() })
         } else {
@@ -183,21 +172,21 @@ impl SciQuantity {
     }
 }
 
-/// Derives From and Into for types that already convert into a `SciNum`.
+/// Derives From and Into for types that already convert into a `SciDecimal`.
 macro_rules! impl_from_for_sci_quant {
     ($t:ty) => {
-        impl From<$t> for SciQuantity {
-            fn from(n: $t) -> SciQuantity {
-                SciQuantity {
+        impl From<$t> for Quantity<SciDecimal> {
+            fn from(n: $t) -> Quantity<SciDecimal> {
+                Quantity {
                     number: n.into(),
                     unit: Unit::one(),
                 }
             }
         }
 
-        impl From<Quantity<$t>> for SciQuantity {
-            fn from(q: Quantity<$t>) -> SciQuantity {
-                SciQuantity {
+        impl From<Quantity<$t>> for Quantity<SciDecimal> {
+            fn from(q: Quantity<$t>) -> Quantity<SciDecimal> {
+                Quantity {
                     number: q.number.into(),
                     unit: q.unit,
                 }
@@ -210,74 +199,69 @@ impl_from_for_sci_quant!(i8);
 impl_from_for_sci_quant!(i16);
 impl_from_for_sci_quant!(i32);
 impl_from_for_sci_quant!(i64);
-impl_from_for_sci_quant!(i128);
-impl_from_for_sci_quant!(isize);
 impl_from_for_sci_quant!(u8);
 impl_from_for_sci_quant!(u16);
 impl_from_for_sci_quant!(u32);
 impl_from_for_sci_quant!(u64);
-impl_from_for_sci_quant!(u128);
-impl_from_for_sci_quant!(usize);
-impl_from_for_sci_quant!(Decimal);
 
-// Arithmetic functions for correlated uncertainties
-impl SciQuantity {
-    /// Adds two quantities and propagates the uncertainties as appropriate for
-    /// the given correlation.
-    pub fn add_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
-    where
-        T: Into<Decimal>,
-    {
-        if self.unit == rhs.unit {
-            Self::new(
-                self.number.add_with_correlation(rhs.number, correlation),
-                self.unit,
-            )
-        } else {
-            panic!()
-        }
-    }
-
-    /// Subtracts two quantities and propagates the uncertainties as appropriate
-    /// for the given correlation.
-    pub fn sub_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
-    where
-        T: Into<Decimal>,
-    {
-        if self.unit == rhs.unit {
-            Self::new(
-                self.number.sub_with_correlation(rhs.number, correlation),
-                self.unit,
-            )
-        } else {
-            panic!()
-        }
-    }
-
-    /// Multiplies two quantities and propagates the uncertainties as
-    /// appropriate for the given correlation.
-    pub fn mul_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
-    where
-        T: Into<Decimal> + Copy,
-    {
-        Self::new(
-            self.number.mul_with_correlation(rhs.number, correlation),
-            (self.unit * rhs.unit).cancelled_by_unit(),
-        )
-    }
-
-    /// Divides two quantities and propagates the uncertainties as appropriate
-    /// for the given correlation.
-    pub fn div_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
-    where
-        T: Into<Decimal> + Copy,
-    {
-        Self::new(
-            self.number.div_with_correlation(rhs.number, correlation),
-            (self.unit / rhs.unit).cancelled_by_unit(),
-        )
-    }
-}
+//// Arithmetic functions for correlated uncertainties
+//impl SciQuantity {
+//    /// Adds two quantities and propagates the uncertainties as appropriate for
+//    /// the given correlation.
+//    pub fn add_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+//    where
+//        T: Into<Decimal>,
+//    {
+//        if self.unit == rhs.unit {
+//            Self::new(
+//                self.number.add_with_correlation(rhs.number, correlation),
+//                self.unit,
+//            )
+//        } else {
+//            panic!()
+//        }
+//    }
+//
+//    /// Subtracts two quantities and propagates the uncertainties as appropriate
+//    /// for the given correlation.
+//    pub fn sub_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+//    where
+//        T: Into<Decimal>,
+//    {
+//        if self.unit == rhs.unit {
+//            Self::new(
+//                self.number.sub_with_correlation(rhs.number, correlation),
+//                self.unit,
+//            )
+//        } else {
+//            panic!()
+//        }
+//    }
+//
+//    /// Multiplies two quantities and propagates the uncertainties as
+//    /// appropriate for the given correlation.
+//    pub fn mul_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+//    where
+//        T: Into<Decimal> + Copy,
+//    {
+//        Self::new(
+//            self.number.mul_with_correlation(rhs.number, correlation),
+//            (self.unit * rhs.unit).cancelled_by_unit(),
+//        )
+//    }
+//
+//    /// Divides two quantities and propagates the uncertainties as appropriate
+//    /// for the given correlation.
+//    pub fn div_with_correlation<T>(self, rhs: Self, correlation: T) -> Self
+//    where
+//        T: Into<Decimal> + Copy,
+//    {
+//        Self::new(
+//            self.number.div_with_correlation(rhs.number, correlation),
+//            (self.unit / rhs.unit).cancelled_by_unit(),
+//        )
+//    }
+//}
 
 impl<T: Num + Display> Display for Quantity<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -327,7 +311,7 @@ pub(crate) mod py {
     impl PyQuantity {
         #[new]
         fn new(number: PyIntoSciNum, unit: PyUnit) -> Self {
-            let number: SciNum = number.try_into().unwrap();
+            let number: SciDecimal = number.try_into().unwrap();
             Self(Quantity::new(number, unit.into_inner()))
         }
 
@@ -395,13 +379,13 @@ pub(crate) mod py {
                 }
                 PyQuantityArithmeticEnum::Int(i) => Self::from(self.owned_inner() * i),
                 PyQuantityArithmeticEnum::Float(f) => {
-                    Self::from(self.owned_inner() * SciNum::from_f64_exact(f).unwrap())
+                    Self::from(self.owned_inner() * SciDecimal::from_f64_exact(f).unwrap())
                 }
                 PyQuantityArithmeticEnum::Decimal(d) => {
-                    Self::from(self.owned_inner() * SciNum::new_exact(d))
+                    Self::from(self.owned_inner() * SciDecimal::new(d))
                 }
                 PyQuantityArithmeticEnum::String(s) => {
-                    Self::from(self.owned_inner() * SciNum::from_str(&s).unwrap())
+                    Self::from(self.owned_inner() * SciDecimal::from_str(&s).unwrap())
                 }
             }
         }
@@ -416,13 +400,13 @@ pub(crate) mod py {
                 }
                 PyQuantityArithmeticEnum::Int(i) => Self::from(i * self.owned_inner()),
                 PyQuantityArithmeticEnum::Float(f) => {
-                    Self::from(SciNum::from_f64_exact(f).unwrap() * self.owned_inner())
+                    Self::from(SciDecimal::from_f64_exact(f).unwrap() * self.owned_inner())
                 }
                 PyQuantityArithmeticEnum::Decimal(d) => {
-                    Self::from(SciNum::new_exact(d) * self.owned_inner())
+                    Self::from(SciDecimal::new(d) * self.owned_inner())
                 }
                 PyQuantityArithmeticEnum::String(s) => {
-                    Self::from(SciNum::from_str(&s).unwrap() * self.owned_inner())
+                    Self::from(SciDecimal::from_str(&s).unwrap() * self.owned_inner())
                 }
             }
         }
@@ -437,13 +421,13 @@ pub(crate) mod py {
                 }
                 PyQuantityArithmeticEnum::Int(i) => Self::from(self.owned_inner() / i),
                 PyQuantityArithmeticEnum::Float(f) => {
-                    Self::from(self.owned_inner() / SciNum::from_f64_exact(f).unwrap())
+                    Self::from(self.owned_inner() / SciDecimal::from_f64_exact(f).unwrap())
                 }
                 PyQuantityArithmeticEnum::Decimal(d) => {
-                    Self::from(self.owned_inner() / SciNum::new_exact(d))
+                    Self::from(self.owned_inner() / SciDecimal::new(d))
                 }
                 PyQuantityArithmeticEnum::String(s) => {
-                    Self::from(self.owned_inner() / SciNum::from_str(&s).unwrap())
+                    Self::from(self.owned_inner() / SciDecimal::from_str(&s).unwrap())
                 }
             }
         }
@@ -458,13 +442,13 @@ pub(crate) mod py {
                 }
                 PyQuantityArithmeticEnum::Int(i) => Self::from(i / self.owned_inner()),
                 PyQuantityArithmeticEnum::Float(f) => {
-                    Self::from(SciNum::from_f64_exact(f).unwrap() / self.owned_inner())
+                    Self::from(SciDecimal::from_f64_exact(f).unwrap() / self.owned_inner())
                 }
                 PyQuantityArithmeticEnum::Decimal(d) => {
-                    Self::from(SciNum::new_exact(d) / self.owned_inner())
+                    Self::from(SciDecimal::new(d) / self.owned_inner())
                 }
                 PyQuantityArithmeticEnum::String(s) => {
-                    Self::from(SciNum::from_str(&s).unwrap() / self.owned_inner())
+                    Self::from(SciDecimal::from_str(&s).unwrap() / self.owned_inner())
                 }
             }
         }
@@ -506,7 +490,7 @@ pub(crate) mod py {
         }
 
         fn with_uncertainty(&self, uncertainty: PyIntoSciNum) -> Self {
-            let uncertainty: SciNum = uncertainty.try_into().unwrap();
+            let uncertainty: SciDecimal = uncertainty.try_into().unwrap();
             let new_inner: SciQuantity = self.owned_inner().with_uncertainty(uncertainty);
             Self(new_inner)
         }
@@ -577,7 +561,9 @@ pub(crate) mod py {
 
 #[cfg(test)]
 mod tests {
-    use rust_decimal_macros::dec;
+    use std::str::FromStr;
+
+    use scinum::sci;
 
     use crate::{
         prefix::Prefix, unit::{LinearUnit, LinearUnitType}, unit128::Unit128
@@ -587,7 +573,7 @@ mod tests {
 
     #[test]
     fn new() {
-        let n = SciNum::new(5, 0);
+        let n = SciDecimal::new(5, 0);
         let u = Unit::new(LinearUnit {
             id: Unit128::SECOND,
             utype: LinearUnitType::Base,
@@ -595,7 +581,7 @@ mod tests {
             symbol: Some(String::from("s")),
             name: Some(String::from("second")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         });
         let q = Quantity::new(n, u.clone());
@@ -605,7 +591,7 @@ mod tests {
 
     #[test]
     fn dimensions() {
-        let n = SciNum::new(5, 0);
+        let n = SciDecimal::new(5, 0);
         let u = Unit::new(LinearUnit {
             id: Unit128::SECOND,
             utype: LinearUnitType::Base,
@@ -613,7 +599,7 @@ mod tests {
             symbol: Some(String::from("s")),
             name: Some(String::from("second")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         });
         let q = Quantity::new(n, u);
@@ -622,7 +608,7 @@ mod tests {
 
     #[test]
     fn uncertainty() {
-        let n = SciNum::new(20, 1);
+        let n = SciDecimal::new(20, 1);
         let u = Unit::new(LinearUnit {
             id: Unit128::SECOND,
             utype: LinearUnitType::Base,
@@ -630,11 +616,11 @@ mod tests {
             symbol: Some(String::from("s")),
             name: Some(String::from("second")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         });
         let q = Quantity::new(n, u.clone());
-        assert_eq!(q.uncertainty(), Quantity::new(SciNum::from(1), u));
+        assert_eq!(q.uncertainty(), Quantity::new(SciDecimal::from(1), u));
     }
 
     #[test]
@@ -646,14 +632,14 @@ mod tests {
             symbol: Some(String::from("s")),
             name: Some(String::from("second")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         });
-        let q1 = Quantity::new(SciNum::new(5, 0), s.clone());
-        let q2 = Quantity::new(SciNum::new(8, 0), s.clone());
+        let q1 = Quantity::new(SciDecimal::new(5, 0), s.clone());
+        let q2 = Quantity::new(SciDecimal::new(8, 0), s.clone());
         assert_eq!(
             q1 * q2,
-            Quantity::new(SciNum::new(40, 0), s.clone() * s.clone())
+            Quantity::new(SciDecimal::new(40, 0), s.clone() * s.clone())
         );
     }
 
@@ -666,12 +652,12 @@ mod tests {
             symbol: Some(String::from("s")),
             name: Some(String::from("second")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         });
-        let q1 = Quantity::new(SciNum::new(40, 0), s.clone() * s.clone());
-        let q2 = Quantity::new(SciNum::new(8, 0), s.clone());
-        assert_eq!(q1 / q2, Quantity::new(SciNum::new(5, 0), s.clone()));
+        let q1 = Quantity::new(SciDecimal::new(40, 0), s.clone() * s.clone());
+        let q2 = Quantity::new(SciDecimal::new(8, 0), s.clone());
+        assert_eq!(q1 / q2, Quantity::new(SciDecimal::new(5, 0), s.clone()));
     }
 
     #[test]
@@ -683,7 +669,7 @@ mod tests {
             symbol: Some(String::from("m")),
             name: Some(String::from("metre")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         });
         let ft = Unit::new(LinearUnit {
@@ -693,11 +679,11 @@ mod tests {
             symbol: Some(String::from("ft")),
             name: Some(String::from("foot")),
             prefix: None,
-            number: SciNum::new_exact(dec!(0.3048)),
+            number: SciDecimal::from_str("0.3048").unwrap(),
             factors: m.to_factors(),
         });
-        let q1: SciQuantity = (dec!(0.3048) * m).into();
-        let q2: SciQuantity = SciNum::ONE * ft;
+        let q1: Quantity<SciDecimal> = (sci!(0.3048) * m).into();
+        let q2: Quantity<SciDecimal> = SciDecimal::ONE * ft;
         assert_eq!(q1.in_base(), q2.in_base());
     }
 
@@ -710,11 +696,11 @@ mod tests {
             symbol: Some(String::from("m")),
             name: Some(String::from("metre")),
             prefix: None,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: Vec::new(),
         });
         let km = Prefix::kilo * m.clone();
-        let q: SciQuantity = SciNum::new_exact(3000) * m;
-        assert_eq!(q.in_unit(&km).unwrap(), SciNum::new_exact(3) * km);
+        let q: Quantity<SciDecimal> = SciDecimal::new(3000, 0) * m;
+        assert_eq!(q.in_unit(&km).unwrap(), SciDecimal::new(3, 0) * km);
     }
 }

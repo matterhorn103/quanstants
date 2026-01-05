@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 use num_rational::Ratio;
-use num_traits::ToPrimitive;
+use num_traits::{Pow, ToPrimitive};
+use scinum::SciDecimal;
 use std::{
     fmt,
     ops::{Add, AddAssign, Deref, Div, Mul, Neg, Sub},
@@ -45,6 +46,11 @@ impl Frac {
 
     pub fn is_negative(&self) -> bool {
         self.0 < Ratio::ZERO
+    }
+
+    #[inline]
+    pub fn is_integer(&self) -> bool {
+        self.0.is_integer()
     }
 
     pub fn to_superscript(&self) -> String {
@@ -175,6 +181,18 @@ impl Div<i8> for Frac {
     type Output = Self;
     fn div(self, rhs: i8) -> Self {
         Self(self.0 / rhs)
+    }
+}
+
+impl Pow<Frac> for SciDecimal {
+    type Output = SciDecimal;
+
+    fn pow(self, rhs: Frac) -> SciDecimal {
+        if rhs.is_integer() {
+            self.powi(rhs.0.to_i32().unwrap())
+        } else {
+            todo!()
+        }
     }
 }
 

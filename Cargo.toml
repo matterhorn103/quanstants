@@ -9,11 +9,12 @@ name = "quanstants"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
+bigdecimal = "0.4.10"
 indexmap = "2.12.1"
 num-rational = "0.4.2"
 num-traits = "0.2.19"
 regex = "1.12.2"
-rust_decimal_macros = "1.38.0"
+scinum = { version = "0.1.0", path = "../scinum" }
 serde_with = "3.15.1"
 toml = "0.9.8"
 
@@ -21,15 +22,11 @@ toml = "0.9.8"
 version = "1.0.228"
 features = ["derive"]
 
-[dependencies.rust_decimal]
-version = "1.38.0"
-features = ["maths"]
-
 [dependencies.pyo3]
 optional = true
 version = "0.26.0"
 # "abi3-py38" tells pyo3 (and maturin) to build using the stable ABI with minimum Python version 3.8
-features = ["abi3-py310", "rust_decimal"]
+features = ["abi3-py310", "bigdecimal"]
 
 #[dependencies.derive_more]
 #version = "2.0.1"

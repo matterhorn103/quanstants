@@ -4,8 +4,9 @@
 #![allow(non_camel_case_types)]
 
 use std::{fmt, str::FromStr};
+use scinum::SciDecimal;
 
-use crate::{error::QuanstantsError, scinum::SciNum};
+use crate::error::QuanstantsError;
 
 #[derive(
     Copy,
@@ -207,40 +208,40 @@ impl Prefix {
         }
     }
 
-    pub fn value(&self) -> SciNum {
+    pub fn value(&self) -> SciDecimal {
         match self {
-            Self::quecto => SciNum::exact_from_scientific_parts(1, -30),
-            Self::ronto => SciNum::exact_from_scientific_parts(1, -27),
-            Self::yocto => SciNum::exact_from_scientific_parts(1, -24),
-            Self::zepto => SciNum::exact_from_scientific_parts(1, -21),
-            Self::atto => SciNum::exact_from_scientific_parts(1, -18),
-            Self::femto => SciNum::exact_from_scientific_parts(1, -15),
-            Self::pico => SciNum::exact_from_scientific_parts(1, -12),
-            Self::nano => SciNum::exact_from_scientific_parts(1, -9),
-            Self::micro => SciNum::exact_from_scientific_parts(1, -6),
-            Self::milli => SciNum::exact_from_scientific_parts(1, -3),
-            Self::centi => SciNum::exact_from_scientific_parts(1, -2),
-            Self::deci => SciNum::exact_from_scientific_parts(1, -1),
-            Self::deca => SciNum::exact_from_scientific_parts(1, 1),
-            Self::hecto => SciNum::exact_from_scientific_parts(1, 2),
-            Self::kilo => SciNum::exact_from_scientific_parts(1, 3),
-            Self::mega => SciNum::exact_from_scientific_parts(1, 6),
-            Self::giga => SciNum::exact_from_scientific_parts(1, 9),
-            Self::tera => SciNum::exact_from_scientific_parts(1, 12),
-            Self::peta => SciNum::exact_from_scientific_parts(1, 15),
-            Self::exa => SciNum::exact_from_scientific_parts(1, 18),
-            Self::zetta => SciNum::exact_from_scientific_parts(1, 21),
-            Self::yotta => SciNum::exact_from_scientific_parts(1, 24),
-            Self::ronna => SciNum::exact_from_scientific_parts(1, 27),
-            Self::quetta => SciNum::exact_from_scientific_parts(1, 30),
-            Self::kibi => SciNum::new_exact(1024).powi(1),
-            Self::mebi => SciNum::new_exact(1024).powi(2),
-            Self::gibi => SciNum::new_exact(1024).powi(3),
-            Self::tebi => SciNum::new_exact(1024).powi(4),
-            Self::pebi => SciNum::new_exact(1024).powi(5),
-            Self::exbi => SciNum::new_exact(1024).powi(6),
-            Self::zebi => SciNum::new_exact(1024).powi(7),
-            Self::yobi => SciNum::new_exact(1024).powi(8),
+            Self::quecto => SciDecimal::new(1, -30),
+            Self::ronto => SciDecimal::new(1, -27),
+            Self::yocto => SciDecimal::new(1, -24),
+            Self::zepto => SciDecimal::new(1, -21),
+            Self::atto => SciDecimal::new(1, -18),
+            Self::femto => SciDecimal::new(1, -15),
+            Self::pico => SciDecimal::new(1, -12),
+            Self::nano => SciDecimal::new(1, -9),
+            Self::micro => SciDecimal::new(1, -6),
+            Self::milli => SciDecimal::new(1, -3),
+            Self::centi => SciDecimal::new(1, -2),
+            Self::deci => SciDecimal::new(1, -1),
+            Self::deca => SciDecimal::new(1, 1),
+            Self::hecto => SciDecimal::new(1, 2),
+            Self::kilo => SciDecimal::new(1, 3),
+            Self::mega => SciDecimal::new(1, 6),
+            Self::giga => SciDecimal::new(1, 9),
+            Self::tera => SciDecimal::new(1, 12),
+            Self::peta => SciDecimal::new(1, 15),
+            Self::exa => SciDecimal::new(1, 18),
+            Self::zetta => SciDecimal::new(1, 21),
+            Self::yotta => SciDecimal::new(1, 24),
+            Self::ronna => SciDecimal::new(1, 27),
+            Self::quetta => SciDecimal::new(1, 30),
+            Self::kibi => SciDecimal::new(1024, 0).powi(1),
+            Self::mebi => SciDecimal::new(1024, 0).powi(2),
+            Self::gibi => SciDecimal::new(1024, 0).powi(3),
+            Self::tebi => SciDecimal::new(1024, 0).powi(4),
+            Self::pebi => SciDecimal::new(1024, 0).powi(5),
+            Self::exbi => SciDecimal::new(1024, 0).powi(6),
+            Self::zebi => SciDecimal::new(1024, 0).powi(7),
+            Self::yobi => SciDecimal::new(1024, 0).powi(8),
         }
     }
 
@@ -301,8 +302,8 @@ impl Prefix {
     }
 }
 
-impl From<Prefix> for SciNum {
-    fn from(p: Prefix) -> SciNum {
+impl From<Prefix> for SciDecimal {
+    fn from(p: Prefix) -> SciDecimal {
         p.value()
     }
 }

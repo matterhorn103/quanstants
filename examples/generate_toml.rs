@@ -4,7 +4,7 @@ use quanstants::{
     context::Context,
     defs::{DefFile, QuantityDef, UnitDef},
     fraction::Frac,
-    scinum::SciNum,
+    SciDecimal,
 };
 
 fn def_from_derived_unit(ctx: &Context, unit_name: &str) -> UnitDef {
@@ -25,8 +25,8 @@ fn def_from_derived_unit(ctx: &Context, unit_name: &str) -> UnitDef {
         source: None,
         dimensions: None,
         value: Some(QuantityDef {
-            number: SciNum::ONE,
-            uncertainty: Some(SciNum::ZERO),
+            number: SciDecimal::ONE,
+            uncertainty: Some(SciDecimal::ZERO),
             unit: unit_factors,
         }),
     }

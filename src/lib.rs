@@ -13,9 +13,10 @@ pub mod ops;
 pub mod prefix;
 pub mod quantity;
 pub mod reg;
-pub mod scinum;
 pub mod unit;
 pub mod unit128;
+
+pub use scinum::{SciNum, SciDecimal, SciFloat};
 
 #[cfg(feature = "python")]
 mod bindings {

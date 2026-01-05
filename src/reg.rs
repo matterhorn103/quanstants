@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use std::collections::HashMap;
+use scinum::{SciDecimal, SciNum};
 
 use crate::{
     defs::{DefFile, UnitDef, units::UnitModule},
@@ -9,7 +10,6 @@ use crate::{
     error::QuanstantsError,
     fraction::Frac,
     prefix::Prefix,
-    scinum::SciNum,
     unit::{LinearFactor, LinearUnit, LinearUnitType, Unit},
     unit128::Unit128,
 };
@@ -95,7 +95,7 @@ impl UnitRegistry {
             symbol: Some(symbol),
             name: Some(name),
             prefix,
-            number: SciNum::ONE,
+            number: SciDecimal::ONE,
             factors: vec![],
         })
     }
@@ -107,7 +107,7 @@ impl UnitRegistry {
         name: String,
         prefix: Option<Prefix>,
     ) -> Unit128 {
-        let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
+        let id = Unit128::new(SciDecimal::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
         self.insert_under_symbol_checked(symbol, unit.clone());
@@ -123,7 +123,7 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
         alt_names: Vec<String>,
     ) -> Unit128 {
-        let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
+        let id = Unit128::new(SciDecimal::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
         for n in alt_names {
@@ -144,7 +144,7 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
         aliases: Vec<String>,
     ) -> Unit128 {
-        let id = Unit128::new(SciNum::ONE, dimensions, 0x00);
+        let id = Unit128::new(SciDecimal::ONE, dimensions, 0x00);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
         for alias in aliases {
@@ -161,7 +161,7 @@ impl UnitRegistry {
         symbol: String,
         name: String,
         prefix: Option<Prefix>,
-        proportionality_factor: SciNum,
+        proportionality_factor: SciDecimal,
         unit_factors: Vec<(Unit, Frac)>,
     ) -> Unit {
         Unit::new(LinearUnit {
@@ -184,7 +184,7 @@ impl UnitRegistry {
 
     fn calculate_derived_id(
         prefix: Option<Prefix>,
-        proportionality_factor: SciNum,
+        proportionality_factor: SciDecimal,
         unit_factors: &[(Unit, Frac)],
     ) -> Unit128 {
         // Build the compound unit representing the unit terms only, ignoring any prefix
@@ -195,8 +195,8 @@ impl UnitRegistry {
         let cmpd = Unit128::new_compound(unit_factors.iter().map(|x| (x.0.id, x.1)).collect());
         if let Some(p) = prefix {
             if p.is_binary()
-                && proportionality_factor == SciNum::ONE
-                && cmpd.factor() == SciNum::ONE
+                && proportionality_factor == SciDecimal::ONE
+                && cmpd.factor() == SciDecimal::ONE
             {
                 // Encode binary prefix using binary scheme
                 todo!()
@@ -231,7 +231,7 @@ impl UnitRegistry {
         symbol: String,
         name: String,
         prefix: Option<Prefix>,
-        proportionality_factor: SciNum,
+        proportionality_factor: SciDecimal,
         unit_factors: Vec<(Unit, Frac)>,
     ) -> Unit128 {
         let id = match id {
@@ -274,7 +274,7 @@ impl UnitRegistry {
         symbol: String,
         name: String,
         prefix: Option<Prefix>,
-        proportionality_factor: SciNum,
+        proportionality_factor: SciDecimal,
         unit_factors: Vec<(Unit, Frac)>,
         alt_names: Vec<String>,
     ) -> Unit128 {
@@ -326,7 +326,7 @@ impl UnitRegistry {
         symbol: String,
         name: String,
         prefix: Option<Prefix>,
-        proportionality_factor: SciNum,
+        proportionality_factor: SciDecimal,
         unit_factors: Vec<(Unit, Frac)>,
         aliases: Vec<String>,
     ) -> Unit128 {

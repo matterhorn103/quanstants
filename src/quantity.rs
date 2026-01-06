@@ -12,16 +12,16 @@ use scinum::{SciNum, SciDecimal};
 use crate::{dimensions::Dimensions, unit::Unit};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
-pub struct Quantity<T>
+pub struct Quantity<N>
 where
-    T: Num,
+    N: Num,
 {
-    pub number: T,
+    pub number: N,
     pub unit: Unit,
 }
 
-impl<T: Num> Quantity<T> {
-    pub fn new(number: T, unit: Unit) -> Self {
+impl<N: Num> Quantity<N> {
+    pub fn new(number: N, unit: Unit) -> Self {
         Self { number, unit }
     }
 
@@ -43,7 +43,7 @@ impl<T: Num> Quantity<T> {
     }
 }
 
-impl<T: Num> Add for Quantity<T> {
+impl<N: Num> Add for Quantity<N> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
@@ -55,7 +55,7 @@ impl<T: Num> Add for Quantity<T> {
     }
 }
 
-impl<T: Num> Sub for Quantity<T> {
+impl<N: Num> Sub for Quantity<N> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
@@ -67,7 +67,7 @@ impl<T: Num> Sub for Quantity<T> {
     }
 }
 
-impl<T: Num> Mul for Quantity<T> {
+impl<N: Num> Mul for Quantity<N> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
@@ -78,7 +78,7 @@ impl<T: Num> Mul for Quantity<T> {
     }
 }
 
-impl<T: Num> Div for Quantity<T> {
+impl<N: Num> Div for Quantity<N> {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
@@ -93,7 +93,7 @@ impl<T: Num> Div for Quantity<T> {
 //impl<T: SciNum> Quantity<T> {
 impl Quantity<SciDecimal> {
     pub fn uncertainty(&self) -> Self {
-        Self::new(self.number.uncertainty().into(), self.unit.clone())
+        Self::new(self.number.uncertainty(), self.unit.clone())
     }
 
     /// Creates a new `SciQuantity` with the same number and unit but the
@@ -172,7 +172,18 @@ impl Quantity<SciDecimal> {
     }
 }
 
-/// Derives From and Into for types that already convert into a `SciDecimal`.
+/// Blanket implementation of From and Into for numeric types to enable direct
+/// conversion to corresponding unitless quantities
+impl<N: Num> From<N> for Quantity<N> {
+    fn from(n: N) -> Self {
+        Quantity {
+            number: n,
+            unit: Unit::one(),
+        }
+    }
+}
+
+/// Derives From and Into for integer types that already convert into a `SciDecimal`.
 macro_rules! impl_from_for_sci_quant {
     ($t:ty) => {
         impl From<$t> for Quantity<SciDecimal> {
@@ -263,7 +274,7 @@ impl_from_for_sci_quant!(u64);
 //    }
 //}
 
-impl<T: Num + Display> Display for Quantity<T> {
+impl<N: Num + Display> Display for Quantity<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_unitless() {
             write!(f, "{}", self.number)
@@ -682,7 +693,7 @@ mod tests {
             number: SciDecimal::from_str("0.3048").unwrap(),
             factors: m.to_factors(),
         });
-        let q1: Quantity<SciDecimal> = (sci!(0.3048) * m).into();
+        let q1: Quantity<SciDecimal> = sci!(0.3048) * m;
         let q2: Quantity<SciDecimal> = SciDecimal::ONE * ft;
         assert_eq!(q1.in_base(), q2.in_base());
     }

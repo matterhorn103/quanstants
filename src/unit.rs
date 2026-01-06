@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use indexmap::IndexMap;
 use num_traits::{Inv, Pow};
-use scinum::SciDecimal;
+use scinum::{SciDecimal, SciNum};
 
 use crate::dimensions::Dimensions;
 use crate::fraction::Frac;
@@ -747,12 +747,12 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() * self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => Quantity::from(SciDecimal::from(i) * self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Int(i) => (SciDecimal::from(i) * self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
                     (SciDecimal::from_f64(f).unwrap() * self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::Decimal(d) => {
-                    Quantity::from(SciDecimal::from(d) * self.owned_inner()).into()
+                    (SciDecimal::from(d) * self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::String(s) => {
                     (SciDecimal::from_str(&s).unwrap() * self.owned_inner()).into()
@@ -769,12 +769,12 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() / self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => Quantity::from(SciDecimal::from(i) / self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Int(i) => (SciDecimal::from(i) / self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
                     (SciDecimal::from_f64(f).unwrap() / self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::Decimal(d) => {
-                    Quantity::from(SciDecimal::from(d) / self.owned_inner()).into()
+                    (SciDecimal::from(d) / self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::String(s) => {
                     (SciDecimal::from_str(&s).unwrap() / self.owned_inner()).into()

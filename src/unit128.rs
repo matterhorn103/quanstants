@@ -9,7 +9,7 @@ use std::{
 
 use num_traits::{Inv, Pow};
 use serde::{Deserialize, Serialize};
-use scinum::SciDecimal;
+use scinum::{SciDecimal, SciNum};
 
 use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac};
 

@@ -6,6 +6,7 @@ use quanstants::{
     fraction::Frac,
     SciDecimal,
 };
+use scinum::SciNum;
 
 fn def_from_derived_unit(ctx: &Context, unit_name: &str) -> UnitDef {
     let unit = ctx.units.get_by_name(unit_name).unwrap();

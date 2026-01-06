@@ -689,13 +689,13 @@ pub(crate) mod py {
     use std::str::FromStr;
 
     use crate::{
-        quantity::{SciQuantity, py::PyQuantity},
+        quantity::{Quantity, py::PyQuantity},
         unit128::py::PyUnitId,
     };
 
     use super::*;
+    use bigdecimal::BigDecimal;
     use pyo3::prelude::*;
-    use rust_decimal::Decimal;
 
     #[pyclass(frozen, name = "Unit")]
     #[derive(Clone, Debug)]
@@ -747,12 +747,12 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() * self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => SciQuantity::from(i * self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Int(i) => Quantity::from(SciDecimal::from(i) * self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
-                    (SciDecimal::from_f64_exact(f).unwrap() * self.owned_inner()).into()
+                    (SciDecimal::from_f64(f).unwrap() * self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::Decimal(d) => {
-                    SciQuantity::from(d * self.owned_inner()).into()
+                    Quantity::from(SciDecimal::from(d) * self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::String(s) => {
                     (SciDecimal::from_str(&s).unwrap() * self.owned_inner()).into()
@@ -769,12 +769,12 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() / self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => SciQuantity::from(i / self.owned_inner()).into(),
+                PyUnitArithmeticEnum::Int(i) => Quantity::from(SciDecimal::from(i) / self.owned_inner()).into(),
                 PyUnitArithmeticEnum::Float(f) => {
-                    (SciDecimal::from_f64_exact(f).unwrap() / self.owned_inner()).into()
+                    (SciDecimal::from_f64(f).unwrap() / self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::Decimal(d) => {
-                    SciQuantity::from(d / self.owned_inner()).into()
+                    Quantity::from(SciDecimal::from(d) / self.owned_inner()).into()
                 }
                 PyUnitArithmeticEnum::String(s) => {
                     (SciDecimal::from_str(&s).unwrap() / self.owned_inner()).into()
@@ -797,11 +797,11 @@ pub(crate) mod py {
         #[pyo3(transparent, annotation = "Quantity")]
         Quantity(PyQuantity),
         #[pyo3(transparent, annotation = "int")]
-        Int(isize),
+        Int(i64),
         #[pyo3(transparent, annotation = "float")]
         Float(f64),
         #[pyo3(transparent, annotation = "Decimal")]
-        Decimal(Decimal),
+        Decimal(BigDecimal),
         #[pyo3(transparent, annotation = "str")]
         String(String),
     }

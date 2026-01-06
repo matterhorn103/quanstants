@@ -202,12 +202,13 @@ impl Context {
 #[cfg(feature = "python")]
 pub(crate) mod py {
     use crate::{
-        prefix::py::PyPrefix, quantity::py::PyQuantity, reg::py::PyUnits, scinum::py::PyIntoSciNum,
+        prefix::py::PyPrefix, quantity::py::PyQuantity, reg::py::PyUnits, num::py::PyIntoSciDecimal,
         unit::py::PyUnit,
     };
 
     use super::*;
     use pyo3::{prelude::*, types::PyType};
+    use scinum::SciNum;
 
     /// The `Context` object is used to access units and constants and to create new
     /// quantities.
@@ -249,9 +250,9 @@ pub(crate) mod py {
         #[pyo3(signature = (number, unit, uncertainty=None))]
         fn quantity(
             &self,
-            number: PyIntoSciNum,
+            number: PyIntoSciDecimal,
             unit: PyUnit,
-            uncertainty: Option<PyIntoSciNum>,
+            uncertainty: Option<PyIntoSciDecimal>,
         ) -> PyQuantity {
             let num: SciDecimal = if let Some(u) = uncertainty {
                 let num: SciDecimal = number.try_into().unwrap();

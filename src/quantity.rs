@@ -209,11 +209,9 @@ macro_rules! impl_from_for_sci_quant {
 impl_from_for_sci_quant!(i8);
 impl_from_for_sci_quant!(i16);
 impl_from_for_sci_quant!(i32);
-impl_from_for_sci_quant!(i64);
 impl_from_for_sci_quant!(u8);
 impl_from_for_sci_quant!(u16);
 impl_from_for_sci_quant!(u32);
-impl_from_for_sci_quant!(u64);
 
 //// Arithmetic functions for correlated uncertainties
 //impl SciQuantity {

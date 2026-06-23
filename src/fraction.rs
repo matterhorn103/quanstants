@@ -62,35 +62,6 @@ impl Frac {
         output
     }
 
-    pub fn from_bits(b: u8) -> Self {
-        if b < 32 {
-            Self::from((b & 0x0F) as i8)
-        } else {
-            let num = (b & 0x0F) as i8;
-            let den = if b < 128 {
-                (b >> 4) as i8
-            } else {
-                // Sign extend denominator so that we regain the 8-bit rep from the 4-bit one
-                ((b >> 4) | 0xF0) as i8
-            };
-            Self::new(num, den)
-        }
-    }
-
-    pub fn to_bits(&self) -> u8 {
-        if self.is_zero() {
-            0
-        } else {
-            let num = self.numer().unsigned_abs();
-            let den = if self.is_negative() {
-                self.denom().abs().neg()
-            } else {
-                self.denom().abs()
-            };
-            (den as u8) << 4 | num
-        }
-    }
-
     pub fn to_f64(&self) -> f64 {
         self.0.to_f64().expect("Should only be None if numer and denom not expressible as i64, which is impossible for us")
     }
@@ -280,16 +251,6 @@ pub(crate) mod py {
         fn denom(&self) -> i8 {
             *self.0.denom()
         }
-
-        #[classmethod]
-        fn from_bits(_cls: &Bound<'_, PyType>, b: u8) -> Self {
-            PyFrac(Frac::from_bits(b))
-        }
-
-        #[allow(clippy::wrong_self_convention)]
-        fn to_bits(&self) -> u8 {
-            self.0.to_bits()
-        }
     }
 }
 
@@ -466,82 +427,6 @@ mod tests {
 
         let f = Frac::new(-3, 4);
         assert_eq!(f.to_superscript(), "⁻³⁄⁴");
-    }
-
-    #[test]
-    fn from_bits_zeroes() {
-        // All zeroes is defined as being 0 even though 0 would properly be represented
-        // as 0/1
-        let f = Frac::from_bits(0x00);
-        assert!(f.is_zero());
-    }
-
-    #[test]
-    fn from_bits_integers() {
-        // Test positive whole numbers
-        let f = Frac::from_bits(0x05);
-        assert_eq!(f, Frac::from(5));
-
-        let f = Frac::from_bits(0x0F);
-        assert_eq!(f, Frac::from(15));
-    }
-
-    #[test]
-    fn from_bits() {
-        // Test positive fractions
-        let f = Frac::from_bits(0x21); // num=1, den=2
-        assert_eq!(f, Frac::new(1, 2));
-
-        let f = Frac::from_bits(0x71); // num=1, den=7
-        assert_eq!(f, Frac::new(1, 7));
-
-        let f = Frac::from_bits(0x43); // num=3, den=4
-        assert_eq!(f, Frac::new(3, 4));
-    }
-
-    #[test]
-    fn from_bits_neg() {
-        // Test negative integers
-        let f = Frac::from_bits(0xF2); // num=2, den=-1
-        assert_eq!(f, Frac::from(-2));
-
-        // Test negative fractions
-        let f = Frac::from_bits(0xE3); // num=3, den=-2
-        assert_eq!(f, Frac::new(-3, 2));
-    }
-
-    #[test]
-    fn to_bits_zero() {
-        let f = Frac::new(0, 1);
-        assert_eq!(f.to_bits(), 0x00);
-    }
-
-    #[test]
-    fn to_bits_positive() {
-        let f = Frac::new(1, 2);
-        // Should encode as positive with num=1, den=2
-        assert_eq!(f.to_bits(), 0x21);
-    }
-
-    #[test]
-    fn to_bits_negative() {
-        let f = Frac::new(-1, 2);
-        assert_eq!(f.to_bits(), 0xE1);
-    }
-
-    #[test]
-    fn bits_roundtrip() {
-        for n in 0i8..=15 {
-            for d in -7i8..=7 {
-                if d == 0 {
-                    continue;
-                }
-                let f = Frac::new(n, d);
-                let bits = f.to_bits();
-                let f2 = Frac::from_bits(bits);
-                assert_eq!(f, f2, "Failed roundtrip for {n}/{d}");
-            }
-        }
     }
 
     #[test]

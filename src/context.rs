@@ -7,13 +7,8 @@ use num_traits::Num;
 use scinum::SciDecimal;
 
 use crate::{
-    error::QuanstantsError,
-    fraction::Frac,
-    prefix::Prefix,
-    quantity::{Quantity},
-    reg::UnitRegistry,
-    unit::Unit,
-    unit128::Unit128,
+    error::QuanstantsError, fraction::Frac, prefix::Prefix, quantity::Quantity, reg::UnitRegistry,
+    unit::Unit, unit128::Unit128,
 };
 
 #[derive(Debug)]
@@ -202,8 +197,8 @@ impl Context {
 #[cfg(feature = "python")]
 pub(crate) mod py {
     use crate::{
-        prefix::py::PyPrefix, quantity::py::PyQuantity, reg::py::PyUnits, num::py::PyIntoSciDecimal,
-        unit::py::PyUnit,
+        num::py::PyIntoSciDecimal, prefix::py::PyPrefix, quantity::py::PyQuantity,
+        reg::py::PyUnits, unit::py::PyUnit,
     };
 
     use super::*;
@@ -212,14 +207,14 @@ pub(crate) mod py {
 
     /// The `Context` object is used to access units and constants and to create new
     /// quantities.
-    /// 
+    ///
     /// A Python `Context` in `quanstants` is always pre-populated with:
     /// - the SI base units
     /// - the SI derived units
     /// - the non-SI units officially approved for use with the SI
     /// - common prefixed units
     /// - the seven defining fundamental constants of the SI (not yet implemented)
-    /// 
+    ///
     /// All of the pre-populated units and constants can be accessed as properties
     /// of the `Context`.
     /// Additionally, properties are defined for the symbols of the SI base and

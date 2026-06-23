@@ -1,10 +1,10 @@
 use std::fs;
 
 use quanstants::{
+    SciDecimal,
     context::Context,
     defs::{DefFile, QuantityDef, UnitDef},
     fraction::Frac,
-    SciDecimal,
 };
 use scinum::SciNum;
 

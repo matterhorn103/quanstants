@@ -3,13 +3,11 @@
 
 use std::collections::HashMap;
 
+use scinum::SciDecimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as, skip_serializing_none};
-use scinum::SciDecimal;
 
-use crate::{
-    dimensions::Dimensions, fraction::Frac, prefix::Prefix, unit128::Unit128,
-};
+use crate::{dimensions::Dimensions, fraction::Frac, prefix::Prefix, unit128::Unit128};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DefFile {

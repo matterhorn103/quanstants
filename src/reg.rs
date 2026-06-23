@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
 // SPDX-License-Identifier: MIT
 
-use std::collections::HashMap;
 use scinum::{SciDecimal, SciNum};
+use std::collections::HashMap;
 
 use crate::{
     defs::{DefFile, UnitDef, units::UnitModule},
@@ -382,30 +382,42 @@ impl UnitRegistry {
         let id = if def.base {
             if !def.alt_names.is_empty() {
                 self.add_base_with_alt_names(
-                    def.dimensions
-                        .ok_or(QuanstantsError::Definition(format!("Invalid dimensions for: {}", def.name)))?,
-                    def.symbol
-                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
+                    def.dimensions.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid dimensions for: {}",
+                        def.name
+                    )))?,
+                    def.symbol.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid symbol for: {}",
+                        def.name
+                    )))?,
                     def.name,
                     def.prefix,
                     def.alt_names,
                 )
             } else if !def.aliases.is_empty() {
                 self.add_base_with_aliases(
-                    def.dimensions
-                        .ok_or(QuanstantsError::Definition(format!("Invalid dimensions for: {}", def.name)))?,
-                    def.symbol
-                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
+                    def.dimensions.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid dimensions for: {}",
+                        def.name
+                    )))?,
+                    def.symbol.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid symbol for: {}",
+                        def.name
+                    )))?,
                     def.name,
                     def.prefix,
                     def.aliases,
                 )
             } else {
                 self.add_base(
-                    def.dimensions
-                        .ok_or(QuanstantsError::Definition(format!("Invalid dimensions for: {}", def.name)))?,
-                    def.symbol
-                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
+                    def.dimensions.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid dimensions for: {}",
+                        def.name
+                    )))?,
+                    def.symbol.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid symbol for: {}",
+                        def.name
+                    )))?,
                     def.name,
                     def.prefix,
                 )
@@ -427,8 +439,10 @@ impl UnitRegistry {
             if !def.alt_names.is_empty() {
                 self.add_derived_with_alt_names(
                     def.id,
-                    def.symbol
-                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
+                    def.symbol.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid symbol for: {}",
+                        def.name
+                    )))?,
                     def.name,
                     def.prefix,
                     proportionality_factor,
@@ -438,8 +452,10 @@ impl UnitRegistry {
             } else if !def.aliases.is_empty() {
                 self.add_derived_with_aliases(
                     def.id,
-                    def.symbol
-                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
+                    def.symbol.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid symbol for: {}",
+                        def.name
+                    )))?,
                     def.name,
                     def.prefix,
                     proportionality_factor,
@@ -449,8 +465,10 @@ impl UnitRegistry {
             } else {
                 self.add_derived(
                     def.id,
-                    def.symbol
-                        .ok_or(QuanstantsError::Definition(format!("Invalid symbol for: {}", def.name)))?,
+                    def.symbol.ok_or(QuanstantsError::Definition(format!(
+                        "Invalid symbol for: {}",
+                        def.name
+                    )))?,
                     def.name,
                     def.prefix,
                     proportionality_factor,

@@ -6,8 +6,8 @@ pub(crate) mod py {
     use std::str::FromStr;
 
     use bigdecimal::BigDecimal;
-    use scinum::{SciDecimal, SciNum};
     use pyo3::prelude::*;
+    use scinum::{SciDecimal, SciNum};
 
     use crate::error::QuanstantsError;
 
@@ -15,7 +15,7 @@ pub(crate) mod py {
     #[derive(Debug, FromPyObject)]
     pub(crate) enum PyIntoSciDecimal {
         #[pyo3(transparent, annotation = "int")]
-        Int(i64),
+        Int(i32),
         #[pyo3(transparent, annotation = "float")]
         Float(f64),
         #[pyo3(transparent, annotation = "Decimal")]
@@ -30,12 +30,13 @@ pub(crate) mod py {
         fn try_from(n: PyIntoSciDecimal) -> Result<SciDecimal, QuanstantsError> {
             match n {
                 PyIntoSciDecimal::Int(i) => Ok(SciDecimal::new(i.into(), 0)),
-                PyIntoSciDecimal::Float(f) => {
-                    Ok(SciDecimal::from_f64(f).ok_or(QuanstantsError::Cast)?)
+                PyIntoSciDecimal::Float(f) => Ok(SciDecimal::from(f)),
+                PyIntoSciDecimal::Decimal(d) => {
+                    SciDecimal::try_from(d).or(Err(QuanstantsError::Cast))
                 }
-                // TODO Replace with direct cast to SciDecimal once From<BigDecimal> is implemented
-                PyIntoSciDecimal::Decimal(d) => SciDecimal::from_str(&d.to_string()).or(Err(QuanstantsError::Cast)),
-                PyIntoSciDecimal::String(s) => SciDecimal::from_str(&s).or(Err(QuanstantsError::Cast)),
+                PyIntoSciDecimal::String(s) => {
+                    SciDecimal::from_str(&s).or(Err(QuanstantsError::Cast))
+                }
             }
         }
     }

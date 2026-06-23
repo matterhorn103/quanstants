@@ -8,8 +8,8 @@ use std::{
 };
 
 use num_traits::{Inv, Pow};
-use serde::{Deserialize, Serialize};
 use scinum::{SciDecimal, SciNum};
+use serde::{Deserialize, Serialize};
 
 use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac};
 
@@ -352,7 +352,11 @@ impl Div for Unit128 {
 
 impl Debug for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Unit128 {{ num: 0x{:X}, dim: 0x{:X} }}", self.num, self.dim)
+        write!(
+            f,
+            "Unit128 {{ num: 0x{:X}, dim: 0x{:X} }}",
+            self.num, self.dim
+        )
     }
 }
 
@@ -390,9 +394,9 @@ impl Unit128 {
     ///
     /// Currently panics if the factor is too large to be represented.
     pub(crate) fn factor_to_bits(factor: SciDecimal) -> u64 {
-        let shortened_factor: SciDecimal = if factor.sigfigs() > 16 {
+        let shortened_factor: SciDecimal = if factor.sf() > 16 {
             // TODO: Round rather than truncate
-            factor.truncate(16)
+            factor.trunc_sf(16)
         } else {
             factor
         };
@@ -424,16 +428,16 @@ impl Unit128 {
     /// Currently panics if either the factor or reference are too large to be
     /// represented.
     pub(crate) fn factor_and_reference_to_bits(factor: SciDecimal, reference: SciDecimal) -> u64 {
-        let shortened_factor: SciDecimal = if factor.sigfigs() > 6 {
+        let shortened_factor: SciDecimal = if factor.sf() > 6 {
             // TODO: Round rather than truncate
-            factor.truncate(6)
+            factor.trunc_sf(6)
         } else {
             factor
         };
 
-        let shortened_reference: SciDecimal = if reference.sigfigs() > 6 {
+        let shortened_reference: SciDecimal = if reference.sf() > 6 {
             // TODO: Round rather than truncate
-            reference.truncate(6)
+            reference.trunc_sf(6)
         } else {
             reference
         };
@@ -454,11 +458,10 @@ impl Unit128 {
     /// numeric component.
     pub(crate) fn bits_to_factor_and_reference(b: u64) -> (SciDecimal, SciDecimal) {
         let factor_exponent = (b & 0x0000_0000_0000_00FF) as i8;
-        let factor_significand = ((b & 0x0000_0000_FFFF_FF00) >> 8) + 1;
-        let factor =
-            SciDecimal::new(factor_significand.into(), factor_exponent.into());
+        let factor_significand = ((b & 0x0000_0000_FFFF_FF00) as u32 >> 8) + 1;
+        let factor = SciDecimal::new(factor_significand.into(), factor_exponent.into());
         let ref_exponent = ((b & 0x0000_00FF_0000_0000) >> 32) as i8;
-        let ref_significand = (b & 0xFFFF_FF00_0000_0000 >> 40) + 1;
+        let ref_significand = ((b & 0xFFFF_FF00_0000_0000) as u32 >> 40) + 1;
         let reference = SciDecimal::new(ref_significand.into(), ref_exponent.into());
         (factor, reference)
     }
@@ -768,10 +771,7 @@ mod tests {
             Unit128::factor_to_bits(SciDecimal::new(-3, 0)),
             0xFFFFFFFFFFFFFC00
         );
-        assert_eq!(
-            Unit128::factor_to_bits(sci!(0.3048)),
-            0xBE7FC
-        );
+        assert_eq!(Unit128::factor_to_bits(sci!(0.3048)), 0xBE7FC);
     }
 
     #[test]
@@ -794,10 +794,7 @@ mod tests {
             Unit128::bits_to_factor(0xFFFFFFFFFFFFFC00),
             SciDecimal::new(-3, 0)
         );
-        assert_eq!(
-            Unit128::bits_to_factor(0xBE7FC),
-            sci!(0.3048)
-        );
+        assert_eq!(Unit128::bits_to_factor(0xBE7FC), sci!(0.3048));
     }
 
     #[test]

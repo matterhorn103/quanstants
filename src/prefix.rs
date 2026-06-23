@@ -3,8 +3,9 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{fmt, str::FromStr};
+use num_traits::Float;
 use scinum::SciDecimal;
+use std::{fmt, str::FromStr};
 
 use crate::error::QuanstantsError;
 

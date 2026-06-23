@@ -37,7 +37,7 @@ pub struct LinearUnit {
     pub(crate) symbol: Option<String>, // Compound units have None for this
     pub(crate) name: Option<String>,   // Compound units have None for this
     pub(crate) prefix: Option<Prefix>, // Only possible for derived or base units
-    pub(crate) number: SciDecimal,         // 1 for everything except derived units
+    pub(crate) number: SciDecimal,     // 1 for everything except derived units
     pub(crate) factors: Vec<LinearFactor>, // Empty for base units and one
 }
 
@@ -689,6 +689,7 @@ pub(crate) mod py {
     use std::str::FromStr;
 
     use crate::{
+        error::QuanstantsError,
         quantity::{Quantity, py::PyQuantity},
         unit128::py::PyUnitId,
     };
@@ -747,16 +748,10 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() * self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => (SciDecimal::from(i) * self.owned_inner()).into(),
-                PyUnitArithmeticEnum::Float(f) => {
-                    (SciDecimal::from_f64(f).unwrap() * self.owned_inner()).into()
-                }
-                PyUnitArithmeticEnum::Decimal(d) => {
-                    (SciDecimal::from(d) * self.owned_inner()).into()
-                }
-                PyUnitArithmeticEnum::String(s) => {
-                    (SciDecimal::from_str(&s).unwrap() * self.owned_inner()).into()
-                }
+                _ => (SciDecimal::try_from(other).expect(
+                    "User is responsible for ensuring the value can be converted to a SciDecimal",
+                ) * self.owned_inner())
+                .into(),
             }
         }
 
@@ -769,16 +764,10 @@ pub(crate) mod py {
                 PyUnitArithmeticEnum::Quantity(q) => {
                     PyQuantity::from(q.into_inner() / self.owned_inner())
                 }
-                PyUnitArithmeticEnum::Int(i) => (SciDecimal::from(i) / self.owned_inner()).into(),
-                PyUnitArithmeticEnum::Float(f) => {
-                    (SciDecimal::from_f64(f).unwrap() / self.owned_inner()).into()
-                }
-                PyUnitArithmeticEnum::Decimal(d) => {
-                    (SciDecimal::from(d) / self.owned_inner()).into()
-                }
-                PyUnitArithmeticEnum::String(s) => {
-                    (SciDecimal::from_str(&s).unwrap() / self.owned_inner()).into()
-                }
+                _ => (SciDecimal::try_from(other).expect(
+                    "User is responsible for ensuring the value can be converted to a SciDecimal",
+                ) / self.owned_inner())
+                .into(),
             }
         }
 
@@ -797,7 +786,7 @@ pub(crate) mod py {
         #[pyo3(transparent, annotation = "Quantity")]
         Quantity(PyQuantity),
         #[pyo3(transparent, annotation = "int")]
-        Int(i64),
+        Int(i32),
         #[pyo3(transparent, annotation = "float")]
         Float(f64),
         #[pyo3(transparent, annotation = "Decimal")]
@@ -805,10 +794,40 @@ pub(crate) mod py {
         #[pyo3(transparent, annotation = "str")]
         String(String),
     }
+
+    impl TryFrom<PyUnitArithmeticEnum> for SciDecimal {
+        type Error = QuanstantsError;
+
+        /// Converts a Python integer, float, decimal, or string to a `SciDecimal`,
+        /// while failing for a `Quantity`.
+        ///
+        /// This function is infallible for integers and floats.
+        ///
+        /// This function returns an error for Python `Decimal`s if they cannot be
+        /// represented by `SciDecimal` and for strings if they do not successfully
+        /// parse to `SciDecimal`.
+        ///
+        /// This functions always fails if `value` is
+        /// `PyQuantityArithmeticEnum::Quantity`.
+        fn try_from(value: PyUnitArithmeticEnum) -> Result<Self, Self::Error> {
+            match value {
+                PyUnitArithmeticEnum::Quantity(q) => Err(QuanstantsError::Cast),
+                PyUnitArithmeticEnum::Int(i) => Ok(SciDecimal::from(i)),
+                PyUnitArithmeticEnum::Float(f) => Ok(SciDecimal::from(f)),
+                PyUnitArithmeticEnum::Decimal(d) => {
+                    SciDecimal::try_from(d).or(Err(QuanstantsError::Cast))
+                }
+                PyUnitArithmeticEnum::String(s) => {
+                    SciDecimal::from_str(&s).or(Err(QuanstantsError::Parse(s.to_string())))
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use num_traits::Float;
     use scinum::sci;
     use std::str::FromStr;
 

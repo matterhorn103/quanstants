@@ -783,6 +783,7 @@ name = "scinum"
 version = "0.1.0"
 dependencies = [
  "bigdecimal",
+ "num-integer",
  "num-traits",
  "regex",
  "rust_decimal",

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use num_rational::Ratio;
-use num_traits::{Pow, ToPrimitive};
+use num_traits::{Float, Pow, ToPrimitive};
 use scinum::SciDecimal;
 use std::{
     fmt,

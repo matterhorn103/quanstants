@@ -7,7 +7,7 @@ use std::{
 };
 
 use num_traits::{Num, Zero};
-use scinum::{SciNum, SciDecimal};
+use scinum::{SciDecimal, SciNum};
 
 use crate::{dimensions::Dimensions, unit::Unit};
 
@@ -117,7 +117,10 @@ impl Quantity<SciDecimal> {
     ///
     /// Has no effect for quantities with non-compound units.
     pub fn cancelled_by_unit(self) -> Self {
-        Self { number: self.number, unit: self.unit.cancelled_by_unit() }
+        Self {
+            number: self.number,
+            unit: self.unit.cancelled_by_unit(),
+        }
     }
 
     /// If the quantity has a compound unit, returns a new quantity with the
@@ -137,7 +140,10 @@ impl Quantity<SciDecimal> {
     /// Has no effect for quantities with non-compound units.
     pub fn cancelled_by_dimension(self) -> Self {
         let cancelled = self.unit.cancelled_by_dimension();
-        Self { number: self.number * cancelled.number, unit: cancelled.unit }
+        Self {
+            number: self.number * cancelled.number,
+            unit: cancelled.unit,
+        }
     }
 
     // This ought to be generic
@@ -152,11 +158,14 @@ impl Quantity<SciDecimal> {
 
     // This ought to be generic
     /// Returns the value of the `Quantity` when expressed in the given unit.
-    /// 
+    ///
     /// Returns `None` if the units have different dimensionality.
     pub fn in_unit(&self, unit: &Unit) -> Option<Self> {
         if self.number.is_zero() && self.number.is_exact() {
-            return Some(Self { number: SciDecimal::zero(), unit: unit.clone() })
+            return Some(Self {
+                number: SciDecimal::zero(),
+                unit: unit.clone(),
+            });
         };
         // Original quantity q0 = n0 * u0
         // The desired new unit is u1
@@ -165,7 +174,10 @@ impl Quantity<SciDecimal> {
         // Find n1 by: n1 = u0 / u1
         let ratio = (self.unit.value() / unit.value()).cancelled_by_dimension();
         if ratio.is_unitless() {
-            Some(Self { number: self.number * ratio.number, unit: unit.clone() })
+            Some(Self {
+                number: self.number * ratio.number,
+                unit: unit.clone(),
+            })
         } else {
             None
         }
@@ -286,11 +298,15 @@ impl<N: Num + Display> Display for Quantity<N> {
 pub(crate) mod py {
     use std::str::FromStr;
 
-    use crate::{num::py::{PyIntoSciDecimal, PySciDecimal}, unit::py::PyUnit};
+    use crate::{
+        error::QuanstantsError,
+        num::py::{PyIntoSciDecimal, PySciDecimal},
+        unit::py::PyUnit,
+    };
 
     use super::*;
-    use pyo3::prelude::*;
     use bigdecimal::BigDecimal;
+    use pyo3::prelude::*;
 
     #[pyclass(frozen, name = "Quantity")]
     #[derive(Clone, PartialEq, PartialOrd, Debug)]
@@ -345,7 +361,11 @@ pub(crate) mod py {
 
         fn __repr__(&self) -> String {
             let inner = self.borrow_inner();
-            let unit_symbol = if inner.is_unitless() { "(unitless)".to_string() } else { inner.unit.symbol(true) };
+            let unit_symbol = if inner.is_unitless() {
+                "(unitless)".to_string()
+            } else {
+                inner.unit.symbol(true)
+            };
             if inner.is_exact() {
                 format!("Quantity({}, {})", inner.number, unit_symbol)
             } else {
@@ -386,16 +406,10 @@ pub(crate) mod py {
                 PyQuantityArithmeticEnum::Unit(u) => {
                     Self::from(self.owned_inner() * u.into_inner())
                 }
-                PyQuantityArithmeticEnum::Int(i) => Self::from(self.owned_inner() * SciDecimal::from(i)),
-                PyQuantityArithmeticEnum::Float(f) => {
-                    Self::from(self.owned_inner() * SciDecimal::from_f64(f).unwrap())
-                }
-                PyQuantityArithmeticEnum::Decimal(d) => {
-                    Self::from(self.owned_inner() * SciDecimal::from(d))
-                }
-                PyQuantityArithmeticEnum::String(s) => {
-                    Self::from(self.owned_inner() * SciDecimal::from_str(&s).unwrap())
-                }
+                _ => Self::from(
+                    self.owned_inner() *
+                    SciDecimal::try_from(other).expect("User is responsible for ensuring the value can be converted to a SciDecimal")
+                )
             }
         }
 
@@ -407,16 +421,10 @@ pub(crate) mod py {
                 PyQuantityArithmeticEnum::Unit(u) => {
                     Self::from(u.into_inner() * self.owned_inner())
                 }
-                PyQuantityArithmeticEnum::Int(i) => Self::from(SciDecimal::from(i) * self.owned_inner()),
-                PyQuantityArithmeticEnum::Float(f) => {
-                    Self::from(SciDecimal::from_f64(f).unwrap() * self.owned_inner())
-                }
-                PyQuantityArithmeticEnum::Decimal(d) => {
-                    Self::from(SciDecimal::from(d) * self.owned_inner())
-                }
-                PyQuantityArithmeticEnum::String(s) => {
-                    Self::from(SciDecimal::from_str(&s).unwrap() * self.owned_inner())
-                }
+                _ => Self::from(
+                    SciDecimal::try_from(other).expect("User is responsible for ensuring the value can be converted to a SciDecimal")
+                        * self.owned_inner(),
+                ),
             }
         }
 
@@ -428,15 +436,12 @@ pub(crate) mod py {
                 PyQuantityArithmeticEnum::Unit(u) => {
                     Self::from(self.owned_inner() / u.into_inner())
                 }
-                PyQuantityArithmeticEnum::Int(i) => Self::from(self.owned_inner() / SciDecimal::from(i)),
-                PyQuantityArithmeticEnum::Float(f) => {
-                    Self::from(self.owned_inner() / SciDecimal::from_f64(f).unwrap())
-                }
-                PyQuantityArithmeticEnum::Decimal(d) => {
-                    Self::from(self.owned_inner() / SciDecimal::from(d))
-                }
-                PyQuantityArithmeticEnum::String(s) => {
-                    Self::from(self.owned_inner() / SciDecimal::from_str(&s).unwrap())
+                _ => {
+                    Self::from(
+                        self.owned_inner() / SciDecimal::try_from(other).expect(
+                            "User is responsible for ensuring the value can be converted to a SciDecimal"
+                        )
+                    )
                 }
             }
         }
@@ -449,16 +454,10 @@ pub(crate) mod py {
                 PyQuantityArithmeticEnum::Unit(u) => {
                     Self::from(u.into_inner() / self.owned_inner())
                 }
-                PyQuantityArithmeticEnum::Int(i) => Self::from(SciDecimal::from(i) / self.owned_inner()),
-                PyQuantityArithmeticEnum::Float(f) => {
-                    Self::from(SciDecimal::from_f64(f).unwrap() / self.owned_inner())
-                }
-                PyQuantityArithmeticEnum::Decimal(d) => {
-                    Self::from(SciDecimal::from(d) / self.owned_inner())
-                }
-                PyQuantityArithmeticEnum::String(s) => {
-                    Self::from(SciDecimal::from_str(&s).unwrap() / self.owned_inner())
-                }
+                _ => Self::from(
+                    SciDecimal::try_from(other).expect(
+                        "User is responsible for ensuring the value can be converted to a SciDecimal",
+                ) / self.owned_inner()),
             }
         }
 
@@ -558,13 +557,43 @@ pub(crate) mod py {
         #[pyo3(transparent, annotation = "Unit")]
         Unit(PyUnit),
         #[pyo3(transparent, annotation = "int")]
-        Int(i64),
+        Int(i32),
         #[pyo3(transparent, annotation = "float")]
         Float(f64),
         #[pyo3(transparent, annotation = "Decimal")]
         Decimal(BigDecimal),
         #[pyo3(transparent, annotation = "str")]
         String(String),
+    }
+
+    impl TryFrom<PyQuantityArithmeticEnum> for SciDecimal {
+        type Error = QuanstantsError;
+
+        /// Converts a Python integer, float, decimal, or string to a `SciDecimal`,
+        /// while failing for a `Quantity` or `Unit`.
+        ///
+        /// This function is infallible for integers and floats.
+        ///
+        /// This function returns an error for Python `Decimal`s if they cannot be
+        /// represented by `SciDecimal` and for strings if they do not successfully
+        /// parse to `SciDecimal`.
+        ///
+        /// This functions always fails if `value` is
+        /// `PyQuantityArithmeticEnum::Quantity` or `PyQuantityArithmeticEnum::Unit`.
+        fn try_from(value: PyQuantityArithmeticEnum) -> Result<Self, Self::Error> {
+            match value {
+                PyQuantityArithmeticEnum::Quantity(q) => Err(QuanstantsError::Cast),
+                PyQuantityArithmeticEnum::Unit(u) => Err(QuanstantsError::Cast),
+                PyQuantityArithmeticEnum::Int(i) => Ok(SciDecimal::from(i)),
+                PyQuantityArithmeticEnum::Float(f) => Ok(SciDecimal::from(f)),
+                PyQuantityArithmeticEnum::Decimal(d) => {
+                    SciDecimal::try_from(d).or(Err(QuanstantsError::Cast))
+                }
+                PyQuantityArithmeticEnum::String(s) => {
+                    SciDecimal::from_str(&s).or(Err(QuanstantsError::Parse(s.to_string())))
+                }
+            }
+        }
     }
 }
 
@@ -575,7 +604,9 @@ mod tests {
     use scinum::sci;
 
     use crate::{
-        prefix::Prefix, unit::{LinearUnit, LinearUnitType}, unit128::Unit128
+        prefix::Prefix,
+        unit::{LinearUnit, LinearUnitType},
+        unit128::Unit128,
     };
 
     use super::*;

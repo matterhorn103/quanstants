@@ -7,128 +7,353 @@ use std::{
     str::FromStr,
 };
 
-use num_traits::{Inv, Pow};
+use num_traits::{Float, Inv, Pow};
 use scinum::{SciDecimal, SciNum};
 use serde::{Deserialize, Serialize};
 
 use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac};
 
+/// The mathematical relationship between a written quantity with this unit and the equivalent reference value.
+///
+/// A "normal" quantity is understood to be the *product* of a number _x_ and a unit _λ_;
+/// for example, "3 ft" is understood to mean 3 × ft and to convert, ft can be
+/// expressed as ft = 0.3408 m and thus 3 ft = 3 × 0.3408 m = 1.0224 m
+///
+/// However, in order to generalize this to "non-linear" or "scale" units -- where
+/// a quantity of the form _x⋅u_ with that unit _u_ indicates a specific point on a
+/// scale, we must instead express quantities as *functions* of a number and a unit,
+/// where the unit is itself a function, and the value of the quantity is given by:
+///
+/// _Q_(_x_, _u_) = _u_(_x_)
+///
+/// where _x_ is the number of the quantity.
+///
+/// For each type of quantity the type of unit is defined by a specific functional form,
+/// and an individual unit is defined by the values of the parameters of that function.
+///
+/// For a linear quantity _Λ_:
+/// - _Λ_(_x_, _λ_) = _λ_(_x_, _k_, *λ*₀), where:
+///     - *λ*₀ is the other linear unit (usually SI) used to define the unit
+///     - _k_ is the proportionality factor, the number of the value of the unit
+///       when expressed in *λ*₀
+///     - The value of an individual unit is fully defined by its values of _k_ and *λ*₀
+///
+/// For a temperature on a scale, _Θ_:
+/// - _Θ_(_x_, _θ_) = _θ_(_x_, _y_, _k_, _λ_), where:
+///     - _λ_ is the (linear) unit of the reference absolute temperature
+///     - _y_ is the number of the reference absolute temperature (i.e. the value in _λ_ at 0 _θ_)
+///     - _k_ is the proportionality factor of the degree of the scale – the size of the degree when expressed in _λ_
+/// - A temperature on the scale _Θ_ is thus expressed as a linear quantity _Λ_ by:
+///     - _Θ_(_x_, _θ_) = _Λ_(_k_(_x_ + _y_), _λ_)
+/// - An individual temperature scale is thus fully defined by _λ_, _y_, and _k_,
+///   which can be linked to:
+///     - the magnitude of the scale's degree _d_ = _Λ_(_k_, _λ_)
+///     - the reference absolute temperature _r_ = _Λ_(_y_, _λ_)
+/// - For Celsius, _λ_ is kelvin, _y_ = 273.15, and _k_ = 1
+/// - For Fahrenheit, if _λ_ is the degree Rankine, _y_ = 459.67, and _k_ = 1
+///   i.e. −459.67 °F is 1 × (−459.67 + 459.67) = 0 °R
+///     - The degree Rankine is, despite the name, a linear unit of temperature,
+///       with _k_ = 5/9 and *λ*₀ = kelvin
+///     - Fahrenheit is therefore equivalently described by _y_ = 459.67, _k_ = 5/9
+///
+/// For a base-10 logarithmic quantity _Κ_:
+/// - _Κ_(_x_, _κ_) = _κ_(_x_, _y_, _k_, _λ_), where:
+///     - _λ_ is the (linear) unit of the reference quantity
+///     - _y_ is the number of the reference quantity when expressed in _λ_, or
+///       equivalently, the number of the value in _λ_ when _x_ = 0
+///     - _k_ is some scaling factor
+/// - _Κ_ is thus expressed as a linear quantity _Λ_ by:
+///     - _Κ_(_x_, _κ_) = _Λ_(_y_ × 10^(*k*⋅*x*), _λ_)
+/// - A logarithmic unit is thus fully defined by _λ_, _y_, and _k_
+///
+/// Similarly, a base-2 log quantity can be expressed as:
+/// - _Β_(_x_, _β_) = _β_(_x_, _y_, _k_, _λ_) = _Λ_(_y_ × 2^(*k*⋅*x*), _λ_)
+///
+/// …and a natural log quantity as:
+/// - _Ε_(_x_, _ε_) = _ε_(_x_, _y_, _k_, _λ_) = _Λ_(_y_ × *e*^(*k*⋅*x*), _λ_)
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-#[repr(u8)]
-pub enum Nibble {
-    X0 = 0x0,
-    X1 = 0x1,
-    X2 = 0x2,
-    X3 = 0x3,
-    X4 = 0x4,
-    X5 = 0x5,
-    X6 = 0x6,
-    X7 = 0x7,
-    X8 = 0x8,
-    X9 = 0x9,
-    XA = 0xA,
-    XB = 0xB,
-    XC = 0xC,
-    XD = 0xD,
-    XE = 0xE,
-    XF = 0xF,
+pub enum ScaleType {
+    Linear,
+    Temperature,
+    Base10Log,
+    NaturalLog,
+    Base2Log,
 }
 
-impl TryFrom<u8> for Nibble {
-    type Error = &'static str;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        if value > 0xF {
-            Err("Maximum value of a nibble is 15!")
-        } else {
-            Ok(unsafe { std::mem::transmute::<u8, Nibble>(value) })
-        }
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub enum CGSSystem {
-    Unspecified,
-    Electrostatic,
-    Electromagnetic,
-    Gaussian,
-    HeavisideLorentz,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-#[repr(u8)]
-pub enum UnitSystem {
-    Linear = 0x0,
-    Base10Log = 0x1,
-    Base2Log = 0x2,
-    NaturalLog = 0x3,
-    Temperature = 0x4,
-    UnknownSICompatible(u8), // 5-9 not yet assigned
-    CentimetreGramSecond(CGSSystem) = 0xC,
-    UnknownSIIncompatible(u8), // A, B, D not yet assigned
-    Private(u8),               // E and F
-}
-
-impl UnitSystem {
-    pub fn from_nibble(nibble: Nibble) -> Self {
-        match nibble {
-            Nibble::X0 => Self::Linear,
-            Nibble::X1 => Self::Base10Log,
-            Nibble::X2 => Self::Base2Log,
-            Nibble::X3 => Self::NaturalLog,
-            Nibble::X4 => Self::Temperature,
-            Nibble::X5 | Nibble::X6 | Nibble::X7 | Nibble::X8 | Nibble::X9 => {
-                Self::UnknownSICompatible(nibble as u8)
-            }
-            Nibble::XA | Nibble::XB | Nibble::XD => Self::UnknownSIIncompatible(nibble as u8),
-            Nibble::XC => Self::CentimetreGramSecond(CGSSystem::Unspecified),
-            Nibble::XE | Nibble::XF => Self::Private(nibble as u8),
-        }
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-#[repr(u8)]
-pub enum UnitType {
-    Base = 0x0,
-    CataloguedDerived(u8), // 1-9
-    Normalized = 0xA,
-    BinaryDerived = 0xB,
-    GenericCompound = 0xC,
-    UnknownDerived = 0xD,
-    Private(u8), // E and F
-}
-
-impl UnitType {
-    pub fn from_nibble(nibble: Nibble) -> Self {
-        match nibble {
-            Nibble::X0 => Self::Base,
-            Nibble::XA => Self::Normalized,
-            Nibble::XB => Self::BinaryDerived,
-            Nibble::XC => Self::GenericCompound,
-            Nibble::XD => Self::UnknownDerived,
-            Nibble::XE | Nibble::XF => Self::Private(nibble as u8),
-            _ => Self::CataloguedDerived(nibble as u8),
-        }
-    }
-
-    pub fn to_nibble(&self) -> Nibble {
-        match self {
-            Self::Base => Nibble::X0,
-            Self::Normalized => Nibble::XA,
-            Self::BinaryDerived => Nibble::XB,
-            Self::GenericCompound => Nibble::XC,
-            Self::UnknownDerived => Nibble::XD,
-            Self::Private(n) => {
-                Nibble::try_from(*n).expect("Inner u8 will always fit into a nibble")
-            }
-            Self::CataloguedDerived(n) => {
-                Nibble::try_from(*n).expect("Inner u8 will always fit into a nibble")
-            }
-        }
-    }
-}
-
+/// A 128-bit encoding of the unit of a quantity,
+/// designed for identification, interchange, and arithmetic.
+///
+/// The unit of a quantity can be entirely described by a 128-bit integer,
+/// here called the "unit of measure ID", or "UoMID".
+///
+/// ## Design
+///
+/// The choices made mean that IDs written out in hexadecimal can be broadly understood by a human,
+/// and all SI base units and simple products of SI base units are in the range
+/// `0x0` to `0xFFFFFFFFFFFFFFFF` with all zeros for the most significant 64 bits.
+///
+/// ### Overall layout
+///
+/// The bit layout of a UoMID is divided, from least to most significant, into:
+/// - a **scheme component**, indicating how the rest of the UoMID should be interpreted
+/// - a **dimensional component**, describing the exponent of each dimension term
+/// - a **numeric component**, encoding one or two numbers that define the mathematical relation
+///   between a quantity in terms of the unit and a quantity in terms of the reference unit that the
+///   unit is defined by
+///
+/// The **scheme component** is always specified by the least significant 8 bits (bits 7–0).
+///
+/// The **dimensional** and **numeric** components have variable widths.
+///
+/// For SI and SI-compatible units (the vast majority), in most cases the rest of the UoMID is divided as follows:
+/// - The **dimensional component** comprises bits 63–8
+/// - The **numeric component** comprises bits 127–64
+///
+/// Sometimes, fractional exponents are necessary for the dimension terms, in which case:
+/// - The **dimensional component** comprises an expanded range of bits 91–8
+/// - The **numeric component** comprises only bits 127–92
+///
+/// ### Scheme component
+///
+/// The first byte (as in, bits 0–7) contains **flags**.
+///
+/// - Width: 8 bits
+/// - Layout: `|prrrsuuu|`
+/// - Between them, these flags indicate:
+///     1. Unit system/compatibility
+///         - SI compatibility
+///         - Whether the unit is a catalogued, uniquely identifiable unit or
+///           simply a normalized representation in SI base units
+///     2. How to interpret the numeric component
+///         - Decimal vs binary numeric factor
+///         - Wide number vs two narrow numbers
+///         - Integer vs fractional exponents
+///     3. How to relate the unit to a quantity
+///         - Linear scales (normal units) vs non-linear scales (referenced units)
+///         - What equation the quantity obeys
+/// - Bits 0–3 classify the unit (1. above).
+/// - Bits 4–7 indicate the scheme for the rest of the UoMID.
+/// - Bit 3 `s` indicates whether the unit is SI-compatible or not.
+///     - If `s == 0`:
+///         - The unit (and quantity) are compatible with the SI.
+///         - A value for `uuu` of a value of `0b000` indicates either that it is
+///           the base unit itself, or that the unit is not catalogued and cannot
+///           be uniquely identified, and so has the encoded value in SI base units.
+///         - Other values of `uuu` uniquely identify the unit as a specific catalogued unit.
+///     - If `s == 1`, the bits 0–2 indicate the alternative system that the unit belongs to.
+///       The way the other bits are interpreted is determined by this value. At present, which
+///       SI-incompatible system is represented by each possibility is not specified.
+///     - The upshot is: hex values of `0` to `7` for the least significant nibble
+///       are used for SI units, while `8` to `F` are for SI-incompatible units.
+///     - Note that non-SI units are not automatically SI-incompatible. A foot is not an SI unit,
+///       but it can be expressed in terms of SI units with no issue, and there are no problems
+///       with compatibility. CGS systems, however, *are* incompatible with the SI – naive
+///       conversion and arithmetic between CGS quantities and SI quantities is not possible.
+/// - The way the rest of the UoMID should be interpreted is not yet defined for non-SI systems,
+///   and will in any case be specific to each alternative system. The rest of this documentation
+///   concerns itself only with SI-compatible units i.e. where bit 3 `s == 0`.
+/// - Bits 6–4 `rrr` indicate the type of scale a quantity with the unit uses:
+///     - `0b000` indicates a normal linear scale; the numeric factor encodes a single number.
+///     - All other combinations indicate a specific non-linear scale, four of which are currently considered:
+///         - `0b001` -> logarithmic, base 10, *x* *κ* = (*y* × 10^(*k*⋅*x*)) *λ*
+///         - `0b010` -> logarithmic, base 2, *x* *β* = (*y* × 2^(*k*⋅*x*)) *λ*
+///         - `0b011` -> logarithmic, base *e*, *x* *ε* = (*y* × *e*^(*k*⋅*x*)) *λ*
+///         - `0b100` -> temperature, *x* *θ* = (*k*(*x* + *y*)) *λ*
+///     - See [`ScaleType`] for more details on the mathematical relationships.
+///     - The bit combinations are chosen to allow for mnemonics (for bits 7–4, with no fractional
+///       exponents,`0x1` indicates base 10, `0x2` base 2, `0x3` base *e*).
+///     - For temperature scales, the scale unit and the degree unit for a scale are related by a
+///       single bit flip (of bit 6).
+/// - Bit 7 `p` is a flag that indicates whether an array of denominators for fractional exponents
+///   is present or not.
+///     - If `p == 1`, the least significant 28 bits of the numeric component are used to encode the
+///       denominators as 4-bit unsigned integers, and the fields of the numeric component are
+///       narrowed to compensate.
+///
+///
+/// ### Dimensional component
+///
+/// #### Without fractional dimensional exponents
+///
+/// - Width: 56 bits
+/// - Layout: `|JJJJJJJJJ|NNNNNNNN|ΘΘΘΘΘΘΘΘ|IIIIIIII|MMMMMMMM|LLLLLLLL|TTTTTTTT|`
+/// - Bits 8–63 encode the exponents for each SI dimension with one byte per dimension,
+///   in the order shown above.
+/// - Each byte is interpreted simply as a signed 8-bit integer `i8`.
+///
+/// #### With fractional dimensional exponents
+///
+/// - Width: 84 bits
+/// - Layout: `jjjj|nnnnθθθθ|iiiimmmm|lllltttt|JJJJJJJJJ|NNNNNNNN|ΘΘΘΘΘΘΘΘ|IIIIIIII|MMMMMMMM|LLLLLLLL|TTTTTTTT|`
+/// - Bits 8–63 encode the numerators of the exponents for each SI dimension as signed 8-bit integers `i8`.
+/// - Bits 91–64 encode the denominators of the exponents as unsigned 4-bit integers (i.e. `u4`)
+///
+///
+/// ### Numeric component
+///
+/// The numeric component may either be:
+/// 1. A **simple numeric component**, encoding a single number
+/// 2. A **referenced numeric component**, encoding two numbers
+///
+/// In most cases the numeric component is simple, with referenced ones used for non-linear units
+/// (logarithmic, temperature).
+///
+/// The numbers are encoded as decimal floats in a BID fashion.
+/// When the dimensional exponents do not need to be fractional and only a simple numeric component
+/// needs to be encoded there is also the possibility of a binary-like float encoding.
+///
+/// The layout of the numeric component is determined by the value of bits 7–4 in the scheme
+/// component, and the layouts indicated by the possible values of that nibble are summarized below:
+///
+/// | Bits 7–4 | Hex | Scale  | Bit width | Bit range | Sign bits | Binary bits | Exp. bits | Sig. bits | Sig. digits |
+/// | -------- | --- | ------ | --------- | --------- | --------- | ----------- | --------- | --------- | ----------- |
+/// | `0000`   | `0` | linear | 64        | 127–64    | 1         | 1           | 8         | 54        | 16          |
+/// | `0001`   | `1` | log10  | 64        | 127–64    | 1         | 0           | 7         | 24        | 7           |
+/// | `0010`   | `2` | log2   | 64        | 127–64    | 1         | 0           | 7         | 24        | 7           |
+/// | `0011`   | `3` | ln     | 64        | 127–64    | 1         | 0           | 7         | 24        | 7           |
+/// | `0100`   | `4` | temp.  | 64        | 127–64    | 1         | 0           | 7         | 24        | 7           |
+/// | `0101`   | `5` |        |           |           |           |             |           |           |             |
+/// | `0110`   | `6` |        |           |           |           |             |           |           |             |
+/// | `0111`   | `7` |        |           |           |           |             |           |           |             |
+/// | `1000`   | `8` | linear | 36        | 127–92    | 1         | 0           | 8         | 27        | 8           |
+/// | `1001`   | `9` | log10  | 36        | 127–92    | 1         | 0           | 7         | 10        | 3           |
+/// | `1010`   | `A` | log2   | 36        | 127–92    | 1         | 0           | 7         | 10        | 3           |
+/// | `1011`   | `B` | ln     | 36        | 127–92    | 1         | 0           | 7         | 10        | 3           |
+/// | `1100`   | `C` | temp.  | 36        | 127–92    | 1         | 0           | 7         | 10        | 3           |
+/// | `1101`   | `D` |        |           |           |           |             |           |           |             |
+/// | `1110`   | `E` |        |           |           |           |             |           |           |             |
+/// | `1111`   | `F` |        |           |           |           |             |           |           |             |
+///
+/// #### Simple numeric component
+///
+/// ##### Without fractional dimensional exponents
+///
+/// A 64-bit encoding of the proportionality factor, similar to both IEEE 754 floating point and
+/// traditional scientific notation, with either a decimal or binary-like exponential factor.
+///
+/// - Width: 64 bits
+/// - Layout: `|wgaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|eeeeeeee|`
+/// - `w` is a flag to indicate the use of the decimal encoding (`0`) or the binary-like encoding (`1`)
+/// - Encodes the proportionality factor *k* by:
+///     - Decimal encoding: *k* = (−1)^*g* (*a* + 1) × 10^*e*
+///     - Binary-like encoding: *k* = (−1)^*g* (*a* + 1) × 1024^(*e*/3)
+/// - The bit pattern is much simpler than IEEE 754 `decimal64` but has the same precision (16 full
+///   decimal digits), achieved by reducing the exponent field to 8 bits (with the consequence that
+///   the range is somewhat reduced in comparison).
+/// - `e` is the exponent, encoded (*with no bias*) by the least significant byte as an `i8`
+///     - Exponents can range from −128 to 127.
+///     - The base of the exponential term is indicated as decimal or binary by `w` as described above.
+///     - Under the usual decimal scheme the value of the exponential term is simply 10^*e*.
+///     - Under the "binary-like" scheme the value of the exponential term is instead 1024^(*e*/3).
+///         - For traditional binary floating point it would be 2^*e*, hence "binary-like".
+///         - For a binary number the encoded `e` is thus actually `<exponent> * 3`; this is done so
+///           that analogous metric and binary prefixes are encoded by the same value/bit pattern
+///           e.g. kilo and kibi are both `0x03`.
+///         - This essentially constrains the exponent in the binary form to multiples of 3 and
+///           makes the maximum value (where `e == 126`) 1024^42 = 2^420 ≈ 10^126
+///         - This may seem too low, as `f64` has a max value of 1.80×10^308 and IEEE `decimal64`
+///           can go up to 1.0×10^385. However, the numeric component is only used to specify the
+///           value of units, not for the number of an actual quantity. The largest and smallest
+///           current SI prefixes are quetta = 10^30 and quecto = 10^−30 respectively, so the
+///           possible range allowed for by the design covers all realistically necessary factors of
+///           SI base units by some way.
+/// - `a` encodes the mantissa as a 54-bit unsigned binary integer *with a bias of −1*.
+///     - Enables 16 full decimal digits of precision, matching IEEE `decimal64` and [`SciDecimal`],
+///       and enough to cover the maximum precision of `f64`.
+///     - The bias means that `a` is actually `<mantissa> - 1`.
+///     - The bias was chosen so that `+1` is encoded as `g = 0, a = 0` => 7 bytes of zeros.
+///     - The maximum value allowed for the significand is 10^16 − 1.
+///
+/// A proportionality factor of +1 – the case for all SI base units, and products and combinations
+/// thereof – has `w = 0, g = 0, a = 0, e = 0`, corresponding to 8 bytes of zeros, giving coherent
+/// SI units nice short IDs.
+///
+/// A proportionality factor of a power of 10, such as the decimal prefixes, have short and easily
+/// understood encodings, for example:
+///
+/// | Hex                | Value                                  |
+/// | ------------------ | -------------------------------------- |
+/// |               `00` | 1e0 = 1                                |
+/// |              `100` | 2e0 = 2                                |
+/// |               `01` | 1e1 = 10 (with 1 s.f.)                 |
+/// |              `900` | 10e0 = 10 (with 2 s.f.)                |
+/// |               `03` | 1e3 = 1000^1 = kilo                    |
+/// |            `3E700` | 1000e0 = 1000 as well, but with 3 s.f. |
+/// |               `06` | 1e6 = 1000^2 = mega                    |
+/// |               `1E` | 1e30 = 1000^10 = quetta                |
+/// |               `78` | 1e120 = ??!                            |
+/// |               `7E` | 1e126 = maximum exponent               |
+/// |               `FD` | 1e-3 = milli                           |
+/// | `4000000000000000` | -1e0 = −1                              |
+/// | `4000000000000100` | -2e0 = −2                              |
+/// | `4000000000000003` | -1e3 = −1000                           |
+///
+/// while the binary prefixes have encodings that match the corresponding decimal ones neatly, with
+/// just a single bit flip (at bit 127):
+///
+/// | Hex                | Value                          |
+/// | ------------------ | ------------------------------ |
+/// | `8000000000000003` | 1 × 1024 = kibi                |
+/// | `8000000000000006` | 1 × 1024^2 = mebi              |
+/// | `800000000000000C` | 1 × 1024^4 = tebi              |
+/// | `800000000000001E` | 1 × 1024^10 = quebi            |
+/// | `8000000000000078` | 1 × 1024^40 = ??!              |
+/// | `800000000000007E` | 1 × 1024^42 = maximum exponent |
+/// | `C000000000000003` | −1 × 1024^1 = −1024            |
+///
+/// ##### With fractional dimensional exponents
+///
+/// Broadly the same as the normal simple encoding, with the following differences:
+/// - The bit width is reduced to 36 bits
+/// - The significand is reduced to a bit width of 27 bits
+/// - There is no binary flag bit `w` – binary numeric exponents are therefore not possible with
+///   anything other than a linear unit with integer dimensional exponents
+/// - With 27 bits for the significand (which still uses a bias of −1), only 8 full decimal digits
+///   of precision is possible.
+/// - The maximum value allowed for the significand is 10^8 − 1.
+///
+/// - Width: 36 bits
+/// - Layout: `|gaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaeeee|eeee`
+///
+/// #### Referenced numeric component
+///
+/// ##### Without fractional dimensional exponents
+///
+/// Used to describe a non-linear or scale quantity: a quantity written as *x* *u*, where *x* is the
+/// number and *u* is a non-linear unit, with the meaning that the quantity is a function
+/// *Q*(*x*, *u*) = *u*(*x*), and *u* is a function of the form *f*(*x*, *y*, *k*, *λ*) where the
+/// values of *y*, *k*, and *λ*  define the unit (see [`ScaleType`]).
+///
+/// The applicable function *f* and therefore the appropriate interpretation of *y* and *k* is
+/// indicated by the scheme component (see above).
+///
+/// - Width: 64 bits
+/// - Layout: `|hbbbbbbb|bbbbbbbb|bbbbbbbb|bfffffff|gaaaaaaa|aaaaaaaa|aaaaaaaa|aeeeeeee|`
+/// - Encoded in essentially the same way as the simple numeric component but as two 32-bit numbers.
+///     - The more significant half encodes *y* (the reference value of the scale),
+///       and the less significant half *k*.
+/// - Neither number has a binary flag bit `w`; only decimal encoding is possible, and the base for
+///   the exponents is always 10.
+/// - The exponents are reduced to a bit-width of 7 (with two's complement, making them effectively
+///   `i7`s)
+/// - This allows 7 full decimal digits of precision in the significand,
+/// - The four least significant bytes encode *k* as *k* = (−1)^*g* (*a* + 1) × 10^*e*
+/// - The four most significant bytes encode *y* as *y* = (−1)^*h* (*b* + 1) × 10^*f*
+/// - With 24 bits for the significand (which still uses a bias of −1), 7 full decimal digits of
+///   precision is possible, matching IEEE 754's `decimal32` and similar to `f32`.
+/// - The maximum value allowed for the significand is 10^7 − 1.
+///
+/// ##### With fractional dimensional exponents
+///
+/// Broadly the same as the normal referenced encoding, with the following differences:
+///     - The bit width of each number is reduced to 18 bits.
+///
+/// - Width: 36 bits
+/// - Layout: `hbbbbbbb|bbbfffff|ffgaaaaa|aaaaaeee|eeee`
+/// - The exponents are, as before, encoded with 7 rather than 8 bits.
+/// - With 10 remaining bits for the significand (which still uses a bias of −1), only 3 full
+///   decimal digits of precision is possible.
+/// - The maximum value allowed for the significand is 999.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct Unit128 {
     pub(crate) num: u64,
@@ -136,33 +361,37 @@ pub struct Unit128 {
 }
 
 impl Unit128 {
-    pub fn new(factor: SciDecimal, dimensions: Dimensions, least_significant_byte: u8) -> Self {
-        let dim = least_significant_byte as u64
-            | (dimensions.T.to_bits() as u64) << 8
-            | (dimensions.L.to_bits() as u64) << 16
-            | (dimensions.M.to_bits() as u64) << 24
-            | (dimensions.I.to_bits() as u64) << 32
-            | (dimensions.Θ.to_bits() as u64) << 40
-            | (dimensions.N.to_bits() as u64) << 48
-            | (dimensions.J.to_bits() as u64) << 56;
-        let num = Unit128::factor_to_bits(factor);
-        Self { num, dim }
-    }
-
-    pub fn new_referenced(
+    pub fn new(
         factor: SciDecimal,
         dimensions: Dimensions,
         least_significant_byte: u8,
-        reference: SciDecimal,
-    ) -> Self {
+    ) -> Result<Self, QuanstantsError> {
         let dim = least_significant_byte as u64
-            | (dimensions.T.to_bits() as u64) << 8
-            | (dimensions.L.to_bits() as u64) << 16
-            | (dimensions.M.to_bits() as u64) << 24
-            | (dimensions.I.to_bits() as u64) << 32
-            | (dimensions.Θ.to_bits() as u64) << 40
+            | (*dimensions.T.numer() as u8 as u64) << 8
+            | (*dimensions.L.numer() as u8 as u64) << 16
+            | (*dimensions.M.numer() as u8 as u64) << 24
+            | (*dimensions.I.numer() as u8 as u64) << 32
+            | (*dimensions.Θ.numer() as u8 as u64) << 40
+            | (*dimensions.N.numer() as u8 as u64) << 48
+            | (*dimensions.J.numer() as u8 as u64) << 56;
+        let num = Unit128::factor_to_bits(factor)?;
+        Ok(Self { num, dim })
+    }
+
+    pub fn new_referenced(
+        reference: SciDecimal,
+        constant: SciDecimal,
+        dimensions: Dimensions,
+        least_significant_byte: u8,
+    ) -> Result<Self, QuanstantsError> {
+        let dim = (dimensions.J.to_bits() as u64) << 56
             | (dimensions.N.to_bits() as u64) << 48
-            | (dimensions.J.to_bits() as u64) << 56;
+            | (dimensions.Θ.to_bits() as u64) << 40
+            | (dimensions.I.to_bits() as u64) << 32
+            | (dimensions.M.to_bits() as u64) << 24
+            | (dimensions.L.to_bits() as u64) << 16
+            | (dimensions.T.to_bits() as u64) << 8
+            | least_significant_byte as u64;
         let num = Unit128::factor_and_reference_to_bits(factor, reference);
         Self { num, dim }
     }
@@ -380,70 +609,85 @@ impl FromStr for Unit128 {
 // Functions for converting between `SciDecimal`s and the 64-bit numeric component
 // of `Unit128`
 impl Unit128 {
-    // Maximum and minimum values for a simple numeric component
-    // Though the bias of -1 means that actually a mantissa 1 higher than this is
-    // theoretically possible, restrict to these values so that they always fit into
-    // other formats with the same width but no bias
-    const MAX_MANTISSA_FACTOR: i64 = 0x7FFFFFFFFFFFFF;
-    const MIN_MANTISSA_FACTOR: i64 = -0x7FFFFFFFFFFFFF;
-    const MAX_EXPONENT_FACTOR: i8 = 0x7F;
-    const MIN_EXPONENT_FACTOR: i8 = -0x80;
+    // Maximum and minimum values for a simple numeric component, which just encodes _k_.
+    // The number is encoded as a sign bit, a 54-bit mantissa, and an `i8` exponent.
+    // However, the mantissa is limited to 16 decimal digits, just like `SciDecimal`
+    // and IEEE 754's `decimal64`.
+    const MAX_MANTISSA_WIDE: i64 = 10_i64.pow(16) - 1;
+    const MIN_MANTISSA_WIDE: i64 = -(10_i64.pow(16) - 1);
+    const MAX_EXPONENT_WIDE: i8 = i8::MAX;
+    const MIN_EXPONENT_WIDE: i8 = i8::MIN;
 
     /// Calculates the 64-bit simple numeric component that encodes the provided
     /// `SciDecimal`.
     ///
-    /// Currently panics if the factor is too large to be represented.
-    pub(crate) fn factor_to_bits(factor: SciDecimal) -> u64 {
-        let shortened_factor: SciDecimal = if factor.sf() > 16 {
-            // TODO: Round rather than truncate
-            factor.trunc_sf(16)
+    /// Fails if the factor is too large to be represented (the exponent is outside
+    /// the range 128 <= e <= 127) or is not finite (i.e. it is infinity or NaN).
+    pub(crate) fn factor_to_bits(factor: SciDecimal) -> Result<u64, QuanstantsError> {
+        if !factor.is_finite() {
+            Err(QuanstantsError::Range)
+        } else if let Ok(exp) = i8::try_from(factor.exponent()) {
+            Ok((factor.sign() as u64) << 63 | (factor.significand() - 1) << 8 | exp as u8 as u64)
         } else {
-            factor
-        };
-
-        match i8::try_from(shortened_factor.exponent()) {
-            Ok(exponent) => {
-                exponent as u8 as u64 | ((shortened_factor.significand_signed() - 1) as u64) << 8
-            }
-            Err(_) => panic!(
-                "Exponent of provided SciNum {} exceeds the range of the i8 used for Unit128's numeric factor's exponent",
-                shortened_factor.exponent()
-            ),
+            Err(QuanstantsError::Range)
         }
     }
 
-    // Maximum and minimum values for a referenced numeric component
-    const MAX_MANTISSA_FACTOR_REFERENCED: i32 = 0x7FFFFF;
-    const MIN_MANTISSA_FACTOR_REFERENCED: i32 = -0x7FFFFF;
-    const MAX_EXPONENT_FACTOR_REFERENCED: i8 = 0x7F;
-    const MIN_EXPONENT_FACTOR_REFERENCED: i8 = -0x80;
-    const MAX_MANTISSA_REFERENCE: i32 = 0x7FFFFF;
-    const MIN_MANTISSA_REFERENCE: i32 = -0x7FFFFF;
-    const MAX_EXPONENT_REFERENCE: i8 = 0x7F;
-    const MIN_EXPONENT_REFERENCE: i8 = -0x80;
+    // Maximum and minimum values for a referenced numeric component, which encodes
+    // both a "reference" _y_ and a "constant" _k_.
+    // Each number has a sign bit, a 27-bit mantissa, and an `i8` exponent.
+    const MAX_MANTISSA_NARROW: i32 = 2_i32.pow(27);
+    const MIN_MANTISSA_NARROW: i32 = -(2_i32.pow(27));
+    const MAX_EXPONENT_NARROW: i8 = i8::MAX;
+    const MIN_EXPONENT_NARROW: i8 = i8::MIN;
 
     /// Calculates the 64-bit referenced numeric component that encodes the
     /// provided `SciNum`s.
     ///
-    /// Currently panics if either the factor or reference are too large to be
-    /// represented.
-    pub(crate) fn factor_and_reference_to_bits(factor: SciDecimal, reference: SciDecimal) -> u64 {
-        let shortened_factor: SciDecimal = if factor.sf() > 6 {
-            // TODO: Round rather than truncate
-            factor.trunc_sf(6)
+    /// If either of the numbers have a precision greater than can be expressed
+    /// in 27 bits (i.e. the significand is greater than [`Unit128::MAX_MANTISSA_NARROW`])
+    /// it is first rounded to 6 significant figures.
+    ///
+    /// Fails if either the reference or constant are too large to be represented
+    /// (the exponent is outside the range 128 <= e <= 127) or are not finite
+    /// (i.e. they are infinity or NaN).
+    pub(crate) fn constant_and_reference_to_bits(
+        reference: SciDecimal,
+        constant: SciDecimal,
+    ) -> Result<u64, QuanstantsError> {
+        if !(reference.is_finite() && constant.is_finite()) {
+            return Err(QuanstantsError::Range);
+        }
+
+        let shortened_reference: SciDecimal =
+            if reference.significand() > Unit128::MAX_MANTISSA_NARROW as u64 {
+                reference.round_sf(6, scinum::RoundingMode::HalfUp)
+            } else {
+                reference
+            };
+        let reference_bits = if let Ok(exp) = i8::try_from(shortened_reference.exponent()) {
+            (shortened_reference.sign() as u64) << 31
+                | (shortened_reference.significand() - 1) << 8
+                | exp as u8 as u64
         } else {
-            factor
+            return Err(QuanstantsError::Range);
         };
 
-        let shortened_reference: SciDecimal = if reference.sf() > 6 {
-            // TODO: Round rather than truncate
-            reference.trunc_sf(6)
+        let shortened_constant: SciDecimal =
+            if constant.significand() > Unit128::MAX_MANTISSA_NARROW as u64 {
+                constant.round_sf(6, scinum::RoundingMode::HalfUp)
+            } else {
+                constant
+            };
+        let constant_bits = if let Ok(exp) = i8::try_from(shortened_constant.exponent()) {
+            (shortened_constant.sign() as u64) << 31
+                | (shortened_constant.significand() - 1) << 8
+                | exp as u8 as u64
         } else {
-            reference
+            return Err(QuanstantsError::Range);
         };
 
-        (Unit128::factor_to_bits(shortened_factor) & 0x0000_0000_FFFF_FFFF)
-            | (Unit128::factor_to_bits(shortened_reference) << 32)
+        Ok(reference_bits << 32 | constant_bits)
     }
 
     /// Determines the `SciNum` encoded by the provided 64-bit numeric

@@ -5,6 +5,8 @@ description = "Intuitive and unastonishing physical quantities, units, constants
 authors = [
     { name = "Matthew J. Milner", email = "matterhorn103@proton.me" }
 ]
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE-*"]
 readme = "README.md"
 requires-python = ">= 3.11"
 classifiers = [

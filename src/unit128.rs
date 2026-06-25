@@ -76,12 +76,12 @@ use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac};
 /// …and a natural log quantity as:
 /// - _Ε_(_x_, _ε_) = _ε_(_x_, _y_, _k_, _λ_) = _Λ_(_y_ × *e*^(*k*⋅*x*), _λ_)
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[repr(u8)]
 pub enum ScaleType {
-    Linear,
-    Temperature,
-    Base10Log,
-    NaturalLog,
-    Base2Log,
+    Base10Log = 1,
+    Base2Log = 2,
+    NaturalLog = 3,
+    Temperature = 4,
 }
 
 /// The classification of a unit as SI-compatible or not, with a further distinction between
@@ -382,73 +382,103 @@ pub enum SICompatibility {
 ///   decimal digits of precision is possible.
 /// - The maximum value allowed for the significand is 999.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub struct Unit128(u128);
+pub struct Unit128(pub u128);
 
 impl Unit128 {
-    pub fn new(
-        factor: SciDecimal,
-        dimensions: Dimensions,
-        scale: ScaleType,
-        system: SICompatibility,
-    ) -> Result<Self, QuanstantsError> {
+    /// Creates a new anonymous unit defined in terms of SI base units.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `factor` is too large or small to be encoded
+    /// (i.e. it is > [`Unit128::MAX_EXPONENT_SIMPLE`] or < [`Unit128::MIN_EXPONENT_SIMPLE`])
+    /// or because it is not finite (i.e. it is infinity or NaN).
+    pub fn new(factor: SciDecimal, dimensions: Dimensions) -> Self {
+        if !dimensions.all_integer() {
+            todo!("Fractional dimensional exponents are not yet implemented!")
+        }
         Self(
-            Unit128::factor_to_bits(factor)
+            (Unit128::factor_to_bits(factor).expect("Caller should not pass an unrepresentable value") as u128) << 64
+                | (*dimensions.J.numer() as u8 as u128) << 56
+                | (*dimensions.N.numer() as u8 as u128) << 48
+                | (*dimensions.Θ.numer() as u8 as u128) << 40
+                | (*dimensions.I.numer() as u8 as u128) << 32
+                | (*dimensions.M.numer() as u8 as u128) << 24
+                | (*dimensions.L.numer() as u8 as u128) << 16
+                | (*dimensions.T.numer() as u8 as u128) << 8
+                // Integer exponents    => bit 7 = 0
+                // Linear unit          => bits 6-4 = 000
+                // SI compatible        => bit 3 = 0
+                // Uncatalogued         => bits 2-0 = 000
+                | 0x00,
         )
-        let dim = least_significant_byte as u64
-            | (*dimensions.T.numer() as u8 as u64) << 8
-            | (*dimensions.L.numer() as u8 as u64) << 16
-            | (*dimensions.M.numer() as u8 as u64) << 24
-            | (*dimensions.I.numer() as u8 as u64) << 32
-            | (*dimensions.Θ.numer() as u8 as u64) << 40
-            | (*dimensions.N.numer() as u8 as u64) << 48
-            | (*dimensions.J.numer() as u8 as u64) << 56;
-        let num = Unit128::factor_to_bits(factor)?;
-        Ok(Self { num, dim })
     }
 
-    pub fn new_referenced(
+    /// Creates a new anonymous scale unit defined in terms of SI base units.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `factor` is too large or small to be encoded
+    /// (i.e. it is > [`Unit128::MAX_EXPONENT_REFERENCED`] or < [`Unit128::MIN_EXPONENT_REFERENCED`])
+    /// or because it is not finite (i.e. it is infinity or NaN).
+    pub fn new_scale(
+        scale_type: ScaleType,
         reference: SciDecimal,
         constant: SciDecimal,
         dimensions: Dimensions,
-        least_significant_byte: u8,
-    ) -> Result<Self, QuanstantsError> {
-        let dim = (dimensions.J.to_bits() as u64) << 56
-            | (dimensions.N.to_bits() as u64) << 48
-            | (dimensions.Θ.to_bits() as u64) << 40
-            | (dimensions.I.to_bits() as u64) << 32
-            | (dimensions.M.to_bits() as u64) << 24
-            | (dimensions.L.to_bits() as u64) << 16
-            | (dimensions.T.to_bits() as u64) << 8
-            | least_significant_byte as u64;
-        let num = Unit128::factor_and_reference_to_bits(factor, reference);
-        Self { num, dim }
+    ) -> Self {
+        if !dimensions.all_integer() {
+            todo!("Fractional dimensional exponents are not yet implemented!")
+        }
+        Self(
+            (Unit128::reference_and_constant_to_bits(reference, constant).expect("Caller should not pass an unrepresentable value") as u128) << 64
+                | (*dimensions.J.numer() as u8 as u128) << 56
+                | (*dimensions.N.numer() as u8 as u128) << 48
+                | (*dimensions.Θ.numer() as u8 as u128) << 40
+                | (*dimensions.I.numer() as u8 as u128) << 32
+                | (*dimensions.M.numer() as u8 as u128) << 24
+                | (*dimensions.L.numer() as u8 as u128) << 16
+                | (*dimensions.T.numer() as u8 as u128) << 8
+                // Integer exponents    => bit 7 = 0
+                // Scale unit           => bits 6-4 = ?
+                | (scale_type as u8 as u128) << 4
+                // SI compatible        => bit 3 = 0
+                // Uncatalogued         => bits 2-0 = 000
+                | 0x0,
+        )
     }
 
-    pub fn new_compound(factors: Vec<(Unit128, Frac)>) -> Self {
-        // Panics if any of the units are referenced or not compatible with the SI
+    /// Creates a new compound unit from a set of factors.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if any of the units are scale units or are not
+    /// SI-compatible, or if the proportionality factor is so large or small that
+    /// it can no longer be represented.
+    pub fn new_compound(factors: &[(Unit128, Frac)]) -> Self {
+        // If a unit is not a scale unit and it is compatible with the SI then
+        // it has a least significant byte in the range 0x00 to 0x07.
         if factors
             .iter()
             .any(|x| x.0.is_referenced() || !x.0.is_si_compatible())
         {
-            panic!()
-        } else {
-            let dimensions = factors
-                .iter()
-                .map(|x| x.0.dimensions().pow(x.1))
-                .fold(Dimensions::DIMENSIONLESS, |acc, x| acc * x);
-            // Do this way, rather than by multiplying successive Unit128s, in order to
-            // avoid introducing rounding error in the proportionality factor
-            let proportionality_factor = factors
-                .iter()
-                .map(|x| x.0.factor().pow(x.1))
-                .fold(SciDecimal::ONE, |acc, x| acc * x);
-            Self::new(proportionality_factor, dimensions, 0x0C)
-        }
+            panic!("Compound units may only be created from linear, SI-compatible units!")
+        };
+        let dimensions = factors
+            .iter()
+            .map(|x| x.0.dimensions().pow(x.1))
+            .fold(Dimensions::DIMENSIONLESS, |acc, x| acc * x);
+        // Do this way, rather than by multiplying successive Unit128s, in order to
+        // avoid constant conversion back and forth to SciDecimal
+        let proportionality_factor = factors
+            .iter()
+            .map(|x| x.0.factor().pow(x.1))
+            .fold(SciDecimal::ONE, |acc, x| acc * x);
+        Self::new(proportionality_factor, dimensions)
     }
 
     #[inline]
     pub fn least_significant_byte(&self) -> u8 {
-        (self.dim & 0xFF) as u8
+        (self.0 & 0xFF) as u8
     }
 
     #[inline]
@@ -655,10 +685,10 @@ fn i7_to_i16(n: u8) -> i16 {
 impl Unit128 {
     // Maximum and minimum values for a simple 64-bit numeric component, which just encodes
     // the proportionality factor _k_.
-    const MAX_SIGNIFICAND_SIMPLE: i64 = 10_i64.pow(16) - 1;
-    const MIN_SIGNIFICAND_SIMPLE: i64 = -(10_i64.pow(16) - 1);
-    const MAX_EXPONENT_SIMPLE: i8 = i8::MAX;
-    const MIN_EXPONENT_SIMPLE: i8 = i8::MIN;
+    pub const MAX_SIGNIFICAND_SIMPLE: i64 = 10_i64.pow(16) - 1;
+    pub const MIN_SIGNIFICAND_SIMPLE: i64 = -(10_i64.pow(16) - 1);
+    pub const MAX_EXPONENT_SIMPLE: i8 = i8::MAX;
+    pub const MIN_EXPONENT_SIMPLE: i8 = i8::MIN;
 
     /// Calculates the 64-bit numeric component that encodes the provided [`SciDecimal`].
     ///
@@ -689,14 +719,13 @@ impl Unit128 {
         }
     }
 
-
     // Maximum and minimum values for a narrow 36-bit numeric component, which just encodes
     // the proportionality factor _k_.
     // Used when the dimensional component encodes fractional exponents and is therefore widened.
-    const MAX_SIGNIFICAND_SIMPLE_NARROW: i64 = 10_i64.pow(8) - 1;
-    const MIN_SIGNIFICAND_SIMPLE_NARROW: i64 = -(10_i64.pow(8) - 1);
-    const MAX_EXPONENT_SIMPLE_NARROW: i8 = i8::MAX;
-    const MIN_EXPONENT_SIMPLE_NARROW: i8 = i8::MIN;
+    pub const MAX_SIGNIFICAND_SIMPLE_NARROW: i64 = 10_i64.pow(8) - 1;
+    pub const MIN_SIGNIFICAND_SIMPLE_NARROW: i64 = -(10_i64.pow(8) - 1);
+    pub const MAX_EXPONENT_SIMPLE_NARROW: i8 = i8::MAX;
+    pub const MIN_EXPONENT_SIMPLE_NARROW: i8 = i8::MIN;
 
     /// Calculates the 36-bit numeric component that encodes the provided [`SciDecimal`],
     /// with zero padding up to 64 bits.
@@ -729,7 +758,11 @@ impl Unit128 {
             };
 
         if let Ok(exp) = i8::try_from(shortened.exponent()) {
-            Ok((shortened.sign() as u64) << 35 | (factor.significand() - 1) << 8 | exp as u8 as u64)
+            Ok(
+                (shortened.sign() as u64) << 35
+                    | (factor.significand() - 1) << 8
+                    | exp as u8 as u64,
+            )
         } else {
             Err(QuanstantsError::Range)
         }
@@ -737,10 +770,10 @@ impl Unit128 {
 
     // Maximum and minimum values for a referenced numeric component, which encodes
     // both a "reference" _y_ and a "constant" _k_.
-    const MAX_SIGNIFICAND_REFERENCED: i64 = 10_i64.pow(7) - 1;
-    const MIN_SIGNIFICAND_REFERENCED: i64 = -(10_i64.pow(7) - 1);
-    const MAX_EXPONENT_REFERENCED: i8 = 63;
-    const MIN_EXPONENT_REFERENCED: i8 = -64;
+    pub const MAX_SIGNIFICAND_REFERENCED: i64 = 10_i64.pow(7) - 1;
+    pub const MIN_SIGNIFICAND_REFERENCED: i64 = -(10_i64.pow(7) - 1);
+    pub const MAX_EXPONENT_REFERENCED: i8 = 63;
+    pub const MIN_EXPONENT_REFERENCED: i8 = -64;
 
     /// Calculates the 64-bit referenced numeric component that encodes the
     /// provided [`SciDecimal`]s.
@@ -783,30 +816,29 @@ impl Unit128 {
 
         // First check that the exponents are representable as `i7`s
         // That allows us to use our `i16_to_i7()` function without worry
-        let allowed_exp = (Unit128::MIN_EXPONENT_REFERENCED as i16)..=(Unit128::MAX_EXPONENT_REFERENCED as i16);
-        if !(
-            allowed_exp.contains(&reference.exponent()) && allowed_exp.contains(&constant.exponent())
-        ) {
+        let allowed_exp =
+            (Unit128::MIN_EXPONENT_REFERENCED as i16)..=(Unit128::MAX_EXPONENT_REFERENCED as i16);
+        if !(allowed_exp.contains(&reference.exponent())
+            && allowed_exp.contains(&constant.exponent()))
+        {
             return Err(QuanstantsError::Range);
         }
 
-        Ok(
-            (shortened_reference.sign() as u64) << 63
+        Ok((shortened_reference.sign() as u64) << 63
             | (shortened_reference.significand() - 1) << 39
             | (i16_to_i7(shortened_reference.exponent()) as u64) << 32
             | (shortened_constant.sign() as u64) << 31
             | (shortened_constant.significand() - 1) << 7
-            | (i16_to_i7(shortened_constant.exponent()) as u64)
-        )
+            | (i16_to_i7(shortened_constant.exponent()) as u64))
     }
 
     // Maximum and minimum values for a narrow referenced numeric component, which encodes
     // both a "reference" _y_ and a "constant" _k_.
     // Used when the dimensional component encodes fractional exponents and is therefore widened.
-    const MAX_SIGNIFICAND_REFERENCED_NARROW: i64 = 10_i64.pow(3) - 1;
-    const MIN_SIGNIFICAND_REFERENCED_NARROW: i64 = -(10_i64.pow(3) - 1);
-    const MAX_EXPONENT_REFERENCED_NARROW: i8 = 63;
-    const MIN_EXPONENT_REFERENCED_NARROW: i8 = -64;
+    pub const MAX_SIGNIFICAND_REFERENCED_NARROW: i64 = 10_i64.pow(3) - 1;
+    pub const MIN_SIGNIFICAND_REFERENCED_NARROW: i64 = -(10_i64.pow(3) - 1);
+    pub const MAX_EXPONENT_REFERENCED_NARROW: i8 = 63;
+    pub const MIN_EXPONENT_REFERENCED_NARROW: i8 = -64;
 
     /// Calculates the 36-bit referenced numeric component that encodes the
     /// provided [`SciDecimal`]s, with zero padding up to 64 bits.
@@ -850,21 +882,20 @@ impl Unit128 {
 
         // First check that the exponents are representable as `i7`s
         // That allows us to use our `i16_to_i7()` function without worry
-        let allowed_exp = (Unit128::MIN_EXPONENT_REFERENCED_NARROW as i16)..=(Unit128::MAX_EXPONENT_REFERENCED_NARROW as i16);
-        if !(
-            allowed_exp.contains(&reference.exponent()) && allowed_exp.contains(&constant.exponent())
-        ) {
+        let allowed_exp = (Unit128::MIN_EXPONENT_REFERENCED_NARROW as i16)
+            ..=(Unit128::MAX_EXPONENT_REFERENCED_NARROW as i16);
+        if !(allowed_exp.contains(&reference.exponent())
+            && allowed_exp.contains(&constant.exponent()))
+        {
             return Err(QuanstantsError::Range);
         }
 
-        Ok(
-            (shortened_reference.sign() as u64) << 35
+        Ok((shortened_reference.sign() as u64) << 35
             | (shortened_reference.significand() - 1) << 25
             | (i16_to_i7(shortened_reference.exponent()) as u64) << 18
             | (shortened_constant.sign() as u64) << 17
             | (shortened_constant.significand() - 1) << 7
-            | (i16_to_i7(shortened_constant.exponent()) as u64)
-        )
+            | (i16_to_i7(shortened_constant.exponent()) as u64))
     }
 
     /// Determines the [`SciDecimal`] encoded by a 64-bit numeric component.
@@ -872,9 +903,12 @@ impl Unit128 {
     /// If the numeric component uses the binary encoding, the result may lose
     /// some precision.
     pub(crate) fn bits_to_factor(b: u64) -> SciDecimal {
-        const BINARY_MASK: u64 =   0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000;
-        const SIGN_MASK: u64 =     0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000;
-        const EXPONENT_MASK: u64 = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_11111111;
+        const BINARY_MASK: u64 =
+            0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000;
+        const SIGN_MASK: u64 =
+            0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000;
+        const EXPONENT_MASK: u64 =
+            0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_11111111;
         let sign = b & SIGN_MASK;
         let significand = ((b & !SIGN_MASK & !BINARY_MASK) >> 8) + 1;
         let binary = (b & BINARY_MASK) != 0;
@@ -898,7 +932,7 @@ impl Unit128 {
     /// Determines the [`SciDecimal`] encoded by a zero-padded 36-bit numeric component.
     pub(crate) fn bits_to_factor_narrow(b: u64) -> SciDecimal {
         // This case is even simpler than the normal case, as there's no possibility of a binary encoding
-        const SIGN_MASK: u64 =     0b1000_00000000_00000000_00000000_00000000;
+        const SIGN_MASK: u64 = 0b1000_00000000_00000000_00000000_00000000;
         const EXPONENT_MASK: u64 = 0b0000_00000000_00000000_00000000_11111111;
         let sign = (b & SIGN_MASK) << 28;
         let significand = ((b & !SIGN_MASK) >> 8) + 1;
@@ -910,7 +944,7 @@ impl Unit128 {
 
     /// Determines the [`SciDecimal`]s encoded by a 64-bit referenced numeric component.
     pub(crate) fn bits_to_reference_and_constant(b: u64) -> (SciDecimal, SciDecimal) {
-        const SIGN_MASK: u64 =     0b10000000_00000000_00000000_00000000;
+        const SIGN_MASK: u64 = 0b10000000_00000000_00000000_00000000;
         const EXPONENT_MASK: u64 = 0b00000000_00000000_00000000_01111111;
         let r = b >> 32; // Reference has same layout as constant, just bit shifted
         let reference_sign = (r & SIGN_MASK) << 32;
@@ -930,7 +964,7 @@ impl Unit128 {
 
     /// Determines the [`SciDecimal`]s encoded by a zero-padded 36-bit referenced numeric component.
     pub(crate) fn bits_to_reference_and_constant_narrow(b: u64) -> (SciDecimal, SciDecimal) {
-        const SIGN_MASK: u64 =     0b10_00000000_00000000;
+        const SIGN_MASK: u64 = 0b10_00000000_00000000;
         const EXPONENT_MASK: u64 = 0b00_00000000_01111111;
         let r = b >> 18; // Reference has same layout as constant, just bit shifted
         let reference_sign = (r & SIGN_MASK) << 46;

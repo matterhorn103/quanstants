@@ -94,6 +94,16 @@ impl Dimensions {
             J: (!self.J.is_zero() as i8).into(),
         }
     }
+
+    /// Returns `true` if no dimensions have a non-zero exponent, `false` otherwise.
+    pub fn all_zero(&self) -> bool {
+        self.exponents().iter().all(|e| e.is_zero())
+    }
+
+    /// Returns `true` if no dimensions have a fractional exponent, `false` otherwise.
+    pub fn all_integer(&self) -> bool {
+        self.exponents().iter().all(|e| e.is_integer())
+    }
 }
 
 impl Mul for Dimensions {

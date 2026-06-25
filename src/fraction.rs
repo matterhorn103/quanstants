@@ -49,6 +49,7 @@ impl Frac {
     }
 
     #[inline]
+    /// Returns `true` if the fraction is an integer (denominator is 1).
     pub fn is_integer(&self) -> bool {
         self.0.is_integer()
     }

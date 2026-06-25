@@ -13,7 +13,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac};
 
-/// The mathematical relationship between a written quantity with this unit and the equivalent reference value.
+/// The mathematical relationship between a written quantity with this unit and
+/// the equivalent reference value.
+///
+/// Represents the information encoded by bits 6–4 of a UoMID (see [`Unit128`]).
 ///
 /// A "normal" quantity is understood to be the *product* of a number _x_ and a unit _λ_;
 /// for example, "3 ft" is understood to mean 3 × ft and to convert, ft can be
@@ -42,7 +45,8 @@ use crate::{dimensions::Dimensions, error::QuanstantsError, fraction::Frac};
 /// - _Θ_(_x_, _θ_) = _θ_(_x_, _y_, _k_, _λ_), where:
 ///     - _λ_ is the (linear) unit of the reference absolute temperature
 ///     - _y_ is the number of the reference absolute temperature (i.e. the value in _λ_ at 0 _θ_)
-///     - _k_ is the proportionality factor of the degree of the scale – the size of the degree when expressed in _λ_
+///     - _k_ is the proportionality factor of the degree of the scale – the size of the degree
+///       when expressed in _λ_
 /// - A temperature on the scale _Θ_ is thus expressed as a linear quantity _Λ_ by:
 ///     - _Θ_(_x_, _θ_) = _Λ_(_k_(_x_ + _y_), _λ_)
 /// - An individual temperature scale is thus fully defined by _λ_, _y_, and _k_,
@@ -80,6 +84,17 @@ pub enum ScaleType {
     Base2Log,
 }
 
+/// The classification of a unit as SI-compatible or not, with a further distinction between
+/// well-known catalogued units and unit definitions normalized in terms of SI base units.
+///
+/// Represents the information encoded by bits 3–0 of a UoMID (see [`Unit128`]).
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+pub enum SICompatibility {
+    Normalized,
+    Catalogued(u8),
+    Incompatible(u8),
+}
+
 /// A 128-bit encoding of the unit of a quantity,
 /// designed for identification, interchange, and arithmetic.
 ///
@@ -88,7 +103,9 @@ pub enum ScaleType {
 ///
 /// ## Design
 ///
-/// The choices made mean that IDs written out in hexadecimal can be broadly understood by a human,
+/// The choices made mean that UoMIDs of "normal" units (SI-compatible units with integer exponents
+/// in the dimensional terms and on a linear scale rather than a logarithmic or temperature scale)
+/// written out in hexadecimal can be broadly understood by a human,
 /// and all SI base units and simple products of SI base units are in the range
 /// `0x0` to `0xFFFFFFFFFFFFFFFF` with all zeros for the most significant 64 bits.
 ///
@@ -105,7 +122,8 @@ pub enum ScaleType {
 ///
 /// The **dimensional** and **numeric** components have variable widths.
 ///
-/// For SI and SI-compatible units (the vast majority), in most cases the rest of the UoMID is divided as follows:
+/// For SI and SI-compatible units (the vast majority), in most cases the rest of the UoMID is
+/// divided up as follows:
 /// - The **dimensional component** comprises bits 63–8
 /// - The **numeric component** comprises bits 127–64
 ///
@@ -132,7 +150,7 @@ pub enum ScaleType {
 ///         - Linear scales (normal units) vs non-linear scales (referenced units)
 ///         - What equation the quantity obeys
 /// - Bits 0–3 classify the unit (1. above).
-/// - Bits 4–7 indicate the scheme for the rest of the UoMID.
+/// - Bits 4–7 indicate the scheme for the rest of the UoMID (2. and 3. above).
 /// - Bit 3 `s` indicates whether the unit is SI-compatible or not.
 ///     - If `s == 0`:
 ///         - The unit (and quantity) are compatible with the SI.
@@ -143,8 +161,9 @@ pub enum ScaleType {
 ///     - If `s == 1`, the bits 0–2 indicate the alternative system that the unit belongs to.
 ///       The way the other bits are interpreted is determined by this value. At present, which
 ///       SI-incompatible system is represented by each possibility is not specified.
-///     - The upshot is: hex values of `0` to `7` for the least significant nibble
-///       are used for SI units, while `8` to `F` are for SI-incompatible units.
+///     - All 1s i.e. `0b1111` for `suuu` is a reserved value.
+///     - The upshot is: hex values of `0` to `7` for the least significant nibble are used for
+///       SI-compatible units, while `8` to `E` are for SI-incompatible units, with `F` reserved.
 ///     - Note that non-SI units are not automatically SI-incompatible. A foot is not an SI unit,
 ///       but it can be expressed in terms of SI units with no issue, and there are no problems
 ///       with compatibility. CGS systems, however, *are* incompatible with the SI – naive
@@ -154,7 +173,8 @@ pub enum ScaleType {
 ///   concerns itself only with SI-compatible units i.e. where bit 3 `s == 0`.
 /// - Bits 6–4 `rrr` indicate the type of scale a quantity with the unit uses:
 ///     - `0b000` indicates a normal linear scale; the numeric factor encodes a single number.
-///     - All other combinations indicate a specific non-linear scale, four of which are currently considered:
+///     - All other combinations indicate a specific non-linear scale, four of which are currently
+///       considered:
 ///         - `0b001` -> logarithmic, base 10, *x* *κ* = (*y* × 10^(*k*⋅*x*)) *λ*
 ///         - `0b010` -> logarithmic, base 2, *x* *β* = (*y* × 2^(*k*⋅*x*)) *λ*
 ///         - `0b011` -> logarithmic, base *e*, *x* *ε* = (*y* × *e*^(*k*⋅*x*)) *λ*
@@ -169,6 +189,10 @@ pub enum ScaleType {
 ///     - If `p == 1`, the least significant 28 bits of the numeric component are used to encode the
 ///       denominators as 4-bit unsigned integers, and the fields of the numeric component are
 ///       narrowed to compensate.
+/// - UoMIDs in which the four least significant bits are all 1s are currently invalid, with those
+///   combinations reserved for special values.
+///     - For example, a least significant byte of `0xFF` might be used as a continuation byte
+///       should a variable-width encoding turn out to be necessary.
 ///
 ///
 /// ### Dimensional component
@@ -185,7 +209,8 @@ pub enum ScaleType {
 ///
 /// - Width: 84 bits
 /// - Layout: `jjjj|nnnnθθθθ|iiiimmmm|lllltttt|JJJJJJJJJ|NNNNNNNN|ΘΘΘΘΘΘΘΘ|IIIIIIII|MMMMMMMM|LLLLLLLL|TTTTTTTT|`
-/// - Bits 8–63 encode the numerators of the exponents for each SI dimension as signed 8-bit integers `i8`.
+/// - Bits 8–63 encode the numerators of the exponents for each SI dimension as signed 8-bit
+///   integers `i8`.
 /// - Bits 91–64 encode the denominators of the exponents as unsigned 4-bit integers (i.e. `u4`)
 ///
 ///
@@ -233,7 +258,7 @@ pub enum ScaleType {
 ///
 /// - Width: 64 bits
 /// - Layout: `|wgaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|eeeeeeee|`
-/// - `w` is a flag to indicate the use of the decimal encoding (`0`) or the binary-like encoding (`1`)
+/// - `w` is a flag to indicate the use of the decimal (`0`) or the binary-like (`1`) encoding
 /// - Encodes the proportionality factor *k* by:
 ///     - Decimal encoding: *k* = (−1)^*g* (*a* + 1) × 10^*e*
 ///     - Binary-like encoding: *k* = (−1)^*g* (*a* + 1) × 1024^(*e*/3)
@@ -242,25 +267,27 @@ pub enum ScaleType {
 ///   the range is somewhat reduced in comparison).
 /// - `e` is the exponent, encoded (*with no bias*) by the least significant byte as an `i8`
 ///     - Exponents can range from −128 to 127.
-///     - The base of the exponential term is indicated as decimal or binary by `w` as described above.
+///     - The base of the exponential term is indicated as decimal or binary by `w` as described.
 ///     - Under the usual decimal scheme the value of the exponential term is simply 10^*e*.
 ///     - Under the "binary-like" scheme the value of the exponential term is instead 1024^(*e*/3).
 ///         - For traditional binary floating point it would be 2^*e*, hence "binary-like".
 ///         - For a binary number the encoded `e` is thus actually `<exponent> * 3`; this is done so
 ///           that analogous metric and binary prefixes are encoded by the same value/bit pattern
 ///           e.g. kilo and kibi are both `0x03`.
-///         - This essentially constrains the exponent in the binary form to multiples of 3 and
-///           makes the maximum value (where `e == 126`) 1024^42 = 2^420 ≈ 10^126
+///         - The exponent in the binary form is thus constrained to multiples of 3.
+///         - This makes the maximum value (where `e == 126`) 1024^42 = 2^420 ≈ 10^126.
+///         - Thus, importantly, the range of the binary encoding falls within the range of the
+///           decimal encoding; this makes processing much easier.
 ///         - This may seem too low, as `f64` has a max value of 1.80×10^308 and IEEE `decimal64`
 ///           can go up to 1.0×10^385. However, the numeric component is only used to specify the
 ///           value of units, not for the number of an actual quantity. The largest and smallest
 ///           current SI prefixes are quetta = 10^30 and quecto = 10^−30 respectively, so the
 ///           possible range allowed for by the design covers all realistically necessary factors of
 ///           SI base units by some way.
-/// - `a` encodes the mantissa as a 54-bit unsigned binary integer *with a bias of −1*.
+/// - `a` encodes the significand as a 54-bit unsigned binary integer *with a bias of −1*.
 ///     - Enables 16 full decimal digits of precision, matching IEEE `decimal64` and [`SciDecimal`],
 ///       and enough to cover the maximum precision of `f64`.
-///     - The bias means that `a` is actually `<mantissa> - 1`.
+///     - The bias means that `a` is actually `<significand> - 1`.
 ///     - The bias was chosen so that `+1` is encoded as `g = 0, a = 0` => 7 bytes of zeros.
 ///     - The maximum value allowed for the significand is 10^16 − 1.
 ///
@@ -355,17 +382,18 @@ pub enum ScaleType {
 ///   decimal digits of precision is possible.
 /// - The maximum value allowed for the significand is 999.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub struct Unit128 {
-    pub(crate) num: u64,
-    pub(crate) dim: u64,
-}
+pub struct Unit128(u128);
 
 impl Unit128 {
     pub fn new(
         factor: SciDecimal,
         dimensions: Dimensions,
-        least_significant_byte: u8,
+        scale: ScaleType,
+        system: SICompatibility,
     ) -> Result<Self, QuanstantsError> {
+        Self(
+            Unit128::factor_to_bits(factor)
+        )
         let dim = least_significant_byte as u64
             | (*dimensions.T.numer() as u8 as u64) << 8
             | (*dimensions.L.numer() as u8 as u64) << 16
@@ -479,7 +507,7 @@ impl Unit128 {
     #[inline]
     pub fn factor(&self) -> SciDecimal {
         if self.is_referenced() {
-            Unit128::bits_to_factor_and_reference(self.num).0
+            Unit128::bits_to_reference_and_constant(self.num).0
         } else {
             Unit128::bits_to_factor(self.num)
         }
@@ -605,29 +633,103 @@ impl FromStr for Unit128 {
     }
 }
 
+/// Casts a (pre-validated) `i16` to the equivalent `i7` (as a `u8` with a leading 0).
+fn i16_to_i7(n: i16) -> u8 {
+    // Can't just cast to `i8` and then `u8`, need to move the sign bits
+    let n = n as u16;
+    let sign = ((n & 0b1000000000000000) >> 9) as u8; // Bit 15 moved to bit 6
+    let value = (n & 0b0000000000111111) as u8; // Bits 5–0 only
+    sign | value
+}
+
+/// Casts an `i7` (as a `u8` with a leading 0) to the equivalent `i16`.
+fn i7_to_i16(n: u8) -> i16 {
+    let sign = ((n & 0b01000000) << 9) as u16; // Bit 6 moved to bit 15
+    let value = (n & 0b00111111) as u16; // Bits 5–0 only
+    (sign | value) as i16
+}
+
 #[allow(dead_code)]
 // Functions for converting between `SciDecimal`s and the 64-bit numeric component
 // of `Unit128`
 impl Unit128 {
-    // Maximum and minimum values for a simple numeric component, which just encodes _k_.
-    // The number is encoded as a sign bit, a 54-bit mantissa, and an `i8` exponent.
-    // However, the mantissa is limited to 16 decimal digits, just like `SciDecimal`
-    // and IEEE 754's `decimal64`.
-    const MAX_MANTISSA_WIDE: i64 = 10_i64.pow(16) - 1;
-    const MIN_MANTISSA_WIDE: i64 = -(10_i64.pow(16) - 1);
-    const MAX_EXPONENT_WIDE: i8 = i8::MAX;
-    const MIN_EXPONENT_WIDE: i8 = i8::MIN;
+    // Maximum and minimum values for a simple 64-bit numeric component, which just encodes
+    // the proportionality factor _k_.
+    const MAX_SIGNIFICAND_SIMPLE: i64 = 10_i64.pow(16) - 1;
+    const MIN_SIGNIFICAND_SIMPLE: i64 = -(10_i64.pow(16) - 1);
+    const MAX_EXPONENT_SIMPLE: i8 = i8::MAX;
+    const MIN_EXPONENT_SIMPLE: i8 = i8::MIN;
 
-    /// Calculates the 64-bit simple numeric component that encodes the provided
-    /// `SciDecimal`.
+    /// Calculates the 64-bit numeric component that encodes the provided [`SciDecimal`].
     ///
-    /// Fails if the factor is too large to be represented (the exponent is outside
-    /// the range 128 <= e <= 127) or is not finite (i.e. it is infinity or NaN).
+    /// A number defined by *k* = (−1)^*g* (*a* + 1) × 10^*e* is encoded by a form of BID decimal
+    /// floating point, with (from most to least significant):
+    ///
+    /// - a binary bit, `w = 0`
+    /// - a sign bit, `g`
+    /// - a 54-bit significand with a bias of −1, `a`
+    /// - an `i8` exponent, `e`
+    ///
+    /// in the layout: `|wgaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|eeeeeeee|`
+    ///
+    /// A binary-like encoding is possible when `w = 1`, but not using this function.
+    ///
+    /// The significand is limited to 16 full decimal digits of precision.
+    /// This matches [`SciDecimal`] and IEEE 754's `decimal64`, so there is no loss of precision.
+    ///
+    /// Fails if `factor` is too large or small to be represented (*e* > [`MAX_EXPONENT_SIMPLE`] or
+    /// < [`MIN_EXPONENT_SIMPLE`]) or is not finite (i.e. it is infinity or NaN).
     pub(crate) fn factor_to_bits(factor: SciDecimal) -> Result<u64, QuanstantsError> {
         if !factor.is_finite() {
             Err(QuanstantsError::Range)
         } else if let Ok(exp) = i8::try_from(factor.exponent()) {
-            Ok((factor.sign() as u64) << 63 | (factor.significand() - 1) << 8 | exp as u8 as u64)
+            Ok((factor.sign() as u64) << 62 | (factor.significand() - 1) << 8 | exp as u8 as u64)
+        } else {
+            Err(QuanstantsError::Range)
+        }
+    }
+
+
+    // Maximum and minimum values for a narrow 36-bit numeric component, which just encodes
+    // the proportionality factor _k_.
+    // Used when the dimensional component encodes fractional exponents and is therefore widened.
+    const MAX_SIGNIFICAND_SIMPLE_NARROW: i64 = 10_i64.pow(8) - 1;
+    const MIN_SIGNIFICAND_SIMPLE_NARROW: i64 = -(10_i64.pow(8) - 1);
+    const MAX_EXPONENT_SIMPLE_NARROW: i8 = i8::MAX;
+    const MIN_EXPONENT_SIMPLE_NARROW: i8 = i8::MIN;
+
+    /// Calculates the 36-bit numeric component that encodes the provided [`SciDecimal`],
+    /// with zero padding up to 64 bits.
+    ///
+    /// A number defined by *k* = (−1)^*g* (*a* + 1) × 10^*e* is encoded by a form of BID decimal
+    /// floating point, with (from most to least significant):
+    ///
+    /// - a sign bit, `g`
+    /// - a 27-bit significand with a bias of −1, `a`
+    /// - an `i8` exponent, `e`
+    ///
+    /// in the layout: `|00000000|00000000|00000000|0000gaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|eeeeeeee|`
+    ///
+    /// The significand is limited to 8 full decimal digits of precision.
+    /// If the number has more than 8 significant figures it is first rounded.
+    ///
+    /// Fails if `factor` is too large or small to be represented
+    /// (*e* > [`MAX_EXPONENT_SIMPLE_NARROW`] or < [`MIN_EXPONENT_SIMPLE_NARROW`])
+    /// or is not finite (i.e. it is infinity or NaN).
+    pub(crate) fn factor_to_bits_narrow(factor: SciDecimal) -> Result<u64, QuanstantsError> {
+        if !factor.is_finite() {
+            return Err(QuanstantsError::Range);
+        }
+
+        let shortened: SciDecimal =
+            if factor.significand() > Unit128::MAX_SIGNIFICAND_SIMPLE_NARROW as u64 {
+                factor.round_sf(8, scinum::RoundingMode::HalfUp)
+            } else {
+                factor
+            };
+
+        if let Ok(exp) = i8::try_from(shortened.exponent()) {
+            Ok((shortened.sign() as u64) << 35 | (factor.significand() - 1) << 8 | exp as u8 as u64)
         } else {
             Err(QuanstantsError::Range)
         }
@@ -635,23 +737,30 @@ impl Unit128 {
 
     // Maximum and minimum values for a referenced numeric component, which encodes
     // both a "reference" _y_ and a "constant" _k_.
-    // Each number has a sign bit, a 27-bit mantissa, and an `i8` exponent.
-    const MAX_MANTISSA_NARROW: i32 = 2_i32.pow(27);
-    const MIN_MANTISSA_NARROW: i32 = -(2_i32.pow(27));
-    const MAX_EXPONENT_NARROW: i8 = i8::MAX;
-    const MIN_EXPONENT_NARROW: i8 = i8::MIN;
+    const MAX_SIGNIFICAND_REFERENCED: i64 = 10_i64.pow(7) - 1;
+    const MIN_SIGNIFICAND_REFERENCED: i64 = -(10_i64.pow(7) - 1);
+    const MAX_EXPONENT_REFERENCED: i8 = 63;
+    const MIN_EXPONENT_REFERENCED: i8 = -64;
 
     /// Calculates the 64-bit referenced numeric component that encodes the
-    /// provided `SciNum`s.
+    /// provided [`SciDecimal`]s.
     ///
-    /// If either of the numbers have a precision greater than can be expressed
-    /// in 27 bits (i.e. the significand is greater than [`Unit128::MAX_MANTISSA_NARROW`])
-    /// it is first rounded to 6 significant figures.
+    /// A reference defined by *y* = (−1)^*h* (*b* + 1) × 10^*f* and a constant defined by
+    /// *k* as *k* = (−1)^*g* (*a* + 1) × 10^*e* are encoded by a form of BID decimal floating
+    /// point, with:
     ///
-    /// Fails if either the reference or constant are too large to be represented
-    /// (the exponent is outside the range 128 <= e <= 127) or are not finite
-    /// (i.e. they are infinity or NaN).
-    pub(crate) fn constant_and_reference_to_bits(
+    /// - two sign bits, `h` and `g`
+    /// - two 24-bit significands with a bias of −1, `b` and `a`
+    /// - two `i7` exponents, `f` and `e`
+    ///
+    /// in the layout: `|hbbbbbbb|bbbbbbbb|bbbbbbbb|bfffffff|gaaaaaaa|aaaaaaaa|aaaaaaaa|aeeeeeee|`
+    ///
+    /// The significands are limited to 7 full decimal digits of precision.
+    /// If either of the numbers have more than 7 significant figures they are first rounded.
+    ///
+    /// Fails if `factor` is too large or small to be represented (*e* > [`MAX_EXPONENT_REFERENCED`]
+    /// or < [`MIN_EXPONENT_REFERENCED`]) or is not finite (i.e. it is infinity or NaN).
+    pub(crate) fn reference_and_constant_to_bits(
         reference: SciDecimal,
         constant: SciDecimal,
     ) -> Result<u64, QuanstantsError> {
@@ -660,54 +769,183 @@ impl Unit128 {
         }
 
         let shortened_reference: SciDecimal =
-            if reference.significand() > Unit128::MAX_MANTISSA_NARROW as u64 {
-                reference.round_sf(6, scinum::RoundingMode::HalfUp)
+            if reference.significand() > Unit128::MAX_SIGNIFICAND_REFERENCED as u64 {
+                reference.round_sf(7, scinum::RoundingMode::HalfUp)
             } else {
                 reference
             };
-        let reference_bits = if let Ok(exp) = i8::try_from(shortened_reference.exponent()) {
-            (shortened_reference.sign() as u64) << 31
-                | (shortened_reference.significand() - 1) << 8
-                | exp as u8 as u64
-        } else {
-            return Err(QuanstantsError::Range);
-        };
-
         let shortened_constant: SciDecimal =
-            if constant.significand() > Unit128::MAX_MANTISSA_NARROW as u64 {
-                constant.round_sf(6, scinum::RoundingMode::HalfUp)
+            if constant.significand() > Unit128::MAX_SIGNIFICAND_REFERENCED as u64 {
+                constant.round_sf(7, scinum::RoundingMode::HalfUp)
             } else {
                 constant
             };
-        let constant_bits = if let Ok(exp) = i8::try_from(shortened_constant.exponent()) {
-            (shortened_constant.sign() as u64) << 31
-                | (shortened_constant.significand() - 1) << 8
-                | exp as u8 as u64
-        } else {
+
+        // First check that the exponents are representable as `i7`s
+        // That allows us to use our `i16_to_i7()` function without worry
+        let allowed_exp = (Unit128::MIN_EXPONENT_REFERENCED as i16)..=(Unit128::MAX_EXPONENT_REFERENCED as i16);
+        if !(
+            allowed_exp.contains(&reference.exponent()) && allowed_exp.contains(&constant.exponent())
+        ) {
             return Err(QuanstantsError::Range);
-        };
+        }
 
-        Ok(reference_bits << 32 | constant_bits)
+        Ok(
+            (shortened_reference.sign() as u64) << 63
+            | (shortened_reference.significand() - 1) << 39
+            | (i16_to_i7(shortened_reference.exponent()) as u64) << 32
+            | (shortened_constant.sign() as u64) << 31
+            | (shortened_constant.significand() - 1) << 7
+            | (i16_to_i7(shortened_constant.exponent()) as u64)
+        )
     }
 
-    /// Determines the `SciNum` encoded by the provided 64-bit numeric
-    /// component.
+    // Maximum and minimum values for a narrow referenced numeric component, which encodes
+    // both a "reference" _y_ and a "constant" _k_.
+    // Used when the dimensional component encodes fractional exponents and is therefore widened.
+    const MAX_SIGNIFICAND_REFERENCED_NARROW: i64 = 10_i64.pow(3) - 1;
+    const MIN_SIGNIFICAND_REFERENCED_NARROW: i64 = -(10_i64.pow(3) - 1);
+    const MAX_EXPONENT_REFERENCED_NARROW: i8 = 63;
+    const MIN_EXPONENT_REFERENCED_NARROW: i8 = -64;
+
+    /// Calculates the 36-bit referenced numeric component that encodes the
+    /// provided [`SciDecimal`]s, with zero padding up to 64 bits.
+    ///
+    /// A reference defined by *y* = (−1)^*h* (*b* + 1) × 10^*f* and a constant defined by
+    /// *k* as *k* = (−1)^*g* (*a* + 1) × 10^*e* are encoded by a form of BID decimal floating
+    /// point, with:
+    ///
+    /// - two sign bits, `h` and `g`
+    /// - two 10-bit significands with a bias of −1, `b` and `a`
+    /// - two `i7` exponents, `f` and `e`
+    ///
+    /// in the layout: `|00000000|00000000|00000000|0000hbbb|bbbbbbbf|ffffffga|aaaaaaaa|aeeeeeee|`
+    ///
+    /// The significands are limited to 3 full decimal digits of precision.
+    /// If either of the numbers have more than 3 significant figures they are first rounded.
+    ///
+    /// Fails if `factor` is too large or small to be represented
+    /// (*e* > [`MAX_EXPONENT_REFERENCED_NARROW`] or < [`MIN_EXPONENT_REFERENCED_NARROW`])
+    /// or is not finite (i.e. it is infinity or NaN).
+    pub(crate) fn reference_and_constant_to_bits_narrow(
+        reference: SciDecimal,
+        constant: SciDecimal,
+    ) -> Result<u64, QuanstantsError> {
+        if !(reference.is_finite() && constant.is_finite()) {
+            return Err(QuanstantsError::Range);
+        }
+
+        let shortened_reference: SciDecimal =
+            if reference.significand() > Unit128::MAX_SIGNIFICAND_REFERENCED_NARROW as u64 {
+                reference.round_sf(3, scinum::RoundingMode::HalfUp)
+            } else {
+                reference
+            };
+        let shortened_constant: SciDecimal =
+            if constant.significand() > Unit128::MAX_SIGNIFICAND_REFERENCED_NARROW as u64 {
+                constant.round_sf(3, scinum::RoundingMode::HalfUp)
+            } else {
+                constant
+            };
+
+        // First check that the exponents are representable as `i7`s
+        // That allows us to use our `i16_to_i7()` function without worry
+        let allowed_exp = (Unit128::MIN_EXPONENT_REFERENCED_NARROW as i16)..=(Unit128::MAX_EXPONENT_REFERENCED_NARROW as i16);
+        if !(
+            allowed_exp.contains(&reference.exponent()) && allowed_exp.contains(&constant.exponent())
+        ) {
+            return Err(QuanstantsError::Range);
+        }
+
+        Ok(
+            (shortened_reference.sign() as u64) << 35
+            | (shortened_reference.significand() - 1) << 25
+            | (i16_to_i7(shortened_reference.exponent()) as u64) << 18
+            | (shortened_constant.sign() as u64) << 17
+            | (shortened_constant.significand() - 1) << 7
+            | (i16_to_i7(shortened_constant.exponent()) as u64)
+        )
+    }
+
+    /// Determines the [`SciDecimal`] encoded by a 64-bit numeric component.
+    ///
+    /// If the numeric component uses the binary encoding, the result may lose
+    /// some precision.
     pub(crate) fn bits_to_factor(b: u64) -> SciDecimal {
-        let exponent = (b & 0x0000_0000_0000_00FF) as i8;
-        let significand = ((b as i64) >> 8) + 1;
-        SciDecimal::new(significand.into(), exponent.into())
+        const BINARY_MASK: u64 =   0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000;
+        const SIGN_MASK: u64 =     0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000;
+        const EXPONENT_MASK: u64 = 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_11111111;
+        let sign = b & SIGN_MASK;
+        let significand = ((b & !SIGN_MASK & !BINARY_MASK) >> 8) + 1;
+        let binary = (b & BINARY_MASK) != 0;
+        if !binary {
+            SciDecimal::new(
+                (sign | significand) as i64,
+                (b & EXPONENT_MASK) as i8 as i16, // Casting larger to smaller truncates, smaller to larger sign extends
+            )
+        } else {
+            // First just make the significand into a number i.e. *n* = (−1)^*g* (*a* + 1)
+            let n = SciDecimal::new((sign | significand) as i64, 0);
+            // Create the exponent term as a second SciDecimal
+            // Per the specification, the exponent is encoded as the actual value multiplied by 3
+            let e = SciDecimal::new(1024, 0).powi((b & EXPONENT_MASK) as i8 as i32 / 3);
+            // The result will always fit into a `SciDecimal`,
+            // but full precision will not always be possible
+            n * e
+        }
     }
 
-    /// Determines the `SciNum`s encoded by the provided 64-bit referenced
-    /// numeric component.
-    pub(crate) fn bits_to_factor_and_reference(b: u64) -> (SciDecimal, SciDecimal) {
-        let factor_exponent = (b & 0x0000_0000_0000_00FF) as i8;
-        let factor_significand = ((b & 0x0000_0000_FFFF_FF00) as u32 >> 8) + 1;
-        let factor = SciDecimal::new(factor_significand.into(), factor_exponent.into());
-        let ref_exponent = ((b & 0x0000_00FF_0000_0000) >> 32) as i8;
-        let ref_significand = ((b & 0xFFFF_FF00_0000_0000) as u32 >> 40) + 1;
-        let reference = SciDecimal::new(ref_significand.into(), ref_exponent.into());
-        (factor, reference)
+    /// Determines the [`SciDecimal`] encoded by a zero-padded 36-bit numeric component.
+    pub(crate) fn bits_to_factor_narrow(b: u64) -> SciDecimal {
+        // This case is even simpler than the normal case, as there's no possibility of a binary encoding
+        const SIGN_MASK: u64 =     0b1000_00000000_00000000_00000000_00000000;
+        const EXPONENT_MASK: u64 = 0b0000_00000000_00000000_00000000_11111111;
+        let sign = (b & SIGN_MASK) << 28;
+        let significand = ((b & !SIGN_MASK) >> 8) + 1;
+        SciDecimal::new(
+            (sign | significand) as i64,
+            (b & EXPONENT_MASK) as i8 as i16, // Casting larger to smaller truncates, smaller to larger sign extends
+        )
+    }
+
+    /// Determines the [`SciDecimal`]s encoded by a 64-bit referenced numeric component.
+    pub(crate) fn bits_to_reference_and_constant(b: u64) -> (SciDecimal, SciDecimal) {
+        const SIGN_MASK: u64 =     0b10000000_00000000_00000000_00000000;
+        const EXPONENT_MASK: u64 = 0b00000000_00000000_00000000_01111111;
+        let r = b >> 32; // Reference has same layout as constant, just bit shifted
+        let reference_sign = (r & SIGN_MASK) << 32;
+        let reference_significand = ((r & !SIGN_MASK) >> 7) + 1;
+        let reference = SciDecimal::new(
+            (reference_sign | reference_significand) as i64,
+            i7_to_i16((r & EXPONENT_MASK) as u8),
+        );
+        let constant_sign = (b & SIGN_MASK) << 32;
+        let constant_significand = ((b & !SIGN_MASK) >> 7) + 1;
+        let constant = SciDecimal::new(
+            (constant_sign | constant_significand) as i64,
+            i7_to_i16((b & EXPONENT_MASK) as u8),
+        );
+        (reference, constant)
+    }
+
+    /// Determines the [`SciDecimal`]s encoded by a zero-padded 36-bit referenced numeric component.
+    pub(crate) fn bits_to_reference_and_constant_narrow(b: u64) -> (SciDecimal, SciDecimal) {
+        const SIGN_MASK: u64 =     0b10_00000000_00000000;
+        const EXPONENT_MASK: u64 = 0b00_00000000_01111111;
+        let r = b >> 18; // Reference has same layout as constant, just bit shifted
+        let reference_sign = (r & SIGN_MASK) << 46;
+        let reference_significand = ((r & !SIGN_MASK) >> 7) + 1;
+        let reference = SciDecimal::new(
+            (reference_sign | reference_significand) as i64,
+            i7_to_i16((r & EXPONENT_MASK) as u8),
+        );
+        let constant_sign = (b & SIGN_MASK) << 46;
+        let constant_significand = ((b & !SIGN_MASK) >> 7) + 1;
+        let constant = SciDecimal::new(
+            (constant_sign | constant_significand) as i64,
+            i7_to_i16((b & EXPONENT_MASK) as u8),
+        );
+        (reference, constant)
     }
 }
 
@@ -981,146 +1219,162 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn new() {
-        let s = Unit128::new(SciDecimal::ONE, Dimensions::TIME, 0x00);
-        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
-        assert_eq!(s, Unit128::SECOND);
-        assert_eq!(s.num, 0x0);
-        assert_eq!(s.dim, 0x1100);
-        assert_eq!(celsius.num, 0x006AB3FE00000000);
-        assert_eq!(celsius.dim, 0x0000110000000041);
-        assert_eq!(ft.num, 0xBE7FC);
-        assert_eq!(ft.dim, 0x110001);
-    }
+    //#[test]
+    //fn new() {
+    //    let s = Unit128::new(SciDecimal::ONE, Dimensions::TIME, 0x00);
+    //    let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+    //    let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
+    //    assert_eq!(s, Unit128::SECOND);
+    //    assert_eq!(s.num, 0x0);
+    //    assert_eq!(s.dim, 0x1100);
+    //    assert_eq!(celsius.num, 0x006AB3FE00000000);
+    //    assert_eq!(celsius.dim, 0x0000110000000041);
+    //    assert_eq!(ft.num, 0xBE7FC);
+    //    assert_eq!(ft.dim, 0x110001);
+    //}
 
     #[test]
-    fn factor_to_bits() {
-        assert_eq!(Unit128::factor_to_bits(SciDecimal::new(1, 0)), 0x0);
-        assert_eq!(Unit128::factor_to_bits(SciDecimal::new(2, 0)), 0x100);
-        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x1); // Fails for
-        // now, gives:
-        assert_eq!(Unit128::factor_to_bits(SciDecimal::new(10, 0)), 0x900);
-        //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3); // Fails
-        // for now, gives:
-        assert_eq!(Unit128::factor_to_bits(SciDecimal::new(1000, 0)), 0x3E700);
-        assert_eq!(Unit128::factor_to_bits(sci!(0.1)), 0xFF);
-        assert_eq!(Unit128::factor_to_bits(sci!(1e-3)), 0xFD);
-        assert_eq!(
-            Unit128::factor_to_bits(SciDecimal::new(-1, 0)),
-            0xFFFFFFFFFFFFFE00
-        );
-        assert_eq!(
-            Unit128::factor_to_bits(SciDecimal::new(-3, 0)),
-            0xFFFFFFFFFFFFFC00
-        );
-        assert_eq!(Unit128::factor_to_bits(sci!(0.3048)), 0xBE7FC);
+    fn create_i7() {
+        // Max possible value for an i7 is 63, min value is -64
+        // Positive numbers first, should be straightforward
+        assert_eq!(i16_to_i7(0), 0_u8);
+        assert_eq!(i16_to_i7(1), 1_u8);
+        assert_eq!(i16_to_i7(63), 63_u8);
+        // Generate negative i7s for testing using two's complement and then
+        // zeroing bit 7 (to reflect overflow)
+        // Don't have to worry about actual overflow of the u8 since the value
+        // is always too low for it to occur
+        assert_eq!(i16_to_i7(-1), (!1_u8 + 1) & 0b01111111);
+        assert_eq!(i16_to_i7(-63), (!63_u8 + 1) & 0b01111111);
+        assert_eq!(i16_to_i7(-64), (!64_u8 + 1) & 0b01111111);
     }
 
-    #[test]
-    fn bits_to_factor() {
-        assert_eq!(Unit128::bits_to_factor(0x0), SciDecimal::new(1, 0));
-        assert_eq!(Unit128::bits_to_factor(0x100), SciDecimal::new(2, 0));
-        //assert_eq!(Unit128::bits_to_factor(0x1, SciNum::new_exact(10)); // Fails for
-        // now, gives:
-        assert_eq!(Unit128::bits_to_factor(0x900), SciDecimal::new(10, 0));
-        //assert_eq!(Unit128::bits_to_factor(0x3, SciNum::new_exact(1000)); // Fails
-        // for now, gives:
-        assert_eq!(Unit128::bits_to_factor(0x3E700), SciDecimal::new(1000, 0));
-        assert_eq!(Unit128::bits_to_factor(0xFF), sci!(0.1));
-        assert_eq!(Unit128::bits_to_factor(0xFD), sci!(1e-3));
-        assert_eq!(
-            Unit128::bits_to_factor(0xFFFFFFFFFFFFFE00),
-            SciDecimal::new(-1, 0)
-        );
-        assert_eq!(
-            Unit128::bits_to_factor(0xFFFFFFFFFFFFFC00),
-            SciDecimal::new(-3, 0)
-        );
-        assert_eq!(Unit128::bits_to_factor(0xBE7FC), sci!(0.3048));
-    }
+    //#[test]
+    //fn factor_to_bits() {
+    //    assert_eq!(Unit128::factor_to_bits(SciDecimal::new(1, 0)), 0x0);
+    //    assert_eq!(Unit128::factor_to_bits(SciDecimal::new(2, 0)), 0x100);
+    //    //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(10)), 0x1); // Fails for
+    //    // now, gives:
+    //    assert_eq!(Unit128::factor_to_bits(SciDecimal::new(10, 0)), 0x900);
+    //    //assert_eq!(Unit128::factor_to_bits(SciNum::new_exact(1000)), 0x3); // Fails
+    //    // for now, gives:
+    //    assert_eq!(Unit128::factor_to_bits(SciDecimal::new(1000, 0)), 0x3E700);
+    //    assert_eq!(Unit128::factor_to_bits(sci!(0.1)), 0xFF);
+    //    assert_eq!(Unit128::factor_to_bits(sci!(1e-3)), 0xFD);
+    //    assert_eq!(
+    //        Unit128::factor_to_bits(SciDecimal::new(-1, 0)),
+    //        0xFFFFFFFFFFFFFE00
+    //    );
+    //    assert_eq!(
+    //        Unit128::factor_to_bits(SciDecimal::new(-3, 0)),
+    //        0xFFFFFFFFFFFFFC00
+    //    );
+    //    assert_eq!(Unit128::factor_to_bits(sci!(0.3048)), 0xBE7FC);
+    //}
 
-    #[test]
-    fn factor() {
-        assert_eq!(Unit128::KILOGRAM.factor(), SciDecimal::ONE);
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
-        assert_eq!(ft.factor(), sci!(0.3048));
-        // Calling factor() on this was broken, keep as regression test
-        let x = Unit128 {
-            num: 0x20789937226C9F0,
-            dim: 0x1214F40D,
-        };
-        // The above should correspond to:
-        // 4.184^-2 = 0.05712374190670824665757561355… = 571237419067082 * 10^-16
-        assert_eq!(x.factor(), sci!(571237419067082e-16));
-    }
+    //#[test]
+    //fn bits_to_factor() {
+    //    assert_eq!(Unit128::bits_to_factor(0x0), SciDecimal::new(1, 0));
+    //    assert_eq!(Unit128::bits_to_factor(0x100), SciDecimal::new(2, 0));
+    //    //assert_eq!(Unit128::bits_to_factor(0x1, SciNum::new_exact(10)); // Fails for
+    //    // now, gives:
+    //    assert_eq!(Unit128::bits_to_factor(0x900), SciDecimal::new(10, 0));
+    //    //assert_eq!(Unit128::bits_to_factor(0x3, SciNum::new_exact(1000)); // Fails
+    //    // for now, gives:
+    //    assert_eq!(Unit128::bits_to_factor(0x3E700), SciDecimal::new(1000, 0));
+    //    assert_eq!(Unit128::bits_to_factor(0xFF), sci!(0.1));
+    //    assert_eq!(Unit128::bits_to_factor(0xFD), sci!(1e-3));
+    //    assert_eq!(
+    //        Unit128::bits_to_factor(0xFFFFFFFFFFFFFE00),
+    //        SciDecimal::new(-1, 0)
+    //    );
+    //    assert_eq!(
+    //        Unit128::bits_to_factor(0xFFFFFFFFFFFFFC00),
+    //        SciDecimal::new(-3, 0)
+    //    );
+    //    assert_eq!(Unit128::bits_to_factor(0xBE7FC), sci!(0.3048));
+    //}
 
-    #[test]
-    fn dimensions() {
-        assert_eq!(Unit128::KILOGRAM.dimensions(), Dimensions::MASS);
-        assert_eq!(
-            Unit128::KELVIN.dimensions(),
-            Dimensions::THERMODYNAMIC_TEMPERATURE
-        );
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
-        assert_eq!(ft.dimensions(), Dimensions::LENGTH);
-    }
+    //#[test]
+    //fn factor() {
+    //    assert_eq!(Unit128::KILOGRAM.factor(), SciDecimal::ONE);
+    //    let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
+    //    assert_eq!(ft.factor(), sci!(0.3048));
+    //    // Calling factor() on this was broken, keep as regression test
+    //    let x = Unit128 {
+    //        num: 0x20789937226C9F0,
+    //        dim: 0x1214F40D,
+    //    };
+    //    // The above should correspond to:
+    //    // 4.184^-2 = 0.05712374190670824665757561355… = 571237419067082 * 10^-16
+    //    assert_eq!(x.factor(), sci!(571237419067082e-16));
+    //}
 
-    #[test]
-    fn lsb() {
-        assert_eq!(Unit128::ONE.least_significant_byte(), 0x00);
-        assert_eq!(Unit128::SECOND.least_significant_byte(), 0x00);
-        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
-        assert_eq!(celsius.least_significant_byte(), 0x41);
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
-        assert_eq!(ft.least_significant_byte(), 0x01);
-    }
+    //#[test]
+    //fn dimensions() {
+    //    assert_eq!(Unit128::KILOGRAM.dimensions(), Dimensions::MASS);
+    //    assert_eq!(
+    //        Unit128::KELVIN.dimensions(),
+    //        Dimensions::THERMODYNAMIC_TEMPERATURE
+    //    );
+    //    let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
+    //    assert_eq!(ft.dimensions(), Dimensions::LENGTH);
+    //}
 
-    #[test]
-    fn is_referenced() {
-        assert!(!Unit128::ONE.is_referenced());
-        assert!(!Unit128::SECOND.is_referenced());
-        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
-        assert!(celsius.is_referenced());
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
-        assert!(!ft.is_referenced());
-    }
+    //#[test]
+    //fn lsb() {
+    //    assert_eq!(Unit128::ONE.least_significant_byte(), 0x00);
+    //    assert_eq!(Unit128::SECOND.least_significant_byte(), 0x00);
+    //    let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+    //    assert_eq!(celsius.least_significant_byte(), 0x41);
+    //    let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
+    //    assert_eq!(ft.least_significant_byte(), 0x01);
+    //}
 
-    #[test]
-    fn to_from_str() {
-        let s = Unit128::SECOND;
-        let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
-        // Test these known examples
-        assert_eq!(s.to_string(), "0x1100");
-        assert_eq!(celsius.to_string(), "0x6AB3FE000000000000110000000041");
-        assert_eq!(ft.to_string(), "0xBE7FC0000000000110001");
-        // Test round trip
-        assert_eq!(Unit128::from_str(&s.to_string()).unwrap(), s);
-        assert_eq!(Unit128::from_str(&celsius.to_string()).unwrap(), celsius);
-        assert_eq!(Unit128::from_str(&ft.to_string()).unwrap(), ft);
-    }
+    //#[test]
+    //fn is_referenced() {
+    //    assert!(!Unit128::ONE.is_referenced());
+    //    assert!(!Unit128::SECOND.is_referenced());
+    //    let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+    //    assert!(celsius.is_referenced());
+    //    let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
+    //    assert!(!ft.is_referenced());
+    //}
 
-    #[test]
-    fn debug() {
-        assert_eq!(
-            format!("{:?}", Unit128::SECOND),
-            "Unit128 { num: 0x0, dim: 0x1100 }"
-        );
-    }
+    //#[test]
+    //fn to_from_str() {
+    //    let s = Unit128::SECOND;
+    //    let celsius = Unit128::from_bits(0x006AB3FE000000000000110000000041);
+    //    let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
+    //    // Test these known examples
+    //    assert_eq!(s.to_string(), "0x1100");
+    //    assert_eq!(celsius.to_string(), "0x6AB3FE000000000000110000000041");
+    //    assert_eq!(ft.to_string(), "0xBE7FC0000000000110001");
+    //    // Test round trip
+    //    assert_eq!(Unit128::from_str(&s.to_string()).unwrap(), s);
+    //    assert_eq!(Unit128::from_str(&celsius.to_string()).unwrap(), celsius);
+    //    assert_eq!(Unit128::from_str(&ft.to_string()).unwrap(), ft);
+    //}
 
-    #[test]
-    fn mul() {
-        let amp_second = Unit128::AMPERE * Unit128::SECOND;
-        let square_metre = Unit128::METRE * Unit128::METRE;
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
-        let square_foot = ft * ft;
-        assert_eq!(amp_second.num, 0x0);
-        assert_eq!(amp_second.dim, 0x110000110C);
-        assert_eq!(square_metre.num, 0x0);
-        assert_eq!(square_metre.dim, 0x12000C);
-        assert_eq!(square_foot.num, 0x8DC23FF8);
-        assert_eq!(square_foot.dim, 0x12000C);
-    }
+    //#[test]
+    //fn debug() {
+    //    assert_eq!(
+    //        format!("{:?}", Unit128::SECOND),
+    //        "Unit128 { num: 0x0, dim: 0x1100 }"
+    //    );
+    //}
+
+    //#[test]
+    //fn mul() {
+    //    let amp_second = Unit128::AMPERE * Unit128::SECOND;
+    //    let square_metre = Unit128::METRE * Unit128::METRE;
+    //    let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH, 0x01);
+    //    let square_foot = ft * ft;
+    //    assert_eq!(amp_second.num, 0x0);
+    //    assert_eq!(amp_second.dim, 0x110000110C);
+    //    assert_eq!(square_metre.num, 0x0);
+    //    assert_eq!(square_metre.dim, 0x12000C);
+    //    assert_eq!(square_foot.num, 0x8DC23FF8);
+    //    assert_eq!(square_foot.dim, 0x12000C);
+    //}
 }

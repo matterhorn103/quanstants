@@ -603,7 +603,8 @@ impl Unit128 {
         }
     }
 
-    /// Discards the number uniquely identifying a catalogued SI-compatible unit.
+    /// For a catalogued SI-compatible unit, discards the number uniquely identifying to afford a
+    /// normalized representation defined only in terms of the SI base units.
     ///
     /// # Panics
     ///
@@ -616,34 +617,46 @@ impl Unit128 {
         Self(self.0 & !0b111)
     }
 
+    /// Calculates the inverse of a linear, SI-compatible unit.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not SI-compatible, or if it is a scale unit.
     pub fn inverse(self) -> Unit128 {
-        // Panics for referenced units
-        if self.is_scale() {
-            panic!()
+        if !self.is_si_compatible() {
+            panic!("This operation is not possible for units incompatible with the SI")
+        } else if self.is_scale() {
+            todo!("This method is not implemented for scale units")
+            // Whether to enable arithmetic for scale units is an open question (see Mul)
         } else {
             Unit128::new(
-                self.factor().inv(),
+                self.factor()
+                    .expect("We already checked it's a linear SI unit")
+                    .inv(),
                 self.dimensions().inverse(),
-                self.scheme_component(),
             )
-            .as_unit_type(UnitType::GenericCompound) // Set as generic compound
-            // unit
         }
     }
 
+    /// Raises a linear, SI-compatible unit to the given power.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not SI-compatible, or if it is a scale unit.
     pub fn pow<T: Into<Frac>>(self, exponent: T) -> Unit128 {
-        // Panics for referenced units
-        let exp: Frac = exponent.into();
-        if self.is_scale() {
-            panic!()
+        if !self.is_si_compatible() {
+            panic!("This operation is not possible for units incompatible with the SI")
+        } else if self.is_scale() {
+            todo!("This method is not implemented for scale units")
+            // Whether to enable arithmetic for scale units is an open question (see Mul)
         } else {
+            let exp: Frac = exponent.into();
             Unit128::new(
-                self.factor().pow(exp),
+                self.factor()
+                    .expect("We already checked it's a linear SI unit")
+                    .pow(exp),
                 self.dimensions().pow(exp),
-                self.scheme_component(),
             )
-            .as_unit_type(UnitType::GenericCompound) // Set as generic compound
-            // unit
         }
     }
 }
@@ -651,18 +664,29 @@ impl Unit128 {
 impl Mul for Unit128 {
     type Output = Self;
 
-    // Panics for referenced units
+    /// Multiplies two linear, SI-compatible units.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either unit is not SI-compatible, or is a scale unit.
     fn mul(self, rhs: Unit128) -> Unit128 {
-        if self.is_scale() {
-            panic!()
+        if !self.is_si_compatible() || !rhs.is_si_compatible() {
+            panic!("This operation is not possible for units incompatible with the SI")
+        } else if self.is_scale() || rhs.is_scale() {
+            todo!("This method is not implemented for scale units")
+            // Whether to enable arithmetic for scale units is an open question.
+            // As they always have a value in linear units, arithmetic could in theory
+            // be performed via that linear value – but the result is then no longer
+            // a scale quantity, which may be surprising behaviour.
         } else {
             Unit128::new(
-                self.factor() * rhs.factor(),
+                self.factor()
+                    .expect("We already checked it's a linear SI unit")
+                    * rhs
+                        .factor()
+                        .expect("We already checked it's a linear SI unit"),
                 self.dimensions() * rhs.dimensions(),
-                self.scheme_component(),
             )
-            .as_unit_type(UnitType::GenericCompound) // Set as generic compound
-            // unit
         }
     }
 }
@@ -670,18 +694,26 @@ impl Mul for Unit128 {
 impl Div for Unit128 {
     type Output = Self;
 
-    // Panics for referenced units
+    /// Divides the unit by `rhs`, where both are linear, SI-compatible units.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either unit is not SI-compatible, or is a scale unit.
     fn div(self, rhs: Unit128) -> Unit128 {
-        if self.is_scale() {
-            panic!()
+        if !self.is_si_compatible() || !rhs.is_si_compatible() {
+            panic!("This operation is not possible for units incompatible with the SI")
+        } else if self.is_scale() || rhs.is_scale() {
+            todo!("This method is not implemented for scale units")
+            // Whether to enable arithmetic for scale units is an open question (see Mul)
         } else {
             Unit128::new(
-                self.factor() / rhs.factor(),
+                self.factor()
+                    .expect("We already checked it's a linear SI unit")
+                    / rhs
+                        .factor()
+                        .expect("We already checked it's a linear SI unit"),
                 self.dimensions() / rhs.dimensions(),
-                self.scheme_component(),
             )
-            .as_unit_type(UnitType::GenericCompound) // Set as generic compound
-            // unit
         }
     }
 }
@@ -709,6 +741,9 @@ impl FromStr for Unit128 {
 }
 
 /// Casts a (pre-validated) `i16` to the equivalent `i7` (as a `u8` with a leading 0).
+///
+/// This function relies on the `i16` having already been confirmed as fitting
+/// into an `i7` (i.e. it is in the range `-63..=64`).
 fn i16_to_i7(n: i16) -> u8 {
     // Can't just cast to `i8` and then `u8`, need to move the sign bits
     let n = n as u16;

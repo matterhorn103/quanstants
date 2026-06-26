@@ -439,8 +439,8 @@ impl Unit {
                 id: Unit128::new(
                     self.id.factor() / num,
                     self.dimensions(),
-                    (self.id.least_significant_byte() & 0xF0) | 0x0C, /* Set as generic compound
-                                                                       * unit */
+                    (self.id.scheme_component() & 0xF0) | 0x0C, /* Set as generic compound
+                                                                 * unit */
                 ),
                 utype: LinearUnitType::Compound,
                 dimensions: self.dimensions(),

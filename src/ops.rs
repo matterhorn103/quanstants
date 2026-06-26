@@ -59,7 +59,7 @@ impl Mul<Unit> for Prefix {
                 Unit128 { num, dim }
             } else {
                 // Set as non-unique derived unit
-                let least_significant_byte: u8 = rhs.id.least_significant_byte() & !0x0F | 0x0D;
+                let least_significant_byte: u8 = rhs.id.scheme_component() & !0x0F | 0x0D;
                 let dimensions = rhs.id.dimensions();
                 let factor = rhs.id.factor() * self.value();
                 Unit128::new(factor, dimensions, least_significant_byte)

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use std::{
-    fmt::{self, Debug},
+    fmt,
     ops::{Div, Mul},
     str::FromStr,
 };
@@ -459,7 +459,7 @@ impl Unit128 {
         // it has a least significant byte in the range 0x00 to 0x07.
         if factors
             .iter()
-            .any(|x| x.0.is_referenced() || !x.0.is_si_compatible())
+            .any(|x| x.0.is_scale() || !x.0.is_si_compatible())
         {
             panic!("Compound units may only be created from linear, SI-compatible units!")
         };
@@ -471,111 +471,160 @@ impl Unit128 {
         // avoid constant conversion back and forth to SciDecimal
         let proportionality_factor = factors
             .iter()
-            .map(|x| x.0.factor().pow(x.1))
+            .map(|x| {
+                x.0.factor()
+                    .expect("We already checked it's a linear SI unit")
+                    .pow(x.1)
+            })
             .fold(SciDecimal::ONE, |acc, x| acc * x);
         Self::new(proportionality_factor, dimensions)
     }
 
+    /// Returns the value of bits 7–0.
+    ///
+    /// The scheme component contains information on:
+    /// 1. SI compatibility
+    /// 2. Anonymity/catalogue number
+    /// 3. How the other 120 bits should be interpreted
+    /// 4. How the encoded numbers relate the unit to base units mathematically
     #[inline]
-    pub fn least_significant_byte(&self) -> u8 {
+    pub fn scheme_component(&self) -> u8 {
         (self.0 & 0xFF) as u8
     }
 
+    /// Returns an enum indicating whether the unit is SI compatible, and if so, whether the unit
+    /// is anonymous/defined in base units or a catalogued unit.
+    ///
+    /// Note that non-SI units are not automatically SI-incompatible. A foot is not an SI unit,
+    /// but it can be expressed in terms of SI units with no issue, and there are no problems
+    /// with compatibility. CGS systems, however, *are* incompatible with the SI – naive
+    /// conversion and arithmetic between CGS quantities and SI quantities is not possible.
     #[inline]
-    pub(crate) fn as_unit_type(mut self, utype: UnitType) -> Self {
-        self.dim = (self.dim & !0xF) | (utype.to_nibble() as u64);
-        self
+    pub fn si_compatibility(&self) -> SICompatibility {
+        let compat_nibble = (self.0 & 0x0F) as u8;
+        match compat_nibble {
+            0 => SICompatibility::Normalized,
+            1..8 => SICompatibility::Catalogued(compat_nibble),
+            8..16 => SICompatibility::Incompatible(compat_nibble),
+            16 => panic!("0x0F is reserved and should never occur!"),
+            _ => unreachable!("Impossible for four bits to have a value greater than 16"),
+        }
     }
 
-    #[inline]
-    pub fn utype(&self) -> UnitType {
-        UnitType::from_nibble(
-            ((self.dim & 0xF) as u8)
-                .try_into()
-                .expect("Will always fit"),
-        )
-    }
-
-    #[inline]
-    pub fn system(&self) -> UnitSystem {
-        UnitSystem::from_nibble(
-            ((self.dim & 0xF0) as u8 >> 4)
-                .try_into()
-                .expect("Will always fit"),
-        )
-    }
-
+    /// Returns `true` if the unit is compatible with the SI.
+    ///
+    /// SI-compatibility is indicated by the SI flag bit, bit 3.
+    ///
+    /// Note that non-SI units are not automatically SI-incompatible. A foot is not an SI unit,
+    /// but it can be expressed in terms of SI units with no issue, and there are no problems
+    /// with compatibility. CGS systems, however, *are* incompatible with the SI – naive
+    /// conversion and arithmetic between CGS quantities and SI quantities is not possible.
     #[inline]
     pub fn is_si_compatible(&self) -> bool {
-        (0x00..=0x9F).contains(&self.least_significant_byte())
+        self.0 & 0b1000 == 0
     }
 
+    /// Returns `true` if the unit is a linear unit, not a scale unit.
+    ///
+    /// For SI-compatible units, a linear unit must have `000` for bits 6–4.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not SI-compatible.
     #[inline]
-    pub fn is_referenced(&self) -> bool {
-        // Tried to be efficient but logic is incorrect
-        //((self.dim & 0b10000000) == 0b10000000) // 0xA* to 0xF* are for other systems
-        //((self.dim entirely
-        //|| ((self.dim & 0xF0) == 0) // 0x0* is for normal linear units
-
-        // Just keep it simple for now
-        (0x10..=0x9F).contains(&self.least_significant_byte())
+    pub fn is_linear(&self) -> bool {
+        if !self.is_si_compatible() {
+            panic!("This method is not implemented for units incompatible with the SI")
+        }
+        self.0 & 0b01110000 != 0
     }
 
+    /// Returns `true` if the unit is a scale unit, not a linear unit.
+    ///
+    /// For SI-compatible units, a scale unit is any `Unit128` with anything other
+    /// than `000` for bits 6–4.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not SI-compatible.
+    #[inline]
+    pub fn is_scale(&self) -> bool {
+        !self.is_linear()
+    }
+
+    /// Returns the SI dimension terms of the unit.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not SI-compatible.
     #[inline]
     pub fn dimensions(&self) -> Dimensions {
+        if !self.is_si_compatible() {
+            panic!("This method is not implemented for units incompatible with the SI")
+        }
+        if (self.0 & 0b10000000) != 0 {
+            todo!("Fractional dimensional exponents are not yet implemented!")
+        }
         Dimensions {
-            T: Frac::from_bits(((self.dim >> 8) & 0xFF) as u8),
-            L: Frac::from_bits(((self.dim >> 16) & 0xFF) as u8),
-            M: Frac::from_bits(((self.dim >> 24) & 0xFF) as u8),
-            I: Frac::from_bits(((self.dim >> 32) & 0xFF) as u8),
-            Θ: Frac::from_bits(((self.dim >> 40) & 0xFF) as u8),
-            N: Frac::from_bits(((self.dim >> 48) & 0xFF) as u8),
-            J: Frac::from_bits(((self.dim >> 56) & 0xFF) as u8),
+            T: Frac::from(((self.0 >> 8) & 0xFF) as u8 as i8),
+            L: Frac::from(((self.0 >> 16) & 0xFF) as u8 as i8),
+            M: Frac::from(((self.0 >> 24) & 0xFF) as u8 as i8),
+            I: Frac::from(((self.0 >> 32) & 0xFF) as u8 as i8),
+            Θ: Frac::from(((self.0 >> 40) & 0xFF) as u8 as i8),
+            N: Frac::from(((self.0 >> 48) & 0xFF) as u8 as i8),
+            J: Frac::from(((self.0 >> 56) & 0xFF) as u8 as i8),
         }
     }
 
+    /// Returns the proportionality factor of a linear, SI-compatible unit, or `None` otherwise.
     #[inline]
-    pub fn factor(&self) -> SciDecimal {
-        if self.is_referenced() {
-            Unit128::bits_to_reference_and_constant(self.num).0
-        } else {
-            Unit128::bits_to_factor(self.num)
-        }
-    }
-
-    pub fn reference_exponent(&self) -> Option<i8> {
-        if self.is_referenced() {
-            Some(((self.num & 0x000000FF00000000) >> 16) as i8)
+    pub fn factor(&self) -> Option<SciDecimal> {
+        if !self.is_si_compatible() {
+            None
+        } else if (self.0 & 0b10000000) != 0 {
+            todo!("Fractional dimensional exponents are not yet implemented!")
+        } else if self.is_linear() {
+            Some(Unit128::bits_to_factor((self.0 >> 64) as u64))
         } else {
             None
         }
     }
 
-    pub fn normalize(self) -> Self {
-        // Will need to normalize the number as well I guess
-        self.as_unit_type(UnitType::Normalized)
-    }
-
-    pub fn from_bits(b: u128) -> Self {
-        Self {
-            num: (b >> 64) as u64,
-            dim: (b & 0x0000000000000000FFFFFFFFFFFFFFFF) as u64,
+    /// Returns the reference and constant values of a SI-compatible scale unit, or `None` otherwise.
+    pub fn reference(&self) -> Option<(SciDecimal, SciDecimal)> {
+        if !self.is_si_compatible() {
+            None
+        } else if (self.0 & 0b10000000) != 0 {
+            todo!("Fractional dimensional exponents are not yet implemented!")
+        } else if self.is_scale() {
+            Some(Self::bits_to_reference_and_constant((self.0 >> 64) as u64))
+        } else {
+            None
         }
     }
 
-    pub fn to_bits(self) -> u128 {
-        (self.num as u128) << 64 | self.dim as u128
+    /// Discards the number uniquely identifying a catalogued SI-compatible unit.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not SI-compatible.
+    pub fn normalize(self) -> Self {
+        if !self.is_si_compatible() {
+            panic!("This method is not implemented for units incompatible with the SI")
+        }
+        // Zero bits 2–0
+        Self(self.0 & !0b111)
     }
 
     pub fn inverse(self) -> Unit128 {
         // Panics for referenced units
-        if self.is_referenced() {
+        if self.is_scale() {
             panic!()
         } else {
             Unit128::new(
                 self.factor().inv(),
                 self.dimensions().inverse(),
-                self.least_significant_byte(),
+                self.scheme_component(),
             )
             .as_unit_type(UnitType::GenericCompound) // Set as generic compound
             // unit
@@ -585,13 +634,13 @@ impl Unit128 {
     pub fn pow<T: Into<Frac>>(self, exponent: T) -> Unit128 {
         // Panics for referenced units
         let exp: Frac = exponent.into();
-        if self.is_referenced() {
+        if self.is_scale() {
             panic!()
         } else {
             Unit128::new(
                 self.factor().pow(exp),
                 self.dimensions().pow(exp),
-                self.least_significant_byte(),
+                self.scheme_component(),
             )
             .as_unit_type(UnitType::GenericCompound) // Set as generic compound
             // unit
@@ -604,13 +653,13 @@ impl Mul for Unit128 {
 
     // Panics for referenced units
     fn mul(self, rhs: Unit128) -> Unit128 {
-        if self.is_referenced() {
+        if self.is_scale() {
             panic!()
         } else {
             Unit128::new(
                 self.factor() * rhs.factor(),
                 self.dimensions() * rhs.dimensions(),
-                self.least_significant_byte(),
+                self.scheme_component(),
             )
             .as_unit_type(UnitType::GenericCompound) // Set as generic compound
             // unit
@@ -623,13 +672,13 @@ impl Div for Unit128 {
 
     // Panics for referenced units
     fn div(self, rhs: Unit128) -> Unit128 {
-        if self.is_referenced() {
+        if self.is_scale() {
             panic!()
         } else {
             Unit128::new(
                 self.factor() / rhs.factor(),
                 self.dimensions() / rhs.dimensions(),
-                self.least_significant_byte(),
+                self.scheme_component(),
             )
             .as_unit_type(UnitType::GenericCompound) // Set as generic compound
             // unit
@@ -637,19 +686,15 @@ impl Div for Unit128 {
     }
 }
 
-impl Debug for Unit128 {
+impl fmt::Debug for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Unit128 {{ num: 0x{:X}, dim: 0x{:X} }}",
-            self.num, self.dim
-        )
+        write!(f, "Unit128(0x{:X})", self.0)
     }
 }
 
 impl fmt::Display for Unit128 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "0x{:X}", self.to_bits())
+        write!(f, "0x{:X}", self.0)
     }
 }
 
@@ -659,7 +704,7 @@ impl FromStr for Unit128 {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let hex = s.strip_prefix("0x").unwrap_or(s);
         let bits = u128::from_str_radix(hex, 16).map_err(|_e| QuanstantsError::Parse(s.into()))?;
-        Ok(Self::from_bits(bits))
+        Ok(Self(bits))
     }
 }
 

@@ -156,18 +156,6 @@ impl Div<i8> for Frac {
     }
 }
 
-impl Pow<Frac> for SciDecimal {
-    type Output = SciDecimal;
-
-    fn pow(self, rhs: Frac) -> SciDecimal {
-        if rhs.is_integer() {
-            self.powi(rhs.0.to_i32().unwrap())
-        } else {
-            todo!()
-        }
-    }
-}
-
 impl fmt::Display for Frac {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_integer() {

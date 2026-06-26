@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 //! Implementations of mathematical operations for the main components of
-//! `quanstants` (`SciNum`, `Unit`, and `Quantity`) with each other as well as
+//! `quanstants` ([`SciDecimal`], [`Unit`], and [`Quantity`]) with each other as well as
 //! with the foreign types valid for those operations (`isize`, `f64`,
 //! `Decimal`, and `String`). Operations between a type and itself are
 //! implemented in the type's own file.
 //!
-//! Multiplication and division operations are implemented for the following
-//! (where N is a numeric type -- meaning `SciNum` or a type that implements
-//! `Into<SciNum>` -- P is `Prefix`, U is `Unit`, and Q is `Quantity`):
+//! Multiplication and division operations are implemented for the following:
 //!
 //! P * U -> U
 //!
@@ -21,13 +19,20 @@
 //!
 //! U */ Q -> Q
 //! Q */ U -> Q
+//!
+//! where:
+//! - N is either [`SciDecimal`] or [`SciFloat`]
+//! - P is [`Prefix`]
+//! - U is [`Unit`]
+//! - Q is [`Quantity`]
 
 use std::ops::{Div, Mul};
 
-use num_traits::{Inv, Num};
+use num_traits::{Float, Inv, Num, Pow};
 use scinum::{SciDecimal, SciFloat};
 
 use crate::{
+    fraction::Frac,
     prefix::Prefix,
     quantity::Quantity,
     unit::{LinearUnit, LinearUnitType, Unit},
@@ -212,6 +217,28 @@ impl<N: Num> Div<Unit> for Quantity<N> {
 
     fn div(self, rhs: Unit) -> Self {
         Self::new(self.number, self.unit / rhs)
+    }
+}
+
+// Other assorted mixed arithmetic
+
+impl Pow<Frac> for SciDecimal {
+    type Output = SciDecimal;
+
+    fn pow(self, rhs: Frac) -> SciDecimal {
+        self.pow(&rhs)
+    }
+}
+
+impl Pow<&Frac> for SciDecimal {
+    type Output = SciDecimal;
+
+    fn pow(self, rhs: &Frac) -> SciDecimal {
+        if rhs.is_integer() {
+            self.powi(rhs.to_integer().into())
+        } else {
+            todo!()
+        }
     }
 }
 

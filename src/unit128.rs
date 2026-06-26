@@ -106,7 +106,7 @@ pub enum SICompatibility {
 /// The choices made mean that UoMIDs of "normal" units (SI-compatible units with integer exponents
 /// in the dimensional terms and on a linear scale rather than a logarithmic or temperature scale)
 /// written out in hexadecimal can be broadly understood by a human,
-/// and all SI base units and simple products of SI base units are in the range
+/// and all SI base units and coherent derived units are in the range
 /// `0x0` to `0xFFFFFFFFFFFFFFFF` with all zeros for the most significant 64 bits.
 ///
 /// ### Overall layout
@@ -204,6 +204,9 @@ pub enum SICompatibility {
 /// - Bits 8–63 encode the exponents for each SI dimension with one byte per dimension,
 ///   in the order shown above.
 /// - Each byte is interpreted simply as a signed 8-bit integer `i8`.
+/// - The commonly used integer exponents are thus easily memorized
+///   (¹, ², ³ are `0x01, `0x02`, `0x03` respectively; ⁻¹, ⁻², ⁻³ are `0xFF`, `0xFE`, `0xFD`)
+///   enabling manual comprehension and composition.
 ///
 /// #### With fractional dimensional exponents
 ///
@@ -725,6 +728,7 @@ impl fmt::Debug for Unit128 {
 }
 
 impl fmt::Display for Unit128 {
+    /// Writes the unit as the hexadecimal representation of the 128-bit UoMID.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x{:X}", self.0)
     }
@@ -733,6 +737,7 @@ impl fmt::Display for Unit128 {
 impl FromStr for Unit128 {
     type Err = QuanstantsError;
 
+    /// Creates a new unit from a hexadecimal string representation of the 128-bit UoMID.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let hex = s.strip_prefix("0x").unwrap_or(s);
         let bits = u128::from_str_radix(hex, 16).map_err(|_e| QuanstantsError::Parse(s.into()))?;
@@ -1065,234 +1070,209 @@ impl Unit128 {
 
 impl Unit128 {
     #[allow(dead_code)]
-    pub const ONE: Unit128 = { Unit128 { num: 0x0, dim: 0x0 } };
 
-    pub const SECOND: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x1100,
-        }
-    };
+    /// Unity, the "base unit" for dimensionless quantities (i.e numbers).
+    pub const ONE: Unit128 = Unit128(0x00);
 
-    pub const METRE: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x110000,
-        }
-    };
+    /// The SI base unit of time, symbol **s**.
+    pub const SECOND: Unit128 = Unit128(0x01_00);
 
+    /// The SI base unit of length, symbol **m**.
+    pub const METRE: Unit128 = Unit128(0x01_00_00);
+
+    /// An alias for [`Unit128::METRE`].
     pub const METER: Unit128 = Unit128::METRE;
 
-    pub const KILOGRAM: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x11000000,
-        }
-    };
+    /// The SI base unit of mass, symbol **kg**.
+    ///
+    /// Note that though the kilogram is the base unit of mass in the SI,
+    /// prefixes are used with the root form, the gram.
+    ///
+    /// When such prefixed forms are expressed as a UoMID, however, the prefix
+    /// is treated as being appended to the kilogram.
+    pub const KILOGRAM: Unit128 = Unit128(0x01_00_00_00);
 
-    pub const AMPERE: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x0000001100000000,
-        }
-    };
+    /// The SI base unit of electric current, symbol **A**.
+    pub const AMPERE: Unit128 = Unit128(0x00_00_00_01_00_00_00_00);
 
-    pub const KELVIN: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x0000110000000000,
-        }
-    };
+    /// The SI base unit of thermodynamic temperature, symbol **K**.
+    pub const KELVIN: Unit128 = Unit128(0x00_00_01_00_00_00_00_00);
 
-    pub const MOLE: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x0011000000000000,
-        }
-    };
+    /// The SI base unit of amount of substance, symbol **mol**.
+    pub const MOLE: Unit128 = Unit128(0x00_01_00_00_00_00_00_00);
 
-    pub const CANDELA: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x1100000000000000,
-        }
-    };
+    /// The SI base unit of luminous intensity, symbol **cd**.
+    pub const CANDELA: Unit128 = Unit128(0x01_00_00_00_00_00_00_00);
 
-    pub const GRAM: Unit128 = {
-        Unit128 {
-            num: 0xFD,
-            dim: 0x11000001,
-        }
-    };
+    /// The gram, an SI derived unit of mass, symbol **g**, equal to 10⁻³ kg.
+    ///
+    /// For historical reasons the kilogram is the base unit of mass in the SI,
+    /// and the gram is a derived unit defined in terms of kg.
+    ///
+    /// For its UoMID representation, the gram is encoded as if it were a
+    /// prefixed form of the base unit i.e. as if it were a "millikilogram".
+    ///
+    /// As such a "millikilogram" does not exist and the gram is *the* canonical
+    /// unit with the value 1 × 10⁻³ kg, the gram does not get a catalogue number
+    /// and is considered the base/normalized representation and so the three
+    /// least significant bits are all 0.
+    pub const GRAM: Unit128 = Unit128(0xFD_00_00_00_00_01_00_00_00);
 
-    pub const RADIAN: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x0000000000000001,
-        }
-    };
+    /// The SI derived unit of plane angle, symbol **rad**, equal to 1.
+    ///
+    /// Note that unlike most unit libraries and representations, but following
+    /// the SI, both the UoMID specification and quanstants do not consider the
+    /// radian and steradian base units – they are just dimensionless derived
+    /// units.
+    ///
+    /// From the SI Brochure (9th Ed.):
+    /// > The radian is the coherent unit for plane angle. One radian is the angle subtended at the centre of a
+    /// > circle by an arc that is equal in length to the radius. This suggests rad = m/m but this representation is
+    /// > not intrinsic and may be misleading since angle is not the same kind of quantity as other length ratios.
+    /// > An alternative definition is that a right angle is equal to π/2 rad. The radian is also the coherent unit
+    /// > for phase angle. For periodic phenomena, the phase angle increases by 2π rad in one period.
+    pub const RADIAN: Unit128 = Unit128(0x01);
 
-    pub const STERADIAN: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x0000000000000002,
-        }
-    };
+    /// The SI derived unit of solid angle, symbol **sr**, equal to 1.
+    ///
+    /// Note that unlike most unit libraries and representations, but following
+    /// the SI, both the UoMID specification and quanstants do not consider the
+    /// radian and steradian base units – they are just dimensionless derived
+    /// units.
+    ///
+    /// From the SI Brochure (9th Ed.):
+    /// > The steradian is the coherent unit for solid angle. One steradian is the solid angle subtended at the centre
+    /// > of a sphere by an area of the surface that is equal to the squared radius. This suggests sr = m2/m2, but this
+    /// > representation is not intrinsic and may be misleading since solid angle is not the same kind of quantity as
+    /// > other area ratios. An alternative definition is that a complete sphere subtends 4π sr about its centre.
+    pub const STERADIAN: Unit128 = Unit128(0x02);
 
-    pub const HERTZ: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000000000F101, // s⁻¹
-        }
-    };
+    /// The SI derived unit of frequency, symbol **Hz**, equal to s⁻¹.
+    ///
+    /// Per the SI:
+    /// > The hertz shall only be used for periodic phenomena and the becquerel shall only be used for stochastic
+    /// processes in activity referred to a radionuclide.
+    ///
+    /// For all other purposes, s⁻¹ should be used.
+    pub const HERTZ: Unit128 = Unit128(0x00_00_00_00_00_00_FF_01);
 
-    pub const NEWTON: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000001111F201, // kg⋅m⋅s⁻²
-        }
-    };
+    /// The SI derived unit of force, symbol **N**, equal to kg⋅m⋅s⁻².
+    pub const NEWTON: Unit128 = Unit128(0x00_00_00_00_01_01_FF_01);
 
-    pub const PASCAL: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x0000000011F1F201, // kg⋅m⁻¹⋅s⁻²
-        }
-    };
+    /// The SI derived unit of pressure and stress, symbol **Pa**, equal to kg⋅m⁻¹⋅s⁻².
+    pub const PASCAL: Unit128 = Unit128(0x00_00_00_00_01_FF_FE_01);
 
-    pub const JOULE: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000001112F201, // kg⋅m²⋅s⁻²
-        }
-    };
+    /// The SI derived unit of energy, work, and amount of heat, symbol **J**, equal to kg⋅m²⋅s⁻².
+    pub const JOULE: Unit128 = Unit128(0x00_00_00_00_01_02_FE_01);
 
-    pub const WATT: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000001112F301, // kg⋅m²⋅s⁻³
-        }
-    };
+    /// The SI derived unit of power and radiant flux, symbol **W**, equal to kg⋅m²⋅s⁻³.
+    pub const WATT: Unit128 = Unit128(0x00_00_00_00_01_02_FD_01);
 
-    pub const COULOMB: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x0000001100001101, // A⋅s
-        }
-    };
+    /// The SI derived unit of electric charge, symbol **C**, equal to A⋅s.
+    pub const COULOMB: Unit128 = Unit128(0x00_00_00_01_00_00_01_01);
 
-    pub const VOLT: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000F11112F301, // kg⋅m²⋅s⁻³⋅A⁻¹
-        }
-    };
+    /// The SI derived unit of electric potential difference (voltage), symbol **V**, equal to kg⋅m²⋅s⁻³⋅A⁻¹.
+    pub const VOLT: Unit128 = Unit128(0x00_00_00_FF_01_02_FD_01);
 
-    pub const FARAD: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x00000012F1F21401, // kg⁻¹⋅m⁻²⋅s⁴⋅A²
-        }
-    };
+    /// The SI derived unit of capacitance, symbol **F**, equal to kg⁻¹⋅m⁻²⋅s⁴⋅A².
+    pub const FARAD: Unit128 = Unit128(0x00_00_00_02_FF_FE_14_01);
 
-    pub const OHM: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000F21112F301, // kg⋅m²⋅s⁻³⋅A⁻²
-        }
-    };
+    /// The SI derived unit of electric resistance, symbol **Ω**, equal to kg⋅m²⋅s⁻³⋅A⁻².
+    pub const OHM: Unit128 = Unit128(0x00_00_00_FE_01_02_FD_01);
 
-    pub const SIEMENS: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x00000012F1F21301, // kg⁻¹⋅m⁻²⋅s³⋅A²
-        }
-    };
+    /// The SI derived unit of electric conductance, symbol **S**, equal to kg⁻¹⋅m⁻²⋅s³⋅A².
+    pub const SIEMENS: Unit128 = Unit128(0x00_00_00_02_FF_FE_03_01);
 
-    pub const WEBER: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000F11112F201, // kg⋅m²⋅s⁻²⋅A⁻¹
-        }
-    };
+    /// The SI derived unit of magnetic flux, symbol **Wb**, equal to kg⋅m²⋅s⁻²⋅A⁻¹.
+    pub const WEBER: Unit128 = Unit128(0x00_00_00_FF_01_02_FE_01);
 
-    pub const TESLA: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000F11100F201, // kg⋅s⁻²⋅A⁻¹
-        }
-    };
+    /// The SI derived unit of magnetic flux density, symbol **T**, equal to kg⋅s⁻²⋅A⁻¹.
+    pub const TESLA: Unit128 = Unit128(0x00_00_00_FF_01_00_FE_01);
 
-    pub const HENRY: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000F21112F201, // kg⋅m²⋅s⁻²⋅A⁻²
-        }
-    };
+    /// The SI derived unit of inductance, symbol **H**, equal to kg⋅m²⋅s⁻²⋅A⁻².
+    pub const HENRY: Unit128 = Unit128(0x00_00_00_FE_01_02_FE_01);
 
-    /// The absolute magnitude of the degree Celsius, equal to the kelvin
-    pub const CELSIUS_DEGREE: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x0000110000000001,
-        }
-    };
+    /// The scale unit of the degree Celsius, symbol **°C**, for temperatures on the Celsius scale.
+    ///
+    /// A temperature on the Celsius scale *x* °C is related to the absolute temperature
+    /// in kelvin by *x* °C = (*x* + 273.15) K
+    ///
+    /// For the corresponding absolute, linear unit, equal to the kelvin and
+    /// used for representing temperature differences and intervals, see
+    /// [`Unit128::CELSIUS_DEGREE`].
+    pub const DEGREE_CELSIUS: Unit128 = Unit128(0x00355942_00000000_00_00_01_00_00_00_00_41);
 
-    /// The referenced degree Celsius, for temperatures on the Celsius scale
-    pub const DEGREE_CELSIUS: Unit128 = {
-        Unit128 {
-            num: 0x006AB3FE00000000,
-            dim: 0x0000110000000041,
-        }
-    };
+    // Numeric component gets referenced layout:
+    // `|hbbbbbbb|bbbbbbbb|bbbbbbbb|bfffffff|gaaaaaaa|aaaaaaaa|aaaaaaaa|aeeeeeee|`
+    // *y* = (−1)^*h* (*b* + 1) × 10^*f* and *k* = (−1)^*g* (*a* + 1) × 10^*e*
+    // For °C:
+    // reference y = 273.15 = 27315e-2
+    //   => h = 0 (positive)
+    //      b = 27315 − 1 = 0b1101010_10110010
+    //      f = −2 = 0b10000010 as i8 = 0b1000010 as i7
+    //   so encoded as 0b00000000_00110101_01011001_01000010 = 0x00_35_59_42
+    // constant (proportionality factor) k = 1
+    //   => g = 0,
+    //      b = 1 − 1 = 0,
+    //      f = 0 = 0b0 as i8 = 0b0 as i7
+    //   so encoded as 4 bytes of zeros 0x00_00_00_00
+    //   and encoded for the degree magnitude (a linear unit) as 8 bytes of zeros
+    // reference unit ꟛ = kelvin => dim = 0x00_00_01_00_00_00_00
+    // Celsius gets catalogue number 1 assigned => lsb = 0x01 for degree magnitude, 0x41 for scale
+    // Putting it together (everything below is hex):
+    // reference:                   00355942
+    // constant:                             00000000
+    // reference unit:                                00_00_01_00_00_00_00
+    // least significant byte:                                             n1 (where n = 0 or 4)
+    // UoMID for degree magnitude:                    00_00_01_00_00_00_00_01
+    // UoMID for scale unit:        00355942_00000000_00_00_01_00_00_00_00_41
 
-    pub const LUMEN: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x1100000000000001, // cd⋅sr
-        }
-    };
+    /// The absolute magnitude of the degree Celsius, equal to the kelvin.
+    ///
+    /// This is an absolute, linear unit, used for representing temperature
+    /// differences and intervals.
+    ///
+    /// For the corresponding scale unit, used for representing temperatures on
+    /// the Celsius scale, see [`Unit128::DEGREE_CELSIUS`].
+    pub const CELSIUS_DEGREE: Unit128 = Unit128(0x00_00_01_00_00_00_00_01);
 
-    pub const LUX: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x1100000000F20001, // cd⋅sr⋅m⁻²
-        }
-    };
+    /// The SI derived unit of luminous flux, symbol **lm**, equal to cd⋅sr.
+    pub const LUMEN: Unit128 = Unit128(0x01_00_00_00_00_00_00_01);
 
-    pub const BECQUEREL: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000000000F102, // s⁻¹
-        }
-    };
+    /// The SI derived unit of illuminance, symbol **lx**, equal to cd⋅sr⋅m⁻².
+    pub const LUX: Unit128 = Unit128(0x01_00_00_00_00_FE_00_01);
 
-    pub const GRAY: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000000012F201, // m²⋅s⁻²
-        }
-    };
+    /// The SI derived unit of radioactivity, symbol **Bq**, equal to s⁻¹.
+    ///
+    /// Per the SI:
+    /// > The hertz shall only be used for periodic phenomena and the becquerel shall only be used for stochastic
+    /// processes in activity referred to a radionuclide.
+    ///
+    /// For all other purposes, s⁻¹ should be used.
+    ///
+    /// Note that according to the SI Brochure (9th Ed.):
+    /// > Activity referred to a radionuclide is sometimes incorrectly called radioactivity.
+    pub const BECQUEREL: Unit128 = Unit128(0x00_00_00_00_00_00_FF_02);
 
-    pub const SIEVERT: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x000000000012F202, // m²⋅s⁻²
-        }
-    };
+    /// The SI derived unit of absorbed dose and kerma, symbol **Gy**, equal to m²⋅s⁻².
+    pub const GRAY: Unit128 = Unit128(0x00_00_00_00_00_02_FE_01);
 
-    pub const KATAL: Unit128 = {
-        Unit128 {
-            num: 0x0,
-            dim: 0x001100000000F101, // mol⋅s⁻¹
-        }
-    };
+    /// The SI derived unit of dose equivalent, symbol **Sv**, equal to m²⋅s⁻².
+    ///
+    /// The sievert is intended to represent the health risk of ionizing radiation,
+    /// whereas the gray is used for the physical absorbed dose.
+    ///
+    /// See CIPM Recommendation 2 on the use of the sievert (PV, 2002, 70, 205).
+    pub const SIEVERT: Unit128 = Unit128(0x00_00_00_00_00_02_FE_02);
+
+    /// The SI derived unit of catalytic activity, symbol **kat**, equal to mol⋅s⁻¹.
+    pub const KATAL: Unit128 = Unit128(0x00_01_00_00_00_00_FF_01);
 }
 
 #[cfg(feature = "python")]
 pub(crate) mod py {
     use super::*;
-    use pyo3::{prelude::*, types::PyType};
+    use pyo3::prelude::*;
 
     #[pyclass(name = "UnitId")]
     pub struct PyUnitId(pub(crate) Unit128);
@@ -1301,7 +1281,7 @@ pub(crate) mod py {
     impl PyUnitId {
         #[new]
         fn new(id: u128) -> Self {
-            PyUnitId(Unit128::from_bits(id))
+            PyUnitId(Unit128(id))
         }
 
         fn __repr__(&self) -> String {
@@ -1316,13 +1296,8 @@ pub(crate) mod py {
             self.0 == other.0
         }
 
-        #[classmethod]
-        fn from_bits(_cls: &Bound<'_, PyType>, x: u128) -> PyResult<Self> {
-            Ok(PyUnitId(Unit128::from_bits(x)))
-        }
-
-        fn to_bits(&self) -> u128 {
-            self.0.to_bits()
+        fn to_int(&self) -> u128 {
+            self.0.0
         }
     }
 }

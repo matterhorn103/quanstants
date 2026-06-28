@@ -15,6 +15,7 @@ pub mod ops;
 //pub mod prefix;
 //pub mod quantity;
 //pub mod reg;
+mod i7;
 //pub mod unit;
 pub mod unit128;
 

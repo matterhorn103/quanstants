@@ -713,7 +713,7 @@ mod tests {
             factors: Vec::new(),
         });
         let ft = Unit::new(LinearUnit {
-            id: Unit128::from_bits(0xBE7FC0000000000110001),
+            id: Unit128(0xBE7FC0000000000010001),
             utype: LinearUnitType::Derived,
             dimensions: Dimensions::LENGTH,
             symbol: Some(String::from("ft")),

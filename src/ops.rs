@@ -33,198 +33,178 @@ use scinum::{SciDecimal, SciFloat};
 
 use crate::{
     fraction::Frac,
-    //prefix::Prefix,
-    //quantity::Quantity,
-    //unit::{LinearUnit, LinearUnitType, Unit},
+    prefix::Prefix,
+    quantity::Quantity,
+    unit::{LinearUnit, LinearUnitType, Unit},
     unit128::Unit128,
 };
 
 // P * U -> U
 // Adding a prefix to an existing unprefixed unit to create a prefixed one
 
-// TODO Restore
-//impl Mul<Unit> for Prefix {
-//    type Output = Unit;
-//
-//    fn mul(self, rhs: Unit) -> Unit {
-//        if rhs.inner.prefix.is_some() {
-//            panic!("Cannot prefix an already prefixed unit!")
-//        }
-//        if matches!(
-//            rhs.inner.utype,
-//            LinearUnitType::One | LinearUnitType::Compound
-//        ) {
-//            panic!("Cannot prefix a compound unit or Unitless!")
-//        }
-//        let new_id = if self.is_binary() {
-//            // Only use a binary exponent if there is no (decimal) factor currently
-//            if rhs.id.num == 0 {
-//                // Set as unit with binary factor
-//                let dim = rhs.id.dim & !0xF | 0xB;
-//                let num = self.equivalent_power() as u8 as u64; // Go via u8 so that it gets padded with zeros
-//                Unit128 { num, dim }
-//            } else {
-//                // Set as non-unique derived unit
-//                let least_significant_byte: u8 = rhs.id.scheme_component() & !0x0F | 0x0D;
-//                let dimensions = rhs.id.dimensions();
-//                let factor = rhs.id.factor() * self.value();
-//                Unit128::new(factor, dimensions, least_significant_byte)
-//            }
-//        } else {
-//            // Set as non-unique derived unit
-//            let dim = rhs.id.dim & !0xF | 0xD;
-//            let old_exponent = rhs.id.num as u8 as i8; // Go via u8 so that it gets truncated
-//            // Increase/decrease decimal exponent appropriately
-//            let num = rhs.id.num & !0xF | ((old_exponent + self.equivalent_power()) as u8 as u64);
-//            Unit128 { num, dim }
-//        };
-//        Unit::new(LinearUnit {
-//            id: new_id,
-//            utype: LinearUnitType::Derived,
-//            dimensions: rhs.dimensions(),
-//            symbol: Some(self.symbol() + &rhs.symbol(false)),
-//            name: Some(self.name() + &rhs.name()),
-//            prefix: Some(self),
-//            number: rhs.number(),
-//            factors: rhs.to_factors(),
-//        })
-//    }
-//}
-//
-//// Quantity creation by multiplication or division between a unit and a number
-//// Numerical type `N` creates a `Quantity<N>`
-//// N */ U -> Q
-//
-//macro_rules! impl_mul_div_with_unit {
-//    ($n:ty) => {
-//        impl Mul<Unit> for $n {
-//            type Output = Quantity<$n>;
-//
-//            fn mul(self, rhs: Unit) -> Quantity<$n> {
-//                Quantity::new(self, rhs)
-//            }
-//        }
-//
-//        impl Div<Unit> for $n {
-//            type Output = Quantity<$n>;
-//
-//            fn div(self, rhs: Unit) -> Quantity<$n> {
-//                Quantity::new(self, rhs.inverse())
-//            }
-//        }
-//    };
-//}
-//
-//// Don't implement for things like integers, which make very little sense as `N`
-//impl_mul_div_with_unit!(f32);
-//impl_mul_div_with_unit!(f64);
-//impl_mul_div_with_unit!(SciDecimal);
-//impl_mul_div_with_unit!(SciFloat);
+impl Mul<Unit> for Prefix {
+    type Output = Unit;
+
+    fn mul(self, rhs: Unit) -> Unit {
+        if rhs.inner.prefix.is_some() {
+            panic!("Cannot prefix an already prefixed unit!")
+        }
+        if matches!(
+            rhs.inner.utype,
+            LinearUnitType::One | LinearUnitType::Compound
+        ) {
+            panic!("Cannot prefix a compound unit or Unitless!")
+        }
+        let new_id = if self.is_binary() && rhs.id.is_coherent() {
+            // Only use a binary exponent if there is no (decimal) factor currently
+            Unit128::new_with_binary_prefix(self.equivalent_power() / 3, rhs.id.dimensions())
+        } else {
+            let dimensions = rhs.id.dimensions();
+            let factor = rhs.id.factor() * self.value();
+            Unit128::new(factor, dimensions)
+        };
+        Unit::new(LinearUnit {
+            id: new_id,
+            utype: LinearUnitType::Derived,
+            dimensions: rhs.dimensions(),
+            symbol: Some(self.symbol() + &rhs.symbol(false)),
+            name: Some(self.name() + &rhs.name()),
+            prefix: Some(self),
+            number: rhs.number(),
+            factors: rhs.to_factors(),
+        })
+    }
+}
+
+// Quantity creation by multiplication or division between a unit and a number
+// Numerical type `N` creates a `Quantity<N>`
+// N */ U -> Q
+
+macro_rules! impl_mul_div_with_unit {
+    ($n:ty) => {
+        impl Mul<Unit> for $n {
+            type Output = Quantity<$n>;
+
+            fn mul(self, rhs: Unit) -> Quantity<$n> {
+                Quantity::new(self, rhs)
+            }
+        }
+
+        impl Div<Unit> for $n {
+            type Output = Quantity<$n>;
+
+            fn div(self, rhs: Unit) -> Quantity<$n> {
+                Quantity::new(self, rhs.inverse())
+            }
+        }
+    };
+}
+
+// Don't implement for things like integers, which make very little sense as `N`
+impl_mul_div_with_unit!(f32);
+impl_mul_div_with_unit!(f64);
+impl_mul_div_with_unit!(SciDecimal);
+impl_mul_div_with_unit!(SciFloat);
 
 // U */ N -> Q
 
-// TODO Restore
-//impl<N: Num> Mul<N> for Unit {
-//    type Output = Quantity<N>;
-//
-//    fn mul(self, rhs: N) -> Quantity<N> {
-//        Quantity::new(rhs, self)
-//    }
-//}
-//
-//impl<N: Num + Inv<Output = N>> Div<N> for Unit {
-//    type Output = Quantity<N>;
-//
-//    fn div(self, rhs: N) -> Quantity<N> {
-//        Quantity::new(rhs.inv(), self)
-//    }
-//}
+impl<N: Num> Mul<N> for Unit {
+    type Output = Quantity<N>;
+
+    fn mul(self, rhs: N) -> Quantity<N> {
+        Quantity::new(rhs, self)
+    }
+}
+
+impl<N: Num + Inv<Output = N>> Div<N> for Unit {
+    type Output = Quantity<N>;
+
+    fn div(self, rhs: N) -> Quantity<N> {
+        Quantity::new(rhs.inv(), self)
+    }
+}
 
 // Arithmetic between the inner numeric type of a `SciNum` type and
 // corresponding quantities
 // N */ Q -> Q
 
-// TODO Restore
-//// Can't do blanket implementation
-//macro_rules! impl_mul_div_with_sci_quant {
-//    ($n:ty) => {
-//        impl Mul<Quantity<$n>> for $n {
-//            type Output = Quantity<$n>;
-//
-//            fn mul(self, rhs: Quantity<$n>) -> Quantity<$n> {
-//                Quantity::new(self * rhs.number, rhs.unit)
-//            }
-//        }
-//
-//        impl Div<Quantity<$n>> for $n {
-//            type Output = Quantity<$n>;
-//
-//            fn div(self, rhs: Quantity<$n>) -> Quantity<$n> {
-//                Quantity::new(self / rhs.number, rhs.unit.inverse())
-//            }
-//        }
-//    };
-//}
-//
-//impl_mul_div_with_sci_quant!(SciDecimal);
-//impl_mul_div_with_sci_quant!(SciFloat);
+// Can't do blanket implementation
+macro_rules! impl_mul_div_with_sci_quant {
+    ($n:ty) => {
+        impl Mul<Quantity<$n>> for $n {
+            type Output = Quantity<$n>;
+
+            fn mul(self, rhs: Quantity<$n>) -> Quantity<$n> {
+                Quantity::new(self * rhs.number, rhs.unit)
+            }
+        }
+
+        impl Div<Quantity<$n>> for $n {
+            type Output = Quantity<$n>;
+
+            fn div(self, rhs: Quantity<$n>) -> Quantity<$n> {
+                Quantity::new(self / rhs.number, rhs.unit.inverse())
+            }
+        }
+    };
+}
+
+impl_mul_div_with_sci_quant!(SciDecimal);
+impl_mul_div_with_sci_quant!(SciFloat);
 
 // Q */ N -> Q
 
-// TODO Restore
-//impl<N: Num> Mul<N> for Quantity<N> {
-//    type Output = Quantity<N>;
-//
-//    fn mul(self, rhs: N) -> Quantity<N> {
-//        Quantity::new(self.number * rhs, self.unit)
-//    }
-//}
-//
-//impl<N: Num + Inv<Output = N>> Div<N> for Quantity<N> {
-//    type Output = Quantity<N>;
-//
-//    fn div(self, rhs: N) -> Quantity<N> {
-//        Quantity::new(self.number / rhs, self.unit)
-//    }
-//}
+impl<N: Num> Mul<N> for Quantity<N> {
+    type Output = Quantity<N>;
+
+    fn mul(self, rhs: N) -> Quantity<N> {
+        Quantity::new(self.number * rhs, self.unit)
+    }
+}
+
+impl<N: Num + Inv<Output = N>> Div<N> for Quantity<N> {
+    type Output = Quantity<N>;
+
+    fn div(self, rhs: N) -> Quantity<N> {
+        Quantity::new(self.number / rhs, self.unit)
+    }
+}
 
 // U */ Q -> Q
 
-// TODO Restore
-//impl<N: Num> Mul<Quantity<N>> for Unit {
-//    type Output = Quantity<N>;
-//
-//    fn mul(self, rhs: Quantity<N>) -> Quantity<N> {
-//        Quantity::new(rhs.number, self * rhs.unit)
-//    }
-//}
-//
-//impl<N: Num + Inv<Output = N>> Div<Quantity<N>> for Unit {
-//    type Output = Quantity<N>;
-//
-//    fn div(self, rhs: Quantity<N>) -> Quantity<N> {
-//        Quantity::new(rhs.number.inv(), self / rhs.unit)
-//    }
-//}
+impl<N: Num> Mul<Quantity<N>> for Unit {
+    type Output = Quantity<N>;
+
+    fn mul(self, rhs: Quantity<N>) -> Quantity<N> {
+        Quantity::new(rhs.number, self * rhs.unit)
+    }
+}
+
+impl<N: Num + Inv<Output = N>> Div<Quantity<N>> for Unit {
+    type Output = Quantity<N>;
+
+    fn div(self, rhs: Quantity<N>) -> Quantity<N> {
+        Quantity::new(rhs.number.inv(), self / rhs.unit)
+    }
+}
 
 // Q */ U -> Q
 
-// TODO Restore
-//impl<N: Num> Mul<Unit> for Quantity<N> {
-//    type Output = Self;
-//
-//    fn mul(self, rhs: Unit) -> Self {
-//        Self::new(self.number, self.unit * rhs)
-//    }
-//}
-//
-//impl<N: Num> Div<Unit> for Quantity<N> {
-//    type Output = Self;
-//
-//    fn div(self, rhs: Unit) -> Self {
-//        Self::new(self.number, self.unit / rhs)
-//    }
-//}
+impl<N: Num> Mul<Unit> for Quantity<N> {
+    type Output = Self;
+
+    fn mul(self, rhs: Unit) -> Self {
+        Self::new(self.number, self.unit * rhs)
+    }
+}
+
+impl<N: Num> Div<Unit> for Quantity<N> {
+    type Output = Self;
+
+    fn div(self, rhs: Unit) -> Self {
+        Self::new(self.number, self.unit / rhs)
+    }
+}
 
 // Other assorted mixed arithmetic
 
@@ -248,39 +228,20 @@ impl Pow<&Frac> for SciDecimal {
     }
 }
 
-// TODO Restore
-//#[cfg(test)]
-//mod tests {
-//    use crate::context::Context;
-//
-//    use super::*;
-//
-//    #[test]
-//    fn prefix() {
-//        let ctx = Context::new();
-//        let millimetre = Prefix::milli * ctx.metre();
-//        assert_eq!(
-//            millimetre.id,
-//            Unit128 {
-//                num: 0xFD,
-//                dim: 0x11000D
-//            }
-//        );
-//        let kilometre = Prefix::kilo * ctx.metre();
-//        assert_eq!(
-//            kilometre.id,
-//            Unit128 {
-//                num: 0x03,
-//                dim: 0x11000D
-//            }
-//        );
-//        let kibisecond = Prefix::kibi * ctx.second();
-//        assert_eq!(
-//            kibisecond.id,
-//            Unit128 {
-//                num: 0x03,
-//                dim: 0x110B
-//            }
-//        );
-//    }
-//}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prefix() {
+        let millimetre = Prefix::milli * Unit::metre();
+        assert_eq!(millimetre.id, Unit128(0xFD_00_00_00_00_00_01_00_0D));
+        let kilometre = Prefix::kilo * Unit::metre();
+        assert_eq!(kilometre.id, Unit128(0x03_00_00_00_00_00_01_00_0D));
+        let kibisecond = Prefix::kibi * Unit::second();
+        assert_eq!(
+            kibisecond.id,
+            Unit128(0x80000000_00000003_00_00_00_00_00_00_01_00)
+        );
+    }
+}

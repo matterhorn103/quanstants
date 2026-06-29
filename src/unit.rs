@@ -187,8 +187,8 @@ impl Debug for LinearFactor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "LinearFactor {{ unit: {:X} ({}), exponent: {} }}",
-            self.unit.id.to_bits(),
+            "LinearFactor {{ unit: {} ({}), exponent: {} }}",
+            self.unit.id,
             self.unit.symbol(true),
             self.exponent,
         )
@@ -436,12 +436,7 @@ impl Unit {
                 factors.append(&mut f_base_factors.into_iter().collect());
             }
             let new_unit = Unit::new(LinearUnit {
-                id: Unit128::new(
-                    self.id.factor() / num,
-                    self.dimensions(),
-                    (self.id.scheme_component() & 0xF0) | 0x0C, /* Set as generic compound
-                                                                 * unit */
-                ),
+                id: Unit128::new(self.id.factor() / num, self.dimensions()),
                 utype: LinearUnitType::Compound,
                 dimensions: self.dimensions(),
                 symbol: None,
@@ -876,7 +871,7 @@ mod tests {
 
     fn foot() -> Unit {
         Unit::new(LinearUnit {
-            id: Unit128::from_bits(0xBE7FC0000000000110001),
+            id: Unit128(0xBE7FC0000000000010001),
             utype: LinearUnitType::Derived,
             dimensions: Dimensions::LENGTH,
             symbol: Some(String::from("ft")),
@@ -893,7 +888,7 @@ mod tests {
         let c_num = sci!(4.184);
         let c_dim = Dimensions::new(2, -2, -1, 0, 0, 0, 0);
         let c = Unit::new(LinearUnit {
-            id: Unit128::new(c_num, c_dim, 0x0D),
+            id: Unit128::new(c_num, c_dim),
             utype: LinearUnitType::Derived,
             dimensions: c_dim,
             symbol: Some(String::from("c")),
@@ -904,7 +899,7 @@ mod tests {
         });
         let d_dim = c_dim.pow(-2);
         Unit::new(LinearUnit {
-            id: Unit128::new(c_num.powi(-2), d_dim, 0x0D),
+            id: Unit128::new(c_num.powi(-2), d_dim),
             utype: LinearUnitType::Derived,
             dimensions: d_dim,
             symbol: Some(String::from("d")),
@@ -932,10 +927,10 @@ mod tests {
         let ms = m.clone() * s.clone();
         let mm = m.clone() * m.clone();
         assert_eq!(ms.symbol(false), "m s");
-        assert_eq!(ms.id, Unit128::from_bits(0x11110C));
+        assert_eq!(ms.id, Unit128(0x10100));
         assert_eq!(ms.dimensions(), Dimensions::new(1, 1, 0, 0, 0, 0, 0));
         assert_eq!(mm.symbol(false), "m m");
-        assert_eq!(mm.id, Unit128::from_bits(0x12000C));
+        assert_eq!(mm.id, Unit128(0x20000));
         assert_eq!(mm.dimensions(), Dimensions::new(0, 2, 0, 0, 0, 0, 0));
     }
 
@@ -1004,7 +999,7 @@ mod tests {
     #[test]
     fn debug() {
         let s = Unit::second();
-        assert_eq!(format!("{s:?}"), r#"Unit { id: 0x1100, symbol: "s" }"#);
+        assert_eq!(format!("{s:?}"), r#"Unit { id: 0x100, symbol: "s" }"#);
     }
 
     #[test]

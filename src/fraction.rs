@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use num_rational::Ratio;
-use num_traits::{Float, Pow, ToPrimitive};
-use scinum::SciDecimal;
+use num_traits::ToPrimitive;
 use std::{
     fmt,
     ops::{Add, AddAssign, Deref, Div, Mul, Neg, Sub},

@@ -605,12 +605,47 @@ impl Unit128 {
     /// value does not lie between [`Unit128::MAX_BIN_FACTOR`] and
     /// [`Unit128::MAX_POS_BIN_FACTOR`])
     /// or because it is not normal (i.e. it is 0 or infinity or NaN).
-    pub fn new_with_binary_factor(factor: f64, dimensions: Dimensions) -> Self {
+    pub(crate) fn new_with_binary_factor(factor: f64, dimensions: Dimensions) -> Self {
         if !dimensions.all_integer() {
             Unit128::new(factor.into(), dimensions)
         } else {
             Self(
                 (Unit128::binary_factor_to_bits(factor).expect("Caller should not pass an unrepresentable value") as u128) << 64
+                    | (*dimensions.J.numer() as u8 as u128) << 56
+                    | (*dimensions.N.numer() as u8 as u128) << 48
+                    | (*dimensions.Θ.numer() as u8 as u128) << 40
+                    | (*dimensions.I.numer() as u8 as u128) << 32
+                    | (*dimensions.M.numer() as u8 as u128) << 24
+                    | (*dimensions.L.numer() as u8 as u128) << 16
+                    | (*dimensions.T.numer() as u8 as u128) << 8
+                    // Integer exponents    => bit 7 = 0
+                    // Linear unit          => bits 6-4 = 000
+                    // SI compatible        => bit 3 = 0
+                    // Uncatalogued         => bits 2-0 = 000
+                    | 0x00,
+            )
+        }
+    }
+
+    /// Creates a new anonymous unit with a factor of 1024^(exponent), encoded using
+    /// the binary-like representation.
+    ///
+    /// If the unit has fractional dimensional exponents, falls back to creating
+    /// a unit with a decimal factor instead, as it is not possible to encode a
+    /// binary factor with fractional exponents.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `exponent` is > 42 or < -42.
+    pub fn new_with_binary_prefix(exponent: i8, dimensions: Dimensions) -> Self {
+        if exponent > 42 || exponent < -42 {
+            panic!("Exponent must be within the range -42..=42")
+        }
+        if !dimensions.all_integer() {
+            Unit128::new(1024_f64.powi(exponent.into()).into(), dimensions)
+        } else {
+            Self(
+                ((exponent * 3) as u8 as u128) << 64
                     | (*dimensions.J.numer() as u8 as u128) << 56
                     | (*dimensions.N.numer() as u8 as u128) << 48
                     | (*dimensions.Θ.numer() as u8 as u128) << 40
@@ -924,13 +959,13 @@ impl Unit128 {
             // decreasing the exponent, do it; otherwise, do the opposite
             if spare >= r as u32 {
                 // Multiply significand by 2^remainder by shifting
-                significand << r;
+                significand = significand << r;
                 // Decrease exponent appropriately
                 exp_2 -= r;
             } else {
                 // Divide significand by necessary amount by shifting
                 // Loses precision in the process, but this is unavoidable
-                significand >> (10 - r);
+                significand = significand >> (10 - r);
                 exp_2 += 10 - r;
             }
         }
@@ -1682,62 +1717,62 @@ mod tests {
         // Test the encodings of the binary prefixes
         // Ki kibi  =  1024^1 =  2^10
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(10)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(10)).unwrap(),
             0x8000000000000003
         );
         // Mi mebi  =  1024^2 =  2^20
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(20)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(20)).unwrap(),
             0x8000000000000006
         );
         // Gi gibi  =  1024^3 =  2^30
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(30)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(30)).unwrap(),
             0x8000000000000009
         );
         // Ti tebi  =  1024^4 =  2^40
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(40)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(40)).unwrap(),
             0x800000000000000C
         );
         // Pi pebi  =  1024^5 =  2^50
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(50)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(50)).unwrap(),
             0x800000000000000F
         );
         // Ei exbi  =  1024^6 =  2^60
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(60)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(60)).unwrap(),
             0x8000000000000012
         );
         // Zi zebi  =  1024^7 =  2^70
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(70)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(70)).unwrap(),
             0x8000000000000015
         );
         // Yi yobi  =  1024^8 =  2^80
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(80)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(80)).unwrap(),
             0x8000000000000018
         );
         // Ri robi  =  1024^9 =  2^90
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(90)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(90)).unwrap(),
             0x800000000000001B
         );
         // Qi quebi = 1024^10 = 2^100
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(100)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(100)).unwrap(),
             0x800000000000001E
         );
         // Neg exponent
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(-10)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(-10)).unwrap(),
             0x80000000000000FD,
         );
         // Max exponent (largest divisible by 3)
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(420)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(420)).unwrap(),
             0x800000000000007E,
         );
         // Max value = 2^54 × 2^420 = 18014398509481984 × 1024^(126/3) = 0x3FFFFFFFFFFFFF × 1024^(0x7E/3)
@@ -1759,14 +1794,14 @@ mod tests {
         assert!(Unit128::binary_factor_to_bits(0_f64).is_err());
         // An exponent not divisible by 3 should result in an increased precision...
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(14)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(14)).unwrap(),
             // Exponent 2^14 becomes 2^10 = 1024^(3/3)
             // Significand 0b1 = 1 becomes 0b10000 = 16 becomes 15 with our bias
             0x8000000000000F03,
         );
         // ...unless the precision is too large, in which case rounding occurs
         assert_eq!(
-            Unit128::binary_factor_to_bits(2.0.pow(53) * 2.0.pow(14)).unwrap(),
+            Unit128::binary_factor_to_bits(2_f64.pow(53) * 2_f64.pow(14)).unwrap(),
             // Exponent 2^14 becomes 2^20 = 1024^(6/3)
             // Significand 2^53 becomes 2^47 becomes 2^47 - 1 with our bias
             1_u64 << 63 // Binary bit

@@ -407,7 +407,6 @@ impl Uomid {
         sig_max: u64,
         significand_bits: u8,
         i7_exponent: bool,
-        //binary_exponent: bool,
     ) -> Result<u64, QuanstantsError> {
         if !n.is_normal() {
             return Err(QuanstantsError::Range);
@@ -570,8 +569,8 @@ impl Unit128 {
     ///
     /// # Panics
     ///
-    /// Panics if `factor` is too large or small to be encoded
-    /// (i.e. it is > [`Unit128::MAX_EXPONENT_SIMPLE`] or < [`Unit128::MIN_EXPONENT_SIMPLE`])
+    /// Panics if `factor` is too large or small to be encoded (i.e. it has an
+    /// exponent > [`Unit128::MAX_EXPONENT`] or < [`Unit128::MIN_EXPONENT`])
     /// or because it is not normal (i.e. it is 0 or infinity or NaN).
     pub fn new(factor: SciDecimal, dimensions: Dimensions) -> Self {
         if !dimensions.all_integer() {
@@ -592,6 +591,40 @@ impl Unit128 {
                 // Uncatalogued         => bits 2-0 = 000
                 | 0x00,
         )
+    }
+
+    /// Creates a new anonymous unit with a factor encoded using the binary-like representation.
+    ///
+    /// If the unit has fractional dimensional exponents, falls back to creating
+    /// a unit with a decimal factor instead, as it is not possible to encode a
+    /// binary factor with fractional exponents.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `factor` is too large or small to be encoded (i.e. its absolute
+    /// value does not lie between [`Unit128::MAX_BIN_FACTOR`] and
+    /// [`Unit128::MAX_POS_BIN_FACTOR`])
+    /// or because it is not normal (i.e. it is 0 or infinity or NaN).
+    pub fn new_with_binary_factor(factor: f64, dimensions: Dimensions) -> Self {
+        if !dimensions.all_integer() {
+            Unit128::new(factor.into(), dimensions)
+        } else {
+            Self(
+                (Unit128::binary_factor_to_bits(factor).expect("Caller should not pass an unrepresentable value") as u128) << 64
+                    | (*dimensions.J.numer() as u8 as u128) << 56
+                    | (*dimensions.N.numer() as u8 as u128) << 48
+                    | (*dimensions.Θ.numer() as u8 as u128) << 40
+                    | (*dimensions.I.numer() as u8 as u128) << 32
+                    | (*dimensions.M.numer() as u8 as u128) << 24
+                    | (*dimensions.L.numer() as u8 as u128) << 16
+                    | (*dimensions.T.numer() as u8 as u128) << 8
+                    // Integer exponents    => bit 7 = 0
+                    // Linear unit          => bits 6-4 = 000
+                    // SI compatible        => bit 3 = 0
+                    // Uncatalogued         => bits 2-0 = 000
+                    | 0x00,
+            )
+        }
     }
 
     /// Creates a new compound unit from a set of factors.
@@ -747,7 +780,35 @@ impl FromStr for Unit128 {
 impl Unit128 {
     // Maximum and minimum values for a simple 64-bit numeric component, which just encodes
     // the proportionality factor _k_.
+
+    /// The highest possible significand for the proportionality factor.
     pub const MAX_SIGNIFICAND: u64 = 10_u64.pow(16) - 1;
+
+    /// The highest possible significand for the proportionality factor.
+    pub const MAX_SIGNED_SIGNIFICAND: i64 = Unit128::MAX_SIGNIFICAND as i64;
+
+    /// The lowest possible significand for the proportionality factor.
+    pub const MIN_SIGNED_SIGNIFICAND: i64 = -Unit128::MAX_SIGNED_SIGNIFICAND;
+
+    /// The highest possible exponent for the proportionality factor.
+    pub const MAX_EXPONENT: i8 = i8::MAX;
+
+    /// The lowest possible exponent for the proportionality factor.
+    pub const MIN_EXPONENT: i8 = i8::MIN;
+
+    /// The highest proportionality factor that can be represented.
+    pub const MAX_FACTOR: SciDecimal =
+        SciDecimal::new(Unit128::MAX_SIGNED_SIGNIFICAND, i8::MAX as i16);
+
+    /// The lowest proportionality factor that can be represented.
+    pub const MIN_FACTOR: SciDecimal =
+        SciDecimal::new(Unit128::MIN_SIGNED_SIGNIFICAND, i8::MAX as i16);
+
+    /// The smallest positive proportionality factor that can be represented.
+    pub const MIN_POS_FACTOR: SciDecimal = SciDecimal::new(1_i64, i8::MIN as i16);
+
+    /// The smallest negative proportionality factor that can be represented.
+    pub const MAX_NEG_FACTOR: SciDecimal = SciDecimal::new(-1_i64, i8::MIN as i16);
 
     /// Calculates the 64-bit numeric component that encodes the provided [`SciDecimal`].
     ///
@@ -772,10 +833,150 @@ impl Unit128 {
         Uomid::num_to_bits(factor, 16, Self::MAX_SIGNIFICAND, 54, false)
     }
 
+    /// The highest proportionality factor that can be represented when using the binary-like encoding.
+    pub const MAX_BIN_FACTOR: f64 =
+        (Unit128::MAX_SIGNED_SIGNIFICAND as f64) * f64::from_bits(0x5A30000000000000); // Representation of 1024^42 as an f64 per IEEE 754
+
+    /// The lowest proportionality factor that can be represented when using the binary-like encoding.
+    pub const MIN_BIN_FACTOR: f64 = -Unit128::MAX_BIN_FACTOR;
+
+    /// The smallest positive proportionality factor that can be represented when using the binary-like encoding.
+    pub const MIN_POS_BIN_FACTOR: f64 = 1.0f64 * f64::from_bits(0x25B0000000000000); // Representation of 1024^-42 as an f64 per IEEE 754
+
+    /// The smallest negative proportionality factor that can be represented when using the binary-like encoding.
+    pub const MAX_NEG_BIN_FACTOR: f64 = -Unit128::MIN_POS_BIN_FACTOR;
+
+    /// Calculates the 64-bit numeric component that encodes the provided `f64`
+    /// using the binary-like encoding scheme.
+    ///
+    /// A number defined by *k* = (−1)^*g* (*a* + 1) × 1024^(*e*/3) is encoded by a form of BID decimal
+    /// floating point, with (from most to least significant):
+    ///
+    /// - a binary bit, `w = 1`
+    /// - a sign bit, `g`
+    /// - a 54-bit significand with a bias of −1, `a`
+    /// - an `i8` exponent, `e`
+    ///
+    /// in the layout: `|wgaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|aaaaaaaa|eeeeeeee|`
+    ///
+    /// The significand is limited to that of an `f64`, which is just slightly
+    /// less than 16 full decimal digits of precision (53 bits = 15.96 digits)
+    ///
+    /// Fails if `factor` is too large or small to be represented (its absolute
+    /// value lies outside of the range [`MIN_POS_BIN_FACTOR`] to [`MAX_BIN_FACTOR`])
+    /// or is not normal (i.e. it is 0 or infinity or NaN).
+    ///
+    /// The binary prefixes have convenient representations that match the corresponding
+    /// decimal prefixes:
+    ///
+    /// | Symbol | Prefix | Value           | Encoded exponent | Hex                |
+    /// | ------ | ------ | --------------- | ---------------- | ------------------ |
+    /// | Ki     | kibi   |  1024^1 = 2^10  |                3 | `8000000000000003` |
+    /// | Mi     | mebi   |  1024^2 = 2^20  |                6 | `8000000000000006` |
+    /// | Gi     | gibi   |  1024^3 = 2^30  |                9 | `8000000000000009` |
+    /// | Ti     | tebi   |  1024^4 = 2^40  |               12 | `800000000000000C` |
+    /// | Pi     | pebi   |  1024^5 = 2^50  |               15 | `800000000000000F` |
+    /// | Ei     | exbi   |  1024^6 = 2^60  |               18 | `8000000000000012` |
+    /// | Zi     | zebi   |  1024^7 = 2^70  |               21 | `8000000000000015` |
+    /// | Yi     | yobi   |  1024^8 = 2^80  |               24 | `8000000000000018` |
+    /// | Ri     | robi   |  1024^9 = 2^90  |               27 | `800000000000001B` |
+    /// | Qi     | quebi  | 1024^10 = 2^100 |               30 | `800000000000001E` |
+    /// |        | MAX    | 1024^42 = 2^420 |              126 | `800000000000007E` |
+    pub(crate) fn binary_factor_to_bits(factor: f64) -> Result<u64, QuanstantsError> {
+        if !factor.is_normal() {
+            return Err(QuanstantsError::Range);
+        } else if (factor.is_sign_positive()
+            && ((factor > Unit128::MAX_BIN_FACTOR) || (factor < Unit128::MIN_POS_BIN_FACTOR)))
+            || (factor.is_sign_negative()
+                && ((factor < Unit128::MIN_BIN_FACTOR) || (factor > Unit128::MAX_NEG_BIN_FACTOR)))
+        {
+            return Err(QuanstantsError::Range);
+        }
+        let bits = factor.to_bits();
+        let sign_bit = bits >> 63;
+        // Significand (called mantissa by `f64` docs) is bits 51–0 of an `f64`
+        // plus an implicit leading 1, which we add back to get the real significand
+        let mut significand = (bits & 0x000F_FFFF_FFFF_FFFF) | 1_u64 << 52;
+        // Exponent is bits 62–52, with a bias of 1023, which we remove to get the real exponent
+        let mut exp_2 = ((bits >> 52) & 0x7FF) as i16 - 1023;
+        // This exponent was a power of 2, we need a power of 1024.
+        // 1024 = 2^10 therefore 1024^a = 2^(a*10)
+        // So we need the exponent with a base of 2 to be a multiple of 10 in
+        // order to convert it to a base of 1024.
+        // If we were to do a left shift on the significand to achieve this,
+        // how many bits would we need to shift by?
+        let remainder = exp_2 % 10;
+        // If already a multiple of 10, no need to do anything
+        if remainder != 0 {
+            // Negative remainder means we'd have to left shift by 10 - |remainder|
+            let r = if remainder.is_positive() {
+                remainder
+            } else {
+                10 - remainder.abs()
+            };
+            // We have 54 bits available for the significand - how many are already being used?
+            let digits = match significand.checked_ilog2() {
+                Some(n) => n + 1,
+                None => 0,
+            };
+            let spare = 54 - digits;
+            // If we have enough spare to increase the significand precision while
+            // decreasing the exponent, do it; otherwise, do the opposite
+            if spare >= r as u32 {
+                // Multiply significand by 2^remainder by shifting
+                significand << r;
+                // Decrease exponent appropriately
+                exp_2 -= r;
+            } else {
+                // Divide significand by necessary amount by shifting
+                // Loses precision in the process, but this is unavoidable
+                significand >> (10 - r);
+                exp_2 += 10 - r;
+            }
+        }
+        // Now can actually convert to a base 1024 exponent
+        debug_assert_eq!(exp_2 % 10, 0);
+        let exp_1024 = exp_2 / 10;
+        Ok(
+            1_u64 << 63 // Binary bit set to 1 to indicate binary encoding
+            | sign_bit << 62 // Sign bit follows binary bit
+            | (significand - 1) << 8 // Apply our bias
+            | (exp_1024 * 3) as i8 as u8 as u64, // Encoded as 3 times the exponent
+        )
+    }
+
     // Maximum and minimum values for a narrow 36-bit numeric component, which just encodes
     // the proportionality factor _k_.
     // Used when the dimensional component encodes fractional exponents and is therefore widened.
+
+    /// The highest possible significand for the proportionality factor when the unit has fractional dimensional exponents.
     pub const MAX_SIGNIFICAND_NARROW: u64 = 10_u64.pow(8) - 1;
+
+    /// The highest possible significand for the proportionality factor when the unit has fractional dimensional exponents.
+    pub const MAX_SIGNED_SIGNIFICAND_NARROW: i64 = Unit128::MAX_SIGNIFICAND_NARROW as i64;
+
+    /// The lowest possible significand for the proportionality factor when the unit has fractional dimensional exponents.
+    pub const MIN_SIGNED_SIGNIFICAND_NARROW: i64 = -Unit128::MAX_SIGNED_SIGNIFICAND_NARROW;
+
+    /// The highest possible exponent for the proportionality factor when the unit has fractional dimensional exponents.
+    pub const MAX_EXPONENT_NARROW: i8 = i7::MAX;
+
+    /// The lowest possible exponent for the proportionality factor when the unit has fractional dimensional exponents.
+    pub const MIN_EXPONENT_NARROW: i8 = i7::MIN;
+
+    /// The highest proportionality factor that can be represented when the unit has fractional dimensional exponents.
+    pub const MAX_FACTOR_NARROW: SciDecimal =
+        SciDecimal::new(Unit128::MAX_SIGNED_SIGNIFICAND_NARROW, i7::MAX as i16);
+
+    /// The lowest proportionality factor that can be represented when the unit has fractional dimensional exponents.
+    pub const MIN_FACTOR_NARROW: SciDecimal =
+        SciDecimal::new(Unit128::MIN_SIGNED_SIGNIFICAND_NARROW, i7::MAX as i16);
+
+    /// The smallest positive proportionality factor that can be represented when the unit has fractional dimensional exponents.
+    pub const MIN_POS_FACTOR_NARROW: SciDecimal = SciDecimal::new(1_i64, i7::MIN as i16);
+
+    /// The smallest negative proportionality factor that can be represented when the unit has fractional dimensional exponents.
+    pub const MAX_NEG_FACTOR_NARROW: SciDecimal = SciDecimal::new(-1_i64, i7::MIN as i16);
 
     /// Calculates the 36-bit numeric component that encodes the provided [`SciDecimal`],
     /// with zero padding up to 64 bits.
@@ -1472,6 +1673,106 @@ mod tests {
             0x4000_0000_0000_0200
         );
         assert_eq!(Unit128::factor_to_bits(sci!(0.3048)).unwrap(), 0xBE7FC);
+    }
+
+    #[test]
+    fn binary_factor_to_bits() {
+        assert_eq!(Unit128::binary_factor_to_bits(1_f64).unwrap(), 0x00);
+        assert_eq!(Unit128::binary_factor_to_bits(2_f64).unwrap(), 0x100);
+        // Test the encodings of the binary prefixes
+        // Ki kibi  =  1024^1 =  2^10
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(10)).unwrap(),
+            0x8000000000000003
+        );
+        // Mi mebi  =  1024^2 =  2^20
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(20)).unwrap(),
+            0x8000000000000006
+        );
+        // Gi gibi  =  1024^3 =  2^30
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(30)).unwrap(),
+            0x8000000000000009
+        );
+        // Ti tebi  =  1024^4 =  2^40
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(40)).unwrap(),
+            0x800000000000000C
+        );
+        // Pi pebi  =  1024^5 =  2^50
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(50)).unwrap(),
+            0x800000000000000F
+        );
+        // Ei exbi  =  1024^6 =  2^60
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(60)).unwrap(),
+            0x8000000000000012
+        );
+        // Zi zebi  =  1024^7 =  2^70
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(70)).unwrap(),
+            0x8000000000000015
+        );
+        // Yi yobi  =  1024^8 =  2^80
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(80)).unwrap(),
+            0x8000000000000018
+        );
+        // Ri robi  =  1024^9 =  2^90
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(90)).unwrap(),
+            0x800000000000001B
+        );
+        // Qi quebi = 1024^10 = 2^100
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(100)).unwrap(),
+            0x800000000000001E
+        );
+        // Neg exponent
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(-10)).unwrap(),
+            0x80000000000000FD,
+        );
+        // Max exponent (largest divisible by 3)
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(420)).unwrap(),
+            0x800000000000007E,
+        );
+        // Max value = 2^54 × 2^420 = 18014398509481984 × 1024^(126/3) = 0x3FFFFFFFFFFFFF × 1024^(0x7E/3)
+        assert_eq!(
+            1_u64 << 63 // Binary bit
+            | 0x3FFF_FFFF_FFFF_FF << 8
+            | 0x7E,
+            0xBFFFFFFFFFFFFF7E,
+        );
+        assert_eq!(
+            Unit128::binary_factor_to_bits(Unit128::MAX_BIN_FACTOR).unwrap(),
+            // 0b10111111_11111111_11111111_11111111_11111111_11111111_11111111_01111110
+            // i.e. binary bit 1, positive sign, significand all 1s, largest allowed exponent
+            0xBFFFFFFFFFFFFF7E,
+        );
+        // Larger than the max value should fail
+        assert!(Unit128::binary_factor_to_bits(Unit128::MAX_BIN_FACTOR + 1_f64).is_err());
+        // Zero should fail
+        assert!(Unit128::binary_factor_to_bits(0_f64).is_err());
+        // An exponent not divisible by 3 should result in an increased precision...
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(14)).unwrap(),
+            // Exponent 2^14 becomes 2^10 = 1024^(3/3)
+            // Significand 0b1 = 1 becomes 0b10000 = 16 becomes 15 with our bias
+            0x8000000000000F03,
+        );
+        // ...unless the precision is too large, in which case rounding occurs
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2.0.pow(53) * 2.0.pow(14)).unwrap(),
+            // Exponent 2^14 becomes 2^20 = 1024^(6/3)
+            // Significand 2^53 becomes 2^47 becomes 2^47 - 1 with our bias
+            1_u64 << 63 // Binary bit
+            | 0x007F_FFFF_FFFF_FF << 8
+            | 0x06,
+        );
     }
 
     #[test]

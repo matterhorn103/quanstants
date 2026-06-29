@@ -1166,7 +1166,7 @@ impl Unit128 {
     pub const HERTZ: Unit128 = Unit128(0x00_00_00_00_00_00_FF_01);
 
     /// The SI derived unit of force, symbol **N**, equal to kg⋅m⋅s⁻².
-    pub const NEWTON: Unit128 = Unit128(0x00_00_00_00_01_01_FF_01);
+    pub const NEWTON: Unit128 = Unit128(0x00_00_00_00_01_01_FE_01);
 
     /// The SI derived unit of pressure and stress, symbol **Pa**, equal to kg⋅m⁻¹⋅s⁻².
     pub const PASCAL: Unit128 = Unit128(0x00_00_00_00_01_FF_FE_01);
@@ -1184,7 +1184,7 @@ impl Unit128 {
     pub const VOLT: Unit128 = Unit128(0x00_00_00_FF_01_02_FD_01);
 
     /// The SI derived unit of capacitance, symbol **F**, equal to kg⁻¹⋅m⁻²⋅s⁴⋅A².
-    pub const FARAD: Unit128 = Unit128(0x00_00_00_02_FF_FE_14_01);
+    pub const FARAD: Unit128 = Unit128(0x00_00_00_02_FF_FE_04_01);
 
     /// The SI derived unit of electric resistance, symbol **Ω**, equal to kg⋅m²⋅s⁻³⋅A⁻².
     pub const OHM: Unit128 = Unit128(0x00_00_00_FE_01_02_FD_01);
@@ -2003,7 +2003,7 @@ mod tests {
         assert_eq!(Unit128::from_str(&s.to_string()).unwrap(), s);
 
         let ft = foot();
-        assert_eq!(ft.to_string(), "0xBE7FC0000000000010000");
+        assert_eq!(ft.to_string(), "0xBE7FC0000000000010001");
         assert_eq!(Unit128::from_str(&ft.to_string()).unwrap(), ft);
 
         let celsius = degree_celsius();

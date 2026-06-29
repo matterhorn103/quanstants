@@ -22,7 +22,7 @@ value.number = "1"
 value.unit = [["second", "-1"]]
 
 [units.newton]
-id = "0x00_00_00_00_01_01_FF_01"
+id = "0x00_00_00_00_01_01_FE_01"
 symbol = "N"
 name = "newton"
 value.number = "1"
@@ -64,7 +64,7 @@ value.number = "1"
 value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-3"], ["ampere", "-1"]]
 
 [units.farad]
-id = "0x00_00_00_02_FF_FE_14_01"
+id = "0x00_00_00_02_FF_FE_04_01"
 symbol = "F"
 name = "farad"
 value.number = "1"

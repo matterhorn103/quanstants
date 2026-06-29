@@ -235,9 +235,9 @@ mod tests {
     #[test]
     fn prefix() {
         let millimetre = Prefix::milli * Unit::metre();
-        assert_eq!(millimetre.id, Unit128(0xFD_00_00_00_00_00_01_00_0D));
+        assert_eq!(millimetre.id, Unit128(0xFD_00_00_00_00_00_01_00_00));
         let kilometre = Prefix::kilo * Unit::metre();
-        assert_eq!(kilometre.id, Unit128(0x03_00_00_00_00_00_01_00_0D));
+        assert_eq!(kilometre.id, Unit128(0x03_00_00_00_00_00_01_00_00));
         let kibisecond = Prefix::kibi * Unit::second();
         assert_eq!(
             kibisecond.id,

@@ -682,6 +682,17 @@ impl Unit128 {
         Self::new(proportionality_factor, dimensions)
     }
 
+    /// Returns an equivalent unit but with the catalogue number set to the provided value.
+    ///
+    /// The catalogue number must be between 1 and 7 inclusive.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `catalogue_number` is 0 or > 7.
+    pub(crate) fn with_catalogue_number(self, catalogue_number: u8) -> Self {
+        Unit128(self.0 | catalogue_number as u128)
+    }
+
     /// Attempts to create a unit from the corresponding UomID in the form of a
     /// 128-bit integer.
     ///

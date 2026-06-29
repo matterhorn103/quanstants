@@ -4,18 +4,17 @@
 #![allow(mixed_script_confusables)]
 #![allow(non_ascii_idents)]
 
-// TODO Restore
-//pub mod context;
-//pub mod defs;
+pub mod context;
+pub mod defs;
 pub mod dimensions;
 pub mod error;
 pub mod fraction;
+mod i7;
 mod num;
 pub mod ops;
 pub mod prefix;
 pub mod quantity;
-//pub mod reg;
-mod i7;
+pub mod reg;
 pub mod unit;
 pub mod unit128;
 
@@ -33,8 +32,8 @@ mod bindings {
         m.add_class::<crate::unit128::py::PyUnitId>()?;
         m.add_class::<crate::unit::py::PyUnit>()?;
         m.add_class::<crate::prefix::py::PyPrefix>()?;
-        //m.add_class::<crate::context::py::PyContext>()?;
-        //m.add_class::<crate::defs::units::py::PyUnitModule>()?;
+        m.add_class::<crate::context::py::PyContext>()?;
+        m.add_class::<crate::defs::units::py::PyUnitModule>()?;
         Ok(())
     }
 }

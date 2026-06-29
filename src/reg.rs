@@ -107,7 +107,7 @@ impl UnitRegistry {
         name: String,
         prefix: Option<Prefix>,
     ) -> Unit128 {
-        let id = Unit128::new(SciDecimal::ONE, dimensions, 0x00);
+        let id = Unit128::new(SciDecimal::ONE, dimensions);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
         self.insert_under_symbol_checked(symbol, unit.clone());
@@ -123,7 +123,7 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
         alt_names: Vec<String>,
     ) -> Unit128 {
-        let id = Unit128::new(SciDecimal::ONE, dimensions, 0x00);
+        let id = Unit128::new(SciDecimal::ONE, dimensions);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
         for n in alt_names {
@@ -144,7 +144,7 @@ impl UnitRegistry {
         prefix: Option<Prefix>,
         aliases: Vec<String>,
     ) -> Unit128 {
-        let id = Unit128::new(SciDecimal::ONE, dimensions, 0x00);
+        let id = Unit128::new(SciDecimal::ONE, dimensions);
         let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
         self.insert_under_string(name, unit.clone());
         for alias in aliases {
@@ -190,9 +190,9 @@ impl UnitRegistry {
         // Build the compound unit representing the unit terms only, ignoring any prefix
         // or numerical factor
         // This is just the easiest way to obtain the proportionality factor that
-        // results from expressing the unit terms in SI base units, which we
-        // need
-        let cmpd = Unit128::new_compound(unit_factors.iter().map(|x| (x.0.id, x.1)).collect());
+        // results from expressing the unit terms in SI base units, which we need
+        let id_factors: Vec<(Unit128, Frac)> = unit_factors.iter().map(|x| (x.0.id, x.1)).collect();
+        let cmpd = Unit128::new_compound(&id_factors);
         if let Some(p) = prefix {
             if p.is_binary()
                 && proportionality_factor == SciDecimal::ONE
@@ -205,15 +205,10 @@ impl UnitRegistry {
                 Unit128::new(
                     p.value() * proportionality_factor * cmpd.factor(),
                     cmpd.dimensions(),
-                    0x0D,
                 )
             }
         } else {
-            Unit128::new(
-                proportionality_factor * cmpd.factor(),
-                cmpd.dimensions(),
-                0x0D,
-            )
+            Unit128::new(proportionality_factor * cmpd.factor(), cmpd.dimensions())
         }
     }
 
@@ -354,21 +349,25 @@ impl UnitRegistry {
     /// Adds a `Prefix` to the provided `Unit`, gives it an ID with the least
     /// significant byte indicated, and inserts it into the registry.
     ///
-    /// Only possible with metric prefixes and panics if attempted with a binary
-    /// prefix.
-    fn add_prefixed(&mut self, prefix: Prefix, unit: Unit, least_significant_byte: u8) {
+    /// Only possible with metric prefixes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the catalogue number is not between 1 and 7 inclusive.
+    ///
+    /// Panics if attempted with a binary prefix.
+    fn add_prefixed(&mut self, prefix: Prefix, unit: Unit, catalogue_number: u8) {
         if prefix.is_binary() {
             panic!("Can't add a unit with a binary prefix to a unit registry!")
         }
+        if catalogue_number == 0 || catalogue_number > 7 {
+            panic!("Catalogue number must be between 1 and 7 inclusive!")
+        }
         // Create the unit in the normal way, but need to adjust the ID afterwards.
         let mut new_unit = prefix * unit;
-        let id = Unit128 {
-            num: new_unit.id.num,
-            dim: new_unit.id.dim & !0xFF | (least_significant_byte as u64),
-        };
-        new_unit.id = id;
+        new_unit.id = new_unit.id.with_catalogue_number(catalogue_number);
         self.insert_under_string(new_unit.name(), new_unit.clone());
-        self.units.insert(id, new_unit);
+        self.units.insert(new_unit.id, new_unit);
     }
 
     /// Creates a `Unit` (base or derived, as appropriate) from the definition
@@ -663,7 +662,7 @@ pub(crate) mod py {
                 .borrow(py)
                 .0
                 .units
-                .get_by_id(Unit128::from_bits(id))
+                .get_by_id(Unit128(id))
                 .unwrap()
                 .into()
         }

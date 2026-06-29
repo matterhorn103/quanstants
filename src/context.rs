@@ -11,17 +11,35 @@ use crate::{
     unit::Unit, unit128::Unit128,
 };
 
+/// A `Quantext` (quanstants context) stores units and provides the interfaces
+/// for accessing units and constants and creating new quantities.
+///
+/// A `Quantext` can be created in three ways, each of which pre-populates the
+/// `Quantext` with a different selection of units:
+/// - `new_minimal()`: SI base only
+/// - `new()`: SI base and SI derived units
+/// - `default()`: as `new()` but with the addition of:
+///     - the non-SI units officially approved for use with the SI
+///     - common prefixed units
+///     - the seven defining fundamental constants of the SI
+///
+/// SI base and derived units can then be accessed via convenience getter
+/// methods, as can common prefixes.
+///
+/// The use of `new_minimal()` is discouraged, as the convenience getters for
+/// the SI derived units will panic if used after initializing only the minimal
+/// set of units.
 #[derive(Debug)]
-pub struct Context {
+pub struct Quantext {
     pub units: UnitRegistry,
 }
 
-impl Context {
-    /// Creates a new `Context` with minimal pre-population (just the SI base
+impl Quantext {
+    /// Creates a new `Quantext` with minimal pre-population (just the SI base
     /// units).
     ///
     /// WARNING: It is important to note that most of the convenience getters
-    /// will panic if called on a `Context` created in this way, as the
+    /// will panic if called on a `Quantext` created in this way, as the
     /// respective items will not have been loaded.
     pub fn new_minimal() -> Self {
         Self {
@@ -29,7 +47,7 @@ impl Context {
         }
     }
 
-    /// Creates a new `Context` pre-populated with:
+    /// Creates a new `Quantext` pre-populated with:
     /// - the SI base units
     /// - the SI derived units
     pub fn new() -> Self {
@@ -39,9 +57,9 @@ impl Context {
     }
 }
 
-impl Default for Context {
-    /// Creates a new `Context` pre-populated with the same items as for
-    /// `Context::new()`:
+impl Default for Quantext {
+    /// Creates a new `Quantext` pre-populated with the same items as for
+    /// `Quantext::new()`:
     /// - the SI base units
     /// - the SI derived units
     ///
@@ -56,7 +74,7 @@ impl Default for Context {
     }
 }
 
-impl Context {
+impl Quantext {
     /// Creates a new `Quantity` from a number and a unit.
     #[inline]
     pub fn quantity<T: Num>(&self, number: T, unit: Unit) -> Quantity<T> {
@@ -121,7 +139,7 @@ macro_rules! unit_getter {
 
 // Generate convenience functions for the pre-populated units
 #[allow(dead_code)]
-impl Context {
+impl Quantext {
     #[inline]
     pub fn one(&self) -> Unit {
         self.units.one()
@@ -164,13 +182,7 @@ impl Context {
     unit_getter!(gray, Unit128::GRAY);
     unit_getter!(sievert, Unit128::SIEVERT);
     unit_getter!(katal, Unit128::KATAL);
-    unit_getter!(
-        gram,
-        Unit128 {
-            num: 0xFD,
-            dim: 0x0000000011000001
-        }
-    );
+    unit_getter!(gram, Unit128::GRAM);
 }
 
 /// Macro to generate convenience functions for prefixes
@@ -185,7 +197,7 @@ macro_rules! prefix_getter {
 
 // Generate convenience functions for the most common prefixes
 #[allow(dead_code)]
-impl Context {
+impl Quantext {
     prefix_getter!(nano);
     prefix_getter!(micro);
     prefix_getter!(milli);
@@ -205,10 +217,10 @@ pub(crate) mod py {
     use pyo3::{prelude::*, types::PyType};
     use scinum::SciNum;
 
-    /// The `Context` object is used to access units and constants and to create new
-    /// quantities.
+    /// A `Quantext` (quanstants context) is used to access units and
+    /// constants and to create new quantities.
     ///
-    /// A Python `Context` in `quanstants` is always pre-populated with:
+    /// A Python `Quantext` in `quanstants` is always pre-populated with:
     /// - the SI base units
     /// - the SI derived units
     /// - the non-SI units officially approved for use with the SI
@@ -216,12 +228,12 @@ pub(crate) mod py {
     /// - the seven defining fundamental constants of the SI (not yet implemented)
     ///
     /// All of the pre-populated units and constants can be accessed as properties
-    /// of the `Context`.
+    /// of the `Quantext`.
     /// Additionally, properties are defined for the symbols of the SI base and
     /// derived units.
     #[pyclass(name = "Context")]
     #[derive(Debug, Default)]
-    pub(crate) struct PyContext(pub(crate) Context);
+    pub(crate) struct PyContext(pub(crate) Quantext);
 
     #[allow(non_snake_case)]
     #[pymethods]
@@ -622,10 +634,7 @@ pub(crate) mod py {
         fn minute(&self) -> PyUnit {
             self.0
                 .units
-                .get_by_id(Unit128 {
-                    num: 0x3C00,
-                    dim: 0x1101,
-                })
+                .get_by_id(Unit128(0x3B00_00_00_00_00_00_00_01_01))
                 .expect("A Quantext in Python should always have this unit loaded")
                 .into()
         }
@@ -640,10 +649,7 @@ pub(crate) mod py {
         fn hour(&self) -> PyUnit {
             self.0
                 .units
-                .get_by_id(Unit128 {
-                    num: 0xE1000,
-                    dim: 0x1101,
-                })
+                .get_by_id(Unit128(0xE0F00_00_00_00_00_00_00_01_01))
                 .expect("A Quantext in Python should always have this unit loaded")
                 .into()
         }
@@ -658,10 +664,7 @@ pub(crate) mod py {
         fn day(&self) -> PyUnit {
             self.0
                 .units
-                .get_by_id(Unit128 {
-                    num: 0x1518000,
-                    dim: 0x1101,
-                })
+                .get_by_id(Unit128(0x1517F00_00_00_00_00_00_00_01_01))
                 .expect("A Quantext in Python should always have this unit loaded")
                 .into()
         }
@@ -674,14 +677,16 @@ pub(crate) mod py {
 
         #[getter]
         fn astronomical_unit(&self) -> PyUnit {
-            self.0
-                .units
-                .get_by_id(Unit128 {
-                    num: 0x22D4BA5A6C00,
-                    dim: 0x0000000000110001,
-                })
-                .expect("A Quantext in Python should always have this unit loaded")
-                .into()
+            todo!()
+            // Incorrect ID right now
+            // self.0
+            // .units
+            // .get_by_id(Unit128 {
+            // num: 0x22D4BA5A6C00,
+            // dim: 0x0000000000110001,
+            // })
+            // .expect("A Quantext in Python should always have this unit loaded")
+            // .into()
         }
 
         /// astronomical unit
@@ -736,10 +741,7 @@ pub(crate) mod py {
         fn litre(&self) -> PyUnit {
             self.0
                 .units
-                .get_by_id(Unit128 {
-                    num: 0xFD,
-                    dim: 0x130001,
-                })
+                .get_by_id(Unit128(0xFD_00_00_00_00_00_03_00_01))
                 .expect("A Quantext in Python should always have this unit loaded")
                 .into()
         }
@@ -1035,7 +1037,7 @@ mod tests {
     fn unit_getters() {
         // Just make sure that a default context has all the SI units in it and their
         // getters work
-        let context = Context::new();
+        let context = Quantext::new();
         context.second();
         context.metre();
         context.meter();
@@ -1070,7 +1072,7 @@ mod tests {
 
     #[test]
     fn quantity_from_str() {
-        let context = Context::new();
+        let context = Quantext::new();
         assert_eq!(
             context.quantity_from_str("3 m").unwrap(),
             SciDecimal::new(3, 0) * context.metre()

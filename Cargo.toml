@@ -17,6 +17,7 @@ num-traits = "0.2.19"
 regex = "1.12.2"
 scinum = { version = "0.1.0", path = "../scinum" }
 serde_with = "3.15.1"
+thiserror = "2.0.18"
 toml = "0.9.8"
 
 [dependencies.serde]

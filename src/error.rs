@@ -1,56 +1,34 @@
 // SPDX-FileCopyrightText: 2025 Matthew Milner <matterhorn103@proton.me>
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use std::{error::Error, fmt, num::TryFromIntError};
+use std::num::TryFromIntError;
 
 use scinum::SciNumError;
 
 use crate::unit::Unit;
 
-#[derive(Clone, Debug)]
+/// Quanstants' error type.
+#[derive(thiserror::Error, Clone, Debug)]
 pub enum QuanstantsError {
+    #[error("Failed to parse: {0}")]
     Parse(String),
+    #[error("Failed to cast between types")]
     Cast,
+    #[error("Input lies outside of valid range")]
     Range,
+    #[error("Operation would cause type to exceed valid range")]
     Overflow,
+    #[error("Definition is incomplete, missing entry {0}")]
     Definition(String),
+    #[error("{0} not found")]
     Lookup(String),
+    #[error("Provided UoMID does not encode a valid unit of this type")]
     InvalidId,
+    #[error("Incompatible units: {0} and {1}")]
     MismatchedUnits(Unit, Unit),
+    #[error("The attempted operation is only valid for linear units, and {0} is not linear")]
     NonLinearUnit(Unit),
 }
-
-impl fmt::Display for QuanstantsError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            QuanstantsError::Parse(string) => write!(f, "Failed to parse: {string}"),
-            QuanstantsError::Cast => write!(f, "Failed to cast"),
-            QuanstantsError::Range => write!(f, "Input lies outside of valid range"),
-            QuanstantsError::Overflow => {
-                write!(f, "Operation would cause type to exceed valid range")
-            }
-            QuanstantsError::Definition(field) => {
-                write!(f, "Definition is incomplete, missing entry {field}")
-            }
-            QuanstantsError::Lookup(search) => {
-                write!(f, "{search} not found")
-            }
-            QuanstantsError::MismatchedUnits(u1, u2) => {
-                write!(f, "Incompatible units: {u1} and {u2}")
-            }
-            QuanstantsError::NonLinearUnit(u) => write!(
-                f,
-                "The attempted operation is only valid for linear units, and {u} is not linear"
-            ),
-            QuanstantsError::InvalidId => write!(
-                f,
-                "Provided UoMID does not encode a valid unit of this type"
-            ),
-        }
-    }
-}
-
-impl Error for QuanstantsError {}
 
 impl From<TryFromIntError> for QuanstantsError {
     fn from(_err: TryFromIntError) -> Self {

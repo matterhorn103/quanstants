@@ -816,8 +816,10 @@ impl FromStr for Unit128 {
 
     /// Creates a new unit from a hexadecimal string representation of the 128-bit UoMID.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let hex = s.strip_prefix("0x").unwrap_or(s);
-        let bits = u128::from_str_radix(hex, 16).map_err(|_e| QuanstantsError::Parse(s.into()))?;
+        // from_str_radix doesn't like anything other than digits
+        // We allow prefix and underscores just like Rust literals and TOML hexadecimal
+        let hex = s.strip_prefix("0x").unwrap_or(s).replace("_", "");
+        let bits = u128::from_str_radix(&hex, 16).map_err(|_e| QuanstantsError::Parse(s.into()))?;
         Self::from_raw(bits)
     }
 }

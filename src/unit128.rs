@@ -645,19 +645,20 @@ impl Unit128 {
             Unit128::new(1024_f64.powi(exponent.into()).into(), dimensions)
         } else {
             Self(
-                ((exponent * 3) as u8 as u128) << 64
-                    | (*dimensions.J.numer() as u8 as u128) << 56
-                    | (*dimensions.N.numer() as u8 as u128) << 48
-                    | (*dimensions.Θ.numer() as u8 as u128) << 40
-                    | (*dimensions.I.numer() as u8 as u128) << 32
-                    | (*dimensions.M.numer() as u8 as u128) << 24
-                    | (*dimensions.L.numer() as u8 as u128) << 16
-                    | (*dimensions.T.numer() as u8 as u128) << 8
-                    // Integer exponents    => bit 7 = 0
-                    // Linear unit          => bits 6-4 = 000
-                    // SI compatible        => bit 3 = 0
-                    // Uncatalogued         => bits 2-0 = 000
-                    | 0x00,
+                1_u128 << 127 // Binary bit
+                | ((exponent * 3) as u8 as u128) << 64
+                | (*dimensions.J.numer() as u8 as u128) << 56
+                | (*dimensions.N.numer() as u8 as u128) << 48
+                | (*dimensions.Θ.numer() as u8 as u128) << 40
+                | (*dimensions.I.numer() as u8 as u128) << 32
+                | (*dimensions.M.numer() as u8 as u128) << 24
+                | (*dimensions.L.numer() as u8 as u128) << 16
+                | (*dimensions.T.numer() as u8 as u128) << 8
+                // Integer exponents    => bit 7 = 0
+                // Linear unit          => bits 6-4 = 000
+                // SI compatible        => bit 3 = 0
+                // Uncatalogued         => bits 2-0 = 000
+                | 0x00,
             )
         }
     }
@@ -883,13 +884,13 @@ impl Unit128 {
 
     /// The highest proportionality factor that can be represented when using the binary-like encoding.
     pub const MAX_BIN_FACTOR: f64 =
-        (Unit128::MAX_SIGNED_SIGNIFICAND as f64) * f64::from_bits(0x5A30000000000000); // Representation of 1024^42 as an f64 per IEEE 754
+        (0xF_FFFF_FFFF_FFFF_u64 + 1) as f64 * f64::from_bits(0x5A30000000000000); // Latter is the representation of 1024^42 as an f64 per IEEE 754
 
     /// The lowest proportionality factor that can be represented when using the binary-like encoding.
     pub const MIN_BIN_FACTOR: f64 = -Unit128::MAX_BIN_FACTOR;
 
     /// The smallest positive proportionality factor that can be represented when using the binary-like encoding.
-    pub const MIN_POS_BIN_FACTOR: f64 = 1.0f64 * f64::from_bits(0x25B0000000000000); // Representation of 1024^-42 as an f64 per IEEE 754
+    pub const MIN_POS_BIN_FACTOR: f64 = 1.0f64 * f64::from_bits(0x25B0000000000000); // Latter is the representation of 1024^-42 as an f64 per IEEE 754
 
     /// The smallest negative proportionality factor that can be represented when using the binary-like encoding.
     pub const MAX_NEG_BIN_FACTOR: f64 = -Unit128::MIN_POS_BIN_FACTOR;
@@ -943,53 +944,67 @@ impl Unit128 {
         let bits = factor.to_bits();
         let sign_bit = bits >> 63;
         // Significand (called mantissa by `f64` docs) is bits 51–0 of an `f64`
-        // plus an implicit leading 1, which we add back to get the real significand
+        // plus, for a normal number, an implicit leading 1, which we add back
+        // to get the real significand
         let mut significand = (bits & 0x000F_FFFF_FFFF_FFFF) | 1_u64 << 52;
-        // Exponent is bits 62–52, with a bias of 1023, which we remove to get the real exponent
+        // Exponent is bits 62–52, with a bias of 1023, which we remove to get
+        // the actual exponent
         let mut exp_2 = ((bits >> 52) & 0x7FF) as i16 - 1023;
+        // BUT IEEE binary floating point encodes numbers with the number as
+        // (m * 2^-52) * 2^x
+        // Whereas our encoding uses a binary integer, just like BID for decimal
+        // Absorb the 2^-52 into the exponent to get the *true* exponent
+        exp_2 -= 52;
         // This exponent was a power of 2, we need a power of 1024.
         // 1024 = 2^10 therefore 1024^a = 2^(a*10)
         // So we need the exponent with a base of 2 to be a multiple of 10 in
         // order to convert it to a base of 1024.
-        // If we were to do a left shift on the significand to achieve this,
-        // how many bits would we need to shift by?
+        //
+        // Really, we want to do two things at the same time:
+        // 1. Turn the significand into an integer without trailing zeros (i.e.
+        //    swap trailing zeros for leading ones)
+        // 2. Make the exponent a multiple of ten so that we can convert from a
+        //    base 2 exponent to a base 1024 one
+        // First increase exponent to a multiple of ten
         let remainder = exp_2 % 10;
         // If already a multiple of 10, no need to do anything
         if remainder != 0 {
-            // Negative remainder means we'd have to left shift by 10 - |remainder|
-            let r = if remainder.is_positive() {
-                remainder
+            // Negative remainder means we'd have to right shift by |remainder|
+            let rshift: i16 = if remainder.is_positive() {
+                10 - remainder
             } else {
-                10 - remainder.abs()
+                remainder.abs()
             };
-            // We have 54 bits available for the significand - how many are already being used?
-            let digits = match significand.checked_ilog2() {
-                Some(n) => n + 1,
-                None => 0,
-            };
-            let spare = 54 - digits;
-            // If we have enough spare to increase the significand precision while
-            // decreasing the exponent, do it; otherwise, do the opposite
-            if spare >= r as u32 {
-                // Multiply significand by 2^remainder by shifting
-                significand = significand << r;
-                // Decrease exponent appropriately
-                exp_2 -= r;
-            } else {
-                // Divide significand by necessary amount by shifting
-                // Loses precision in the process, but this is unavoidable
-                significand = significand >> (10 - r);
-                exp_2 += 10 - r;
-            }
+            // Divide significand by necessary amount by shifting
+            // May lose precision in the process, but this is unavoidable
+            significand = significand >> (rshift);
+            exp_2 += rshift;
         }
+        // If the exponent is now already larger than the allowed maximum (420),
+        // it's a problem - the number is simply too big, nothing we can do
+        if exp_2 > 420 {
+            return Err(QuanstantsError::Range);
+        }
+        // Now we can continue to shift in sets of 10 until we would be losing
+        // precision - but only so long as we don't exceed the max exponent
+        while significand.trailing_zeros() >= 10 && exp_2 < 420 {
+            significand = significand >> 10;
+            exp_2 += 10;
+        }
+        // If, even after doing that, the exponent is below the allowed minimum
+        // (-420), it's also a problem
+        if exp_2 < -420 {
+            return Err(QuanstantsError::Range);
+        }
+
         // Now can actually convert to a base 1024 exponent
         debug_assert_eq!(exp_2 % 10, 0);
         let exp_1024 = exp_2 / 10;
         Ok(
             1_u64 << 63 // Binary bit set to 1 to indicate binary encoding
-            | sign_bit << 62 // Sign bit follows binary bit
-            | (significand - 1) << 8 // Apply our bias
-            | (exp_1024 * 3) as i8 as u8 as u64, // Encoded as 3 times the exponent
+        | sign_bit << 62 // Sign bit follows binary bit
+        | (significand - 1) << 8 // Apply our bias
+        | (exp_1024 * 3) as i8 as u8 as u64, // Encoded as 3 times the exponent
         )
     }
 
@@ -1423,6 +1438,17 @@ impl ScaleUnit128 {
         )
     }
 
+    /// Returns an equivalent unit but with the catalogue number set to the provided value.
+    ///
+    /// The catalogue number must be between 1 and 7 inclusive.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `catalogue_number` is 0 or > 7.
+    pub(crate) fn with_catalogue_number(self, catalogue_number: u8) -> Self {
+        ScaleUnit128(self.0 | catalogue_number as u128)
+    }
+
     /// Attempts to create a scale unit from the corresponding UomID in the form
     /// of a 128-bit integer.
     ///
@@ -1684,6 +1710,26 @@ mod tests {
 
     use super::*;
 
+    /// Create a representation of the foot using `Unit128::new()`, for testing purposes.
+    ///
+    /// Equivalent to `Unit128(0xBE7FC_00000000_00010001)`.
+    fn foot() -> Unit128 {
+        Unit128::new(sci!(0.3048), Dimensions::LENGTH).with_catalogue_number(1)
+    }
+
+    /// Create a representation of the degree celsius using `ScaleUnit128::new()`, for testing purposes.
+    ///
+    /// Equivalent to `Unit128(0x0035597E_00000000_00_00_01_00_00_00_00_41)`.
+    fn degree_celsius() -> ScaleUnit128 {
+        ScaleUnit128::new(
+            ScaleType::Temperature,
+            sci!(273.15),
+            SciDecimal::ONE,
+            Dimensions::THERMODYNAMIC_TEMPERATURE,
+        )
+        .with_catalogue_number(1)
+    }
+
     #[test]
     fn factor_to_bits() {
         assert_eq!(
@@ -1725,8 +1771,14 @@ mod tests {
 
     #[test]
     fn binary_factor_to_bits() {
-        assert_eq!(Unit128::binary_factor_to_bits(1_f64).unwrap(), 0x00);
-        assert_eq!(Unit128::binary_factor_to_bits(2_f64).unwrap(), 0x100);
+        assert_eq!(
+            Unit128::binary_factor_to_bits(1_f64).unwrap(),
+            0x8000000000000000
+        );
+        assert_eq!(
+            Unit128::binary_factor_to_bits(2_f64).unwrap(),
+            0x8000000000000100
+        );
         // Test the encodings of the binary prefixes
         // Ki kibi  =  1024^1 =  2^10
         assert_eq!(
@@ -1797,29 +1849,24 @@ mod tests {
         );
         assert_eq!(
             Unit128::binary_factor_to_bits(Unit128::MAX_BIN_FACTOR).unwrap(),
+            // In theory:
             // 0b10111111_11111111_11111111_11111111_11111111_11111111_11111111_01111110
             // i.e. binary bit 1, positive sign, significand all 1s, largest allowed exponent
-            0xBFFFFFFFFFFFFF7E,
+            // In practice we restrict it ever so slightly (at least for now) to:
+            // 0b10001111_11111111_11111111_11111111_11111111_11111111_11111111_01111110
+            0b10001111_11111111_11111111_11111111_11111111_11111111_11111111_01111110,
         );
         // Larger than the max value should fail
-        assert!(Unit128::binary_factor_to_bits(Unit128::MAX_BIN_FACTOR + 1_f64).is_err());
+        assert!(Unit128::binary_factor_to_bits(Unit128::MAX_BIN_FACTOR * 100_f64).is_err());
         // Zero should fail
         assert!(Unit128::binary_factor_to_bits(0_f64).is_err());
-        // An exponent not divisible by 3 should result in an increased precision...
+    }
+
+    #[test]
+    fn binary_round_trip() {
         assert_eq!(
-            Unit128::binary_factor_to_bits(2_f64.pow(14)).unwrap(),
-            // Exponent 2^14 becomes 2^10 = 1024^(3/3)
-            // Significand 0b1 = 1 becomes 0b10000 = 16 becomes 15 with our bias
-            0x8000000000000F03,
-        );
-        // ...unless the precision is too large, in which case rounding occurs
-        assert_eq!(
-            Unit128::binary_factor_to_bits(2_f64.pow(53) * 2_f64.pow(14)).unwrap(),
-            // Exponent 2^14 becomes 2^20 = 1024^(6/3)
-            // Significand 2^53 becomes 2^47 becomes 2^47 - 1 with our bias
-            1_u64 << 63 // Binary bit
-            | 0x007F_FFFF_FFFF_FF << 8
-            | 0x06,
+            Unit128::bits_to_factor(Unit128::binary_factor_to_bits(1_f64).unwrap()),
+            SciDecimal::from(1_f64)
         );
     }
 
@@ -1867,38 +1914,36 @@ mod tests {
         let s = Unit128::new(SciDecimal::ONE, Dimensions::TIME);
         assert_eq!(s, Unit128::SECOND);
         assert_eq!(s.0, Unit128::SECOND.0);
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH);
+        assert_eq!(foot().0, 0xBE7FC_00000000_00010001);
         // proportionality factor k = 0.3048 = 3048e-4
         //   => g = 0,
         //      b = 3048 − 1 = 3047 = 0xBE7,
         //      f = −4 = 0xFC as i8,
         //   so encoded as 0x00000000000BE7_FC
         // reference unit ꟛ = metre => dim = 0x00_00_00_00_00_10_00
-        // least significant byte = 0x00
-        // Note that creating a unit like this does not give the catalogued version
-        // Actual foot has least significant byte = 0x01
-        assert_eq!(ft.0, 0xBE7FC_00000000_00010000);
+        // least significant byte = 0x01
     }
 
     #[test]
     fn new_scale() {
-        let celsius = ScaleUnit128::new(
-            ScaleType::Temperature,
-            sci!(273.15),
-            SciDecimal::ONE,
-            Dimensions::THERMODYNAMIC_TEMPERATURE,
-        );
-        // Note that creating a unit like this does not give the catalogued version
-        // Actual celsius is 0x0035597E_00000000_00_00_01_00_00_00_00_41
-        assert_eq!(celsius.0, 0x0035597E_00000000_00_00_01_00_00_00_00_40);
-        assert_eq!(celsius, ScaleUnit128::DEGREE_CELSIUS.normalize());
+        let celsius = degree_celsius();
+        assert_eq!(celsius.0, 0x0035597E_00000000_00_00_01_00_00_00_00_41);
+        assert_eq!(celsius, ScaleUnit128::DEGREE_CELSIUS);
+    }
+
+    #[test]
+    fn new_binary() {
+        let kib_id = Unit128(0x80000000_00000003_00_00_00_00_00_00_00_00);
+        let kib = Unit128::new_with_binary_factor(2_f64.pow(10), Dimensions::DIMENSIONLESS);
+        assert_eq!(kib, kib_id);
+        let kib2 = Unit128::new_with_binary_prefix(1, Dimensions::DIMENSIONLESS);
+        assert_eq!(kib2, kib_id)
     }
 
     #[test]
     fn factor() {
         assert_eq!(Unit128::KILOGRAM.factor(), SciDecimal::ONE);
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH);
-        assert_eq!(ft.factor(), sci!(0.3048));
+        assert_eq!(foot().factor(), sci!(0.3048));
         assert_eq!(ScaleUnit128::DEGREE_CELSIUS.factor(), SciDecimal::ONE);
         // Calling factor() on this was broken, keep as a good example of a
         // number with maximum precision and as a regression test
@@ -1920,8 +1965,7 @@ mod tests {
             Unit128::KELVIN.dimensions(),
             Dimensions::THERMODYNAMIC_TEMPERATURE
         );
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH);
-        assert_eq!(ft.dimensions(), Dimensions::LENGTH);
+        assert_eq!(foot().dimensions(), Dimensions::LENGTH);
     }
 
     #[test]
@@ -1929,8 +1973,7 @@ mod tests {
         assert!(Uomid::from(Unit128::ONE).is_si_compatible());
         assert!(Uomid::from(Unit128::SECOND).is_si_compatible());
         assert!(Uomid::from(ScaleUnit128::DEGREE_CELSIUS).is_si_compatible());
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH);
-        assert!(Uomid::from(ft).is_si_compatible());
+        assert!(Uomid::from(foot()).is_si_compatible());
         // Make up some unit that's deliberately not compatible
         // Key thing is that bit 3 is a 1
         assert!(!Uomid(0x28390A).is_si_compatible());
@@ -1941,8 +1984,7 @@ mod tests {
         assert!(!Uomid::from(Unit128::ONE).is_scale());
         assert!(!Uomid::from(Unit128::SECOND).is_scale());
         assert!(Uomid::from(ScaleUnit128::DEGREE_CELSIUS).is_scale());
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH);
-        assert!(!Uomid::from(ft).is_scale());
+        assert!(!Uomid::from(foot()).is_scale());
     }
 
     #[test]
@@ -1950,8 +1992,7 @@ mod tests {
         assert!(Uomid::from(Unit128::ONE).is_linear());
         assert!(Uomid::from(Unit128::SECOND).is_linear());
         assert!(!Uomid::from(ScaleUnit128::DEGREE_CELSIUS).is_linear());
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH);
-        assert!(Uomid::from(ft).is_linear());
+        assert!(Uomid::from(foot()).is_linear());
     }
 
     #[test]
@@ -1961,11 +2002,11 @@ mod tests {
         assert_eq!(s.to_string(), "0x100");
         assert_eq!(Unit128::from_str(&s.to_string()).unwrap(), s);
 
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH);
+        let ft = foot();
         assert_eq!(ft.to_string(), "0xBE7FC0000000000010000");
         assert_eq!(Unit128::from_str(&ft.to_string()).unwrap(), ft);
 
-        let celsius = ScaleUnit128::DEGREE_CELSIUS;
+        let celsius = degree_celsius();
         assert_eq!(celsius.to_string(), "0x35597E000000000000010000000041");
         assert_eq!(
             ScaleUnit128::from_str(&celsius.to_string()).unwrap(),
@@ -1982,8 +2023,7 @@ mod tests {
     fn mul() {
         let amp_second = Unit128::AMPERE * Unit128::SECOND;
         let square_metre = Unit128::METRE * Unit128::METRE;
-        let ft = Unit128::new(sci!(0.3048), Dimensions::LENGTH);
-        let square_foot = ft * ft;
+        let square_foot = foot() * foot();
         assert_eq!(amp_second.0, 0x100000100);
         assert_eq!(square_metre.0, 0x20000);
         // 0.3048^2 = 0.09290304 = 9290304e-8

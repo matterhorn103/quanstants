@@ -429,12 +429,14 @@ impl UnitRegistry {
                 Some(u) => value.number.with_uncertainty(u),
                 None => value.number,
             };
-            // TODO this definitely shouldn't just panic if the unit isn't found
-            let unit_factors: Vec<(Unit, Frac)> = value
-                .unit
-                .into_iter()
-                .map(|f| (self.get_by_name(&f.0).unwrap(), f.1))
-                .collect();
+            let mut unit_factors: Vec<(Unit, Frac)> = Vec::new();
+            for (name, exp) in value.unit {
+                unit_factors.push((
+                    self.get_by_name(&name)
+                        .ok_or(QuanstantsError::Lookup(name))?,
+                    exp,
+                ))
+            }
             if !def.alt_names.is_empty() {
                 self.add_derived_with_alt_names(
                     def.id,
@@ -482,8 +484,35 @@ impl UnitRegistry {
     pub fn load_module(&mut self, module: UnitModule) -> Result<(), QuanstantsError> {
         let def_file: DefFile =
             toml::from_str(module.toml()).expect("Files stored in binary, so they should work");
-        for u in def_file.units.into_values() {
-            self.add_from_def(u)?;
+        // Be flexible in the order we process the definitions
+        // This allows units to be defined in terms of related ones in the same
+        // module e.g. a yard can be defined as three feet
+        let mut pending: Vec<String> = def_file.units.keys().cloned().collect();
+        // Keep going until all loaded
+        while let Some(name) = pending.pop() {
+            match self.add_from_def(
+                def_file
+                    .units
+                    .get(&name)
+                    .expect("Couldn't have ever made it into pending if it wasn't in the map")
+                    .clone(),
+            ) {
+                Ok(_) => continue,
+                Err(e) => match e {
+                    QuanstantsError::Lookup(name) => {
+                        // Maybe the unit that was looked for is in this module
+                        // but hasn't been loaded yet, in which case we should
+                        // come back to this one later, after we've loaded the
+                        // other definitions in the file
+                        if pending.contains(&name) {
+                            pending.insert(0, name);
+                        } else {
+                            Err(QuanstantsError::Lookup(name))?
+                        }
+                    }
+                    _ => Err(e)?, // Just propagate
+                },
+            }
         }
         Ok(())
     }

@@ -1,0 +1,358 @@
+# The British imperial system
+# From the international yard and pound agreement and the Weights and Measures Act 1985
+
+# Imperial units use the simple name, whereas US customary units are prefixed
+# with "us" e.g. "us_fluid_ounce"
+
+## Length
+
+[units.twip]
+#id = ""
+symbol = "twip"
+name = "twip"
+value.number = "0.0000176389"
+value.unit = [["metre", "1"]]
+
+[units.thou]
+#id = ""
+symbol = "th"
+name = "thou"
+value.number = "0.0000254"
+value.unit = [["metre", "1"]]
+
+[units.barleycorn]
+#id = ""
+symbol = "barleycorn"
+name = "barleycorn"
+value.number = "0.0084667"
+value.unit = [["metre", "1"]]
+
+[units.inch]
+#id = ""
+symbol = "in"
+name = "inch"
+value.number = "0.0254"
+value.unit = [["metre", "1"]]
+
+[units.hand]
+#id = ""
+symbol = "hh"
+name = "hand"
+value.number = "0.1016"
+value.unit = [["metre", "1"]]
+
+[units.foot]
+id = "0xBE7FC0000000000110001"
+symbol = "ft"
+name = "foot"
+value.number = "0.3048"
+value.unit = [["metre", "1"]]
+
+[units.yard]
+#id = ""
+symbol = "yd"
+name = "yard"
+value.number = "0.9144"
+value.unit = [["metre", "1"]]
+
+[units.chain]
+#id = ""
+symbol = "ch"
+name = "chain"
+value.number = "20.1168"
+value.unit = [["metre", "1"]]
+
+[units.furlong]
+#id = ""
+symbol = "fur"
+name = "furlong"
+value.number = "201.168"
+value.unit = [["metre", "1"]]
+
+[units.mile]
+#id = ""
+symbol = "mi"
+name = "mile"
+value.number = "1609.344"
+value.unit = [["metre", "1"]]
+
+[units.league]
+#id = ""
+symbol = "lea"  # Or should symbol be le?
+name = "league"
+value.number = "4828.032"
+value.unit = [["metre", "1"]]
+
+#link?
+#rod?
+
+## Area
+
+#perch?
+[units.rood]
+#id = ""
+symbol = "rood"
+name = "rood"
+value.number = "1011.714106"
+value.unit = [["metre", "2"]]
+
+[units.acre]
+#id = ""
+symbol = "ac"
+name = "acre"
+value.number = "4046.8564224"
+value.unit = [["metre", "2"]]
+
+## Capacity
+
+[units.minim]
+#id = ""
+symbol = "min"
+name = "minim"
+value.number = "0.000059193880208333333333"  # to 20 sf
+value.unit = [["litre", "2"]]
+
+[units.fluid_scruple]
+#id = ""
+symbol = "fl s"
+name = "fluid_scruple"
+value.number = "0.0011838776041666666667"  # to 20 sf
+value.unit = [["litre", "2"]]
+
+[units.fluid_drachm]
+#id = ""
+symbol = "fl dr"
+name = "fluid_drachm"
+aliases = ["fluid_dram"]
+value.number = "0.0035516328125"
+value.unit = [["litre", "2"]]
+
+[units.fluid_ounce]
+#id = ""
+symbol = "fl oz"
+name = "fluid_ounce"
+value.number = "0.0284130625"
+value.unit = [["litre", "2"]]
+
+[units.gill]
+#id = ""
+symbol = "gi"
+name = "gill"
+value.number = "0.1420653125"
+value.unit = [["litre", "2"]]
+
+[units.pint]
+#id = ""
+symbol = "pt"
+name = "pint"
+value.number = "0.56826125"
+value.unit = [["litre", "2"]]
+
+[units.quart]
+#id = ""
+symbol = "qt"
+name = "quart"
+value.number = "1.1365225"
+value.unit = [["litre", "2"]]
+
+[units.gallon]
+#id = ""
+symbol = "gal"
+name = "gallon"
+value.number = "4.54609"
+value.unit = [["litre", "2"]]
+
+[units.peck]
+symbol = "peck"
+name = "peck"
+value.number = "9.09218"
+value.unit = [["litre", "2"]]
+
+[units.bushel]
+symbol = "bushel"
+name = "bushel"
+value.number = "36.36872"
+value.unit = [["litre", "2"]]
+
+## Mass (all three systems, only grain is common to all)
+
+[units.grain]
+#id = ""
+symbol = "gr"
+name = "grain"
+value.number = "64.79891E-6"
+value.unit = [["kilogram", "1"]]
+
+### Avoirdupois system
+
+[units.dram]
+#id = ""
+symbol = "dr"
+name = "dram"
+value.number = "0.0017718451953125"
+value.unit = [["kilogram", "1"]]
+
+[units.ounce]
+#id = ""
+symbol = "oz"
+name = "ounce"
+value.number = "0.028349523125"
+value.unit = [["kilogram", "1"]]
+
+[units.pound]
+#id = ""
+symbol = "lb"
+name = "pound"
+value.number = "0.45359237"
+value.unit = [["kilogram", "1"]]
+
+[units.stone]
+#id = ""
+symbol = "st"
+name = "stone"
+value.number = "6.35029318"
+value.unit = [["kilogram", "1"]]
+
+[units.quarter]
+#id = ""
+symbol = "qr"
+name = "quarter"
+value.number = "12.70058636"
+value.unit = [["kilogram", "1"]]
+
+[units.cental]
+#id = ""
+symbol = "cental"
+name = "cental"
+value.number = "45.359237"
+value.unit = [["kilogram", "1"]]
+
+[units.hundredweight]
+#id = ""
+symbol = "cwt"
+name = "hundredweight"
+value.number = "50.80234544"
+value.unit = [["kilogram", "1"]]
+
+[units.ton]
+#id = ""
+symbol = "ton"
+name = "ton"
+aliases = ["tun"]
+value.number = "1016.0469088"
+value.unit = [["kilogram", "1"]]
+
+### Troy system
+
+[units.pennyweight]
+#id = ""
+symbol = "dwt"
+name = "pennyweight"
+value.number = "0.00155517384"
+value.unit = [["kilogram", "1"]]
+
+[units.troy_ounce]
+#id = ""
+symbol = "oz t"
+name = "troy_ounce"
+value.number = "0.03110347680"
+value.unit = [["kilogram", "1"]]
+
+[units.troy_pound]
+#id = ""
+symbol = "lb t"
+name = "troy_pound"
+value.number = "0.37324172"
+value.unit = [["kilogram", "1"]]
+
+### Apothecaries system
+
+[units.scruple]
+#id = ""
+symbol = "℈"
+name = "scruple"
+value.number = "0.001295962"
+value.unit = [["kilogram", "1"]]
+
+[units.drachm]
+#id = ""
+symbol = "ʒ"
+name = "drachm"
+value.number = "0.003887886"
+value.unit = [["kilogram", "1"]]
+
+[units.ounce_apothecaries]
+#id = ""
+symbol = "℥"
+name = "ounce_apothecaries"
+value.number = "0.031103088"
+value.unit = [["kilogram", "1"]]
+
+## Nautical units
+
+[units.fathom_practical]
+# According to Wiki, the Admiralty used 1 ftm = 6 ft in practice
+#id = ""
+symbol = "ftm"
+name = "fathom_practical"
+value.number = "1.8288"
+value.unit = [["metre", "1"]]
+
+[units.british_fathom]
+# 1/1000 nmi
+#id = ""
+symbol = "br ftm"
+name = "british_fathom"
+value.number = "1.853184"
+value.unit = [["metre", "1"]]
+
+[units.fathom]
+#id = ""
+symbol = "ftm"
+name = "fathom"
+value.number = "1.852"
+value.unit = [["metre", "1"]]
+
+[units.british_cable]
+#id = ""
+symbol = "br cable"
+name = "british_cable"
+value.number = "185.3184"
+value.unit = [["metre", "1"]]
+
+[units.cable]
+#id = ""
+symbol = "cable"
+name = "cable"
+value.number = "185.2"
+value.unit = [["metre", "1"]]
+
+[units.british_nautical_mile]
+# Tradtional value of 6080 ft
+#id = ""
+symbol = "br nmi"
+name = "british_nautical_mile"
+value.number = "1853.184"
+value.unit = [["metre", "1"]]
+
+[units.nautical_mile]
+# International definition
+#id = ""
+symbol = "nmi"
+name = "nautical_mile"
+value.number = "1852"
+value.unit = [["metre", "1"]]
+
+[units.british_knot]
+#id = ""
+symbol = "br kn"
+name = "british_knot"
+value.number = "1853.184"
+value.unit = [["metre", "1"], ["hour", "-1"]]
+
+[units.knot]
+#id = ""
+symbol = "kn"
+name = "knot"
+value.number = "1852"
+value.unit = [["metre", "1"], ["hour", "-1"]]

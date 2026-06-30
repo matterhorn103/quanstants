@@ -4,6 +4,8 @@ import tomllib
 
 from platformdirs import user_config_dir
 
+from .loader import create_units, create_constants
+
 # Available options, their default values, and their respective docstrings, are
 # contained in quanstants/config.toml
 
@@ -157,9 +159,9 @@ class QuanstantsConfig:
         if "config" in valid_sections:
             self.load_config(toml["config"])
         if "units" in valid_sections:
-            self.load_units(toml["units"])
+            create_units(toml["units"])
         if "constants" in valid_sections:
-            self.load_constants(toml["constants"])
+            create_constants(toml["constants"])
     
     def init_config(self, config_table: dict):
         # Initiate options dynamically
@@ -221,98 +223,6 @@ class QuanstantsConfig:
         
         with open(toml_path, "wb") as f:
             tomli_w.dump(config_table_to_save, f)
-
-    def load_units(self, units_table: dict):
-        """Create units from a specification contained in a units table read from `quanstants.toml`.
-        
-        Units should be listed in tables according to their type.
-        Keyword arguments for the unit type's constructor should be supplied as
-        key/value pairs.
-        If `name` is not given, the key of the unit's table will be passed as the unit's
-        name.
-        Arguments that should be `Quantity` objects should be given as a table with
-        key/value pairs for the arguments of the `Quantity` constructor.
-
-        For example:
-
-        ```toml
-        [units.derived]
-        thaum.symbol = "thm"
-        thaum.value.number = "3.595e16"
-        thaum.value.unit = "J"
-        thaum.canon_symbol = true
-        ```
-
-        will create a unit using:
-
-        ```python
-        DerivedUnit(
-            symbol="thm",
-            name="thaum",
-            value=Quantity("3.595e16", "J"),
-            canon_symbol=True,
-        )
-        ```
-        """
-        from .quantity import Quantity
-        from .unit import BaseUnit, UnitlessUnit, DerivedUnit, CompoundUnit
-        from .temperature import TemperatureUnit
-        
-        for UnitClass in [BaseUnit, UnitlessUnit, DerivedUnit, CompoundUnit, TemperatureUnit]:
-            section = UnitClass.__name__[:-4].lower()
-            if section in units_table:
-                for unit, kwargs in units_table[section].items():
-                    if "name" not in kwargs:
-                        kwargs["name"] = unit
-                    if "value" in kwargs:
-                        value_dict = kwargs["value"]
-                        kwargs["value"] = Quantity(**value_dict)
-                    UnitClass(**kwargs)
-    
-    def load_constants(self, constants_table: dict):
-        """Create constants from a specification contained in a constants table read from `quanstants.toml`.
-        
-        Constants should be listed in a `[constants]` table.
-        Keyword arguments for `Constant()` should be supplied as key/value pairs.
-        If `name` is not given, the key of the constants's table will be passed as the
-        constant's name.
-        Arguments that should be `Quantity` objects should be given as a table with
-        key/value pairs for the arguments of the `Quantity` constructor.
-
-        For example:
-
-        ```toml
-        [constants]
-        swallow_airspeed_velocity.symbol = "swv"
-        swallow_airspeed_velocity.value.number = "9"
-        swallow_airspeed_velocity.value.unit = "m s-1"
-        swallow_airspeed_velocity.alt_names = [ "european_swallow_airspeed_velocity", "unladen_swallow_airspeed_velocity" ]
-        ```
-
-        will create a constant using:
-
-        ```python
-        Constant(
-            symbol="swv",
-            name="swallow_airspeed_velocity",
-            value=Quantity("9", "m s-1"),
-            alt_names=[
-                "european_swallow_airspeed_velocity",
-                "unladen_swallow_airspeed_velocity",
-            ]
-        )
-        ```
-        """
-        from .quantity import Quantity
-        from .constant import Constant
-
-        for constant, kwargs in constants_table.items():
-            if "name" not in kwargs:
-                kwargs["name"] = constant
-            if "value" in kwargs:
-                value_dict = kwargs["value"]
-                kwargs["value"] = Quantity(**value_dict)
-            Constant(**kwargs)
 
 
 # Create instance of config class that will be passed around to other modules

@@ -1,0 +1,13 @@
+[units.derived.nibble]
+name = "nibble"
+value.number = 4
+value.unit = "bit"
+alt_names = [ "nybble", "nyble", "nybl", "half_byte", "tetrade", "semioctet", "quadbit", "quartet" ]
+canon_symbol = false
+
+[units.derived.octet]
+symbol = "o"
+name = "octet"
+value.number = 8
+value.unit = "bit"
+canon_symbol = false

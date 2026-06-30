@@ -6,6 +6,8 @@ and optionally `from quanstants import Quantity`.
 from decimal import Decimal as dec
 from importlib import import_module
 
+from quanstants import _quanstants
+
 ### SETUP ###
 # Setup configuration first in case the user's preferences affect initial setup
 from .config import quanfig

@@ -1,0 +1,164 @@
+# SI derived units
+
+[units.radian]
+id = "0x01"
+symbol = "rad"
+name = "radian"
+value.number = "1"
+value.unit = []
+
+[units.steradian]
+id = "0x02"
+symbol = "sr"
+name = "steradian"
+value.number = "1"
+value.unit = []
+
+[units.hertz]
+id = "0x00_00_00_00_00_00_FF_01"
+symbol = "Hz"
+name = "hertz"
+value.number = "1"
+value.unit = [["second", "-1"]]
+
+[units.newton]
+id = "0x00_00_00_00_01_01_FE_01"
+symbol = "N"
+name = "newton"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["metre", "1"], ["second", "-2"]]
+
+[units.pascal]
+id = "0x00_00_00_00_01_FF_FE_01"
+symbol = "Pa"
+name = "pascal"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["metre", "-1"], ["second", "-2"]]
+
+[units.joule]
+id = "0x00_00_00_00_01_02_FE_01"
+symbol = "J"
+name = "joule"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-2"]]
+
+[units.watt]
+id = "0x00_00_00_00_01_02_FD_01"
+symbol = "W"
+name = "watt"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-3"]]
+
+[units.coulomb]
+id = "0x00_00_00_01_00_00_01_01"
+symbol = "C"
+name = "coulomb"
+value.number = "1"
+value.unit = [["ampere", "1"], ["second", "1"]]
+
+[units.volt]
+id = "0x00_00_00_FF_01_02_FD_01"
+symbol = "V"
+name = "volt"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-3"], ["ampere", "-1"]]
+
+[units.farad]
+id = "0x00_00_00_02_FF_FE_04_01"
+symbol = "F"
+name = "farad"
+value.number = "1"
+value.unit = [["kilogram", "-1"], ["metre", "-2"], ["second", "4"], ["ampere", "2"]]
+
+[units.ohm]
+id = "0x00_00_00_FE_01_02_FD_01"
+symbol = "Ω"
+name = "ohm"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-3"], ["ampere", "-2"]]
+
+[units.siemens]
+id = "0x00_00_00_02_FF_FE_03_01"
+symbol = "S"
+name = "siemens"
+value.number = "1"
+value.unit = [["kilogram", "-1"], ["metre", "-2"], ["second", "3"], ["ampere", "2"]]
+
+[units.weber]
+id = "0x00_00_00_FF_01_02_FE_01"
+symbol = "Wb"
+name = "weber"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-2"], ["ampere", "-1"]]
+
+[units.tesla]
+id = "0x00_00_00_FF_01_00_FE_01"
+symbol = "T"
+name = "tesla"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["second", "-2"], ["ampere", "-1"]]
+
+[units.henry]
+id = "0x00_00_00_FE_01_02_FE_01"
+symbol = "H"
+name = "henry"
+value.number = "1"
+value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-2"], ["ampere", "-2"]]
+
+[units."Celsius degree"]
+id = "0x00_00_01_00_00_00_00_01"
+symbol = "°C"
+name = "Celsius degree"
+value.number = "1"
+value.unit = [["kelvin", "1"]]
+
+[units.lumen]
+id = "0x01_00_00_00_00_00_00_01"
+symbol = "lm"
+name = "lumen"
+value.number = "1"
+value.unit = [["candela", "1"], ["steradian", "1"]]
+
+[units.lux]
+id = "0x01_00_00_00_00_FE_00_01"
+symbol = "lx"
+name = "lux"
+value.number = "1"
+value.unit = [["second", "1"], ["steradian", "1"], ["metre", "-2"]]
+
+[units.becquerel]
+id = "0x00_00_00_00_00_00_FF_02"
+symbol = "Bq"
+name = "becquerel"
+value.number = "1"
+value.unit = [["second", "-1"]]
+
+[units.gray]
+id = "0x00_00_00_00_00_02_FE_01"
+symbol = "Gy"
+name = "gray"
+value.number = "1"
+value.unit = [["metre", "2"], ["second", "-2"]]
+
+[units.sievert]
+id = "0x00_00_00_00_00_02_FE_02"
+symbol = "Sv"
+name = "sievert"
+value.number = "1"
+value.unit = [["metre", "2"], ["second", "-2"]]
+
+[units.katal]
+id = "0x00_01_00_00_00_00_FF_01"
+symbol = "kat"
+name = "katal"
+value.number = "1"
+value.unit = [["mole", "1"], ["second", "-1"]]
+
+# Other
+
+[units.gram]
+id = "0xFD_00_00_00_00_01_00_00_00"
+symbol = "g"
+name = "gram"
+value.number = "1e-3"
+value.unit = [["kilogram", "1"]]

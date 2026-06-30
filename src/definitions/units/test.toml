@@ -1,0 +1,164 @@
+# SI derived units
+
+[units.radian]
+id = "0x1"
+symbol = "rad"
+name = "radian"
+value.number = "1"
+value.unit = []
+
+#[units.steradian]
+#id = "0x2"
+#symbol = "sr"
+#name = "steradian"
+#value.number = "1"
+#value.unit = [[]]
+#
+#[units.hertz]
+#id = "0xF101"
+#symbol = "Hz"
+#name = "hertz"
+#value.number = "1"
+#value.unit = [["second", "-1"]]
+#
+#[units.newton]
+#id = "0x1111F201"
+#symbol = "N"
+#name = "newton"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["metre", "1"], ["second", "-2"]]
+#
+#[units.pascal]
+#id = "0x11F1F201"
+#symbol = "Pa"
+#name = "pascal"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["metre", "-1"], ["second", "-2"]]
+#
+#[units.joule]
+#id = "0x1112F201"
+#symbol = "J"
+#name = "joule"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-2"]]
+#
+#[units.watt]
+#id = "0x1112F301"
+#symbol = "W"
+#name = "watt"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-3"]]
+#
+#[units.coulomb]
+#id = "0x1100001101"
+#symbol = "C"
+#name = "coulomb"
+#value.number = "1"
+#value.unit = [["ampere", "1"], ["second", "1"]]
+#
+#[units.volt]
+#id = "0xF11112F301"
+#symbol = "V"
+#name = "volt"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-3"], ["ampere", "-1"]]
+#
+#[units.farad]
+#id = "0x12F1F21401"
+#symbol = "F"
+#name = "farad"
+#value.number = "1"
+#value.unit = [["kilogram", "-1"], ["metre", "-2"], ["second", "4"], ["ampere", "2"]]
+#
+#[units.ohm]
+#id = "0xF21112F301"
+#symbol = "Ω"
+#name = "ohm"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-3"], ["ampere", "-2"]]
+#
+#[units.siemens]
+#id = "0x12F1F21301"
+#symbol = "S"
+#name = "siemens"
+#value.number = "1"
+#value.unit = [["kilogram", "-1"], ["metre", "-2"], ["second", "3"], ["ampere", "2"]]
+#
+#[units.weber]
+#id = "0xF11112F201"
+#symbol = "Wb"
+#name = "weber"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-2"], ["ampere", "-1"]]
+#
+#[units.tesla]
+#id = "0xF11100F201"
+#symbol = "T"
+#name = "tesla"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["second", "-2"], ["ampere", "-1"]]
+#
+#[units.henry]
+#id = "0xF21112F201"
+#symbol = "H"
+#name = "henry"
+#value.number = "1"
+#value.unit = [["kilogram", "1"], ["metre", "2"], ["second", "-2"], ["ampere", "-2"]]
+#
+#[units."Celsius degree"]
+#id = "0x110000000001"
+#symbol = "°C"
+#name = "Celsius degree"
+#value.number = "1"
+#value.unit = [["kelvin", "1"]]
+#
+#[units.lumen]
+#id = "0x1100000000000001"
+#symbol = "lm"
+#name = "lumen"
+#value.number = "1"
+#value.unit = [["second", "1"]]
+#
+#[units.lux]
+#id = "0x1100000000F20001"
+#symbol = "lx"
+#name = "lux"
+#value.number = "1"
+#value.unit = [["second", "1"], ["metre", "-2"]]
+#
+#[units.becquerel]
+#id = "0xF102"
+#symbol = "Bq"
+#name = "becquerel"
+#value.number = "1"
+#value.unit = [["second", "-1"]]
+#
+#[units.gray]
+#id = "0x12F201"
+#symbol = "Gy"
+#name = "gray"
+#value.number = "1"
+#value.unit = [["metre", "2"], ["second", "-2"]]
+#
+#[units.sievert]
+#id = "0x12F202"
+#symbol = "Sv"
+#name = "sievert"
+#value.number = "1"
+#value.unit = [["metre", "2"], ["second", "-2"]]
+#
+#[units.katal]
+#id = "0x1100000000F101"
+#symbol = "kat"
+#name = "katal"
+#value.number = "1"
+#value.unit = [["mole", "1"], ["second", "-1"]]
+#
+## Non-SI units officially accepted for use with the SI
+#[unit.litre]
+#id = "0xFD0000000000130001"
+#symbol = "L"  # For now, for distinguishability, but should work out way to allow l as alternative
+#name = "litre"
+#alt_names = ["liter"]
+#value.number = "1e-3"
+#value.unit = [["metre", "3"]]

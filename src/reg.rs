@@ -712,15 +712,15 @@ impl UnitRegistry {
             ) {
                 Ok(_) => continue,
                 Err(e) => match e {
-                    QuanstantsError::Lookup(name) => {
+                    QuanstantsError::Lookup(missing) => {
                         // Maybe the unit that was looked for is in this module
                         // but hasn't been loaded yet, in which case we should
                         // come back to this one later, after we've loaded the
                         // other definitions in the file
-                        if pending.contains(&name) {
+                        if pending.contains(&missing) {
                             pending.insert(0, name);
                         } else {
-                            Err(QuanstantsError::Lookup(name))?
+                            Err(QuanstantsError::Lookup(missing))?
                         }
                     }
                     _ => Err(e)?, // Just propagate
@@ -853,6 +853,63 @@ pub(crate) mod py {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn si_base_names() -> Vec<&'static str> {
+        vec![
+            "second", "metre", "kilogram", "ampere", "kelvin", "mole", "candela",
+        ]
+    }
+
+    fn si_compatible_names() -> Vec<&'static str> {
+        let mut names = si_base_names();
+        let si_compatible = vec![
+            "radian",
+            "steradian",
+            "hertz",
+            "newton",
+            "pascal",
+            "joule",
+            "watt",
+            "coulomb",
+            "volt",
+            "farad",
+            "ohm",
+            "siemens",
+            "weber",
+            "tesla",
+            "henry",
+            "Celsius degree",
+            "lumen",
+            "lux",
+            "becquerel",
+            "gray",
+            "sievert",
+            "katal",
+            "gram",
+        ];
+        names.extend(si_compatible);
+        names
+    }
+
+    #[test]
+    fn minimal() {
+        let reg = UnitRegistry::new_minimal();
+        // Check it contains what we promise it does
+        for name in si_base_names() {
+            assert!(reg.get_by_name(name).is_some())
+        }
+    }
+
+    #[test]
+    fn basic() {
+        let reg = UnitRegistry::new();
+        // Check it contains what we promise it does
+        for name in si_compatible_names() {
+            dbg!(name);
+            dbg!(reg.get_by_name(name));
+            assert!(reg.get_by_name(name).is_some())
+        }
+    }
 
     #[test]
     #[allow(non_snake_case)]

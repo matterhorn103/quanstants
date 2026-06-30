@@ -147,7 +147,7 @@ impl Quantity<SciDecimal> {
     }
 
     // This ought to be generic
-    /// Returns the value of the `SciQuantity` when expressed in base units.
+    /// Returns the value of the `Quantity` when expressed in base units.
     pub fn in_base(&self) -> Self {
         if self.unit.is_base() || self.unit.is_compound_base() {
             self.clone()
@@ -157,30 +157,41 @@ impl Quantity<SciDecimal> {
     }
 
     // This ought to be generic
-    /// Returns the value of the `Quantity` when expressed in the given unit.
+    /// Returns the value of the `Quantity` when expressed in terms of `other`.
     ///
     /// Returns `None` if the units have different dimensionality.
-    pub fn in_unit(&self, unit: &Unit) -> Option<Self> {
+    pub fn in_unit(&self, other: &Unit) -> Option<Self> {
+        if self.dimensions() != other.dimensions() {
+            return None;
+        }
         if self.number.is_zero() && self.number.is_exact() {
             return Some(Self {
                 number: SciDecimal::zero(),
-                unit: unit.clone(),
+                unit: other.clone(),
             });
         };
-        // Original quantity q0 = n0 * u0
-        // The desired new unit is u1
-        // If there is a number n1 such that u0 = n1 * u1,
-        // the new quantity is then q1 = n0 * (n1 * u1) = (n0 * n1) * u1
-        // Find n1 by: n1 = u0 / u1
-        let ratio = (self.unit.value() / unit.value()).cancelled_by_dimension();
-        if ratio.is_unitless() {
-            Some(Self {
-                number: self.number * ratio.number,
-                unit: unit.clone(),
-            })
-        } else {
-            None
-        }
+        // For a known quantity in terms of A that we wish to express as the
+        // equal expression in terms of B:
+        // q = n * A = m * B
+        // We know A, B, and n; we need to find m.
+        // If A is defined in terms of a base unit U and some number a by:
+        // A = a * U
+        // then
+        // U = A/a
+        // Since B is likewise defined in terms of the same U and
+        // some other number b, then:
+        // U = A/a = B/b
+        // and A can be defined in terms of B as:
+        // A = (a/b) * B
+        // The quantity is then:
+        // q = n * A = n * (a/b) * B
+        // a/b is simply the ratio of the values of the units, a/b = A/B
+        // Leverage the fact that Unit128 keeps track of the value in base units
+        let ratio = self.unit.id.factor() / other.id.factor();
+        Some(Self {
+            number: self.number * ratio,
+            unit: other.clone(),
+        })
     }
 }
 
@@ -604,26 +615,45 @@ mod tests {
     use scinum::sci;
 
     use crate::{
+        fraction::Frac,
         prefix::Prefix,
-        unit::{LinearUnit, LinearUnitType},
+        unit::{LinearFactor, LinearUnit, LinearUnitType},
         unit128::Unit128,
     };
 
     use super::*;
 
+    /// Helper function that defines a joule.
+    fn joule() -> Unit {
+        Unit::new(LinearUnit {
+            id: Unit128::JOULE,
+            utype: LinearUnitType::Derived,
+            dimensions: Dimensions::new(-2, 2, 1, 0, 0, 0, 0),
+            symbol: Some(String::from("J")),
+            name: Some(String::from("joule")),
+            prefix: None,
+            number: SciDecimal::ONE,
+            factors: vec![
+                LinearFactor {
+                    unit: Unit::kilogram().inner,
+                    exponent: Frac::new(1, 1),
+                },
+                LinearFactor {
+                    unit: Unit::metre().inner,
+                    exponent: Frac::new(2, 1),
+                },
+                LinearFactor {
+                    unit: Unit::second().inner,
+                    exponent: Frac::new(-2, 1),
+                },
+            ],
+        })
+    }
+
     #[test]
     fn new() {
         let n = SciDecimal::new(5, 0);
-        let u = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciDecimal::ONE,
-            factors: Vec::new(),
-        });
+        let u = Unit::second();
         let q = Quantity::new(n, u.clone());
         assert_eq!(q.number, n);
         assert_eq!(q.unit, u);
@@ -632,16 +662,7 @@ mod tests {
     #[test]
     fn dimensions() {
         let n = SciDecimal::new(5, 0);
-        let u = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciDecimal::ONE,
-            factors: Vec::new(),
-        });
+        let u = Unit::second();
         let q = Quantity::new(n, u);
         assert_eq!(q.dimensions(), Dimensions::TIME);
     }
@@ -649,69 +670,71 @@ mod tests {
     #[test]
     fn uncertainty() {
         let n = SciDecimal::new_with_uncertainty(20, 1, 0);
-        let u = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciDecimal::ONE,
-            factors: Vec::new(),
-        });
+        let u = Unit::second();
         let q = Quantity::new(n, u.clone());
         assert_eq!(q.uncertainty(), Quantity::new(SciDecimal::ONE, u));
     }
 
     #[test]
-    fn mul() {
-        let s = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
+    fn cancel_by_unit() {
+        // For example, `3 m s² m⁻¹` becomes `3 s²`,
+        // and `0.78 J K⁻¹ J` becomes `0.78 J² K⁻¹`
+        let compound = Unit::new(LinearUnit {
+            id: Unit128(0x0200),
+            utype: LinearUnitType::Compound,
+            dimensions: Dimensions::new(2, 0, 0, 0, 0, 0, 0),
+            symbol: None,
+            name: None,
             prefix: None,
             number: SciDecimal::ONE,
-            factors: Vec::new(),
+            factors: vec![
+                LinearFactor {
+                    unit: Unit::metre().inner,
+                    exponent: Frac::new(1, 1),
+                },
+                LinearFactor {
+                    unit: Unit::second().inner,
+                    exponent: Frac::new(2, 1),
+                },
+                LinearFactor {
+                    unit: Unit::metre().inner,
+                    exponent: Frac::new(-1, 1),
+                },
+            ],
         });
-        let q1 = Quantity::new(SciDecimal::new(5, 0), s.clone());
-        let q2 = Quantity::new(SciDecimal::new(8, 0), s.clone());
+        let uncancelled = Quantity::new(SciDecimal::new(3, 0), compound);
+        let cancelled = uncancelled.cancelled_by_unit();
+        assert_eq!(cancelled.to_string(), "3 s2");
+    }
+
+    #[test]
+    fn mul() {
+        let q1 = Quantity::new(SciDecimal::new(5, 0), Unit::second());
+        let q2 = Quantity::new(SciDecimal::new(8, 0), Unit::second());
         assert_eq!(
             q1 * q2,
-            Quantity::new(SciDecimal::new(40, 0), s.clone() * s.clone())
+            Quantity::new(SciDecimal::new(40, 0), Unit::second() * Unit::second())
         );
     }
 
     #[test]
     fn div() {
-        let s = Unit::new(LinearUnit {
-            id: Unit128::SECOND,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::TIME,
-            symbol: Some(String::from("s")),
-            name: Some(String::from("second")),
-            prefix: None,
-            number: SciDecimal::ONE,
-            factors: Vec::new(),
-        });
-        let q1 = Quantity::new(SciDecimal::new(40, 0), s.clone() * s.clone());
-        let q2 = Quantity::new(SciDecimal::new(8, 0), s.clone());
-        assert_eq!(q1 / q2, Quantity::new(SciDecimal::new(5, 0), s.clone()));
+        let q1 = Quantity::new(SciDecimal::new(40, 0), Unit::second() * Unit::second());
+        let q2 = Quantity::new(SciDecimal::new(8, 0), Unit::second());
+        assert_eq!(
+            q1 / q2,
+            Quantity::new(SciDecimal::new(5, 0), Unit::second())
+        );
+        let q1: Quantity<SciDecimal> = SciDecimal::new(3000, 0) * Unit::metre();
+        let km = Prefix::kilo * Unit::metre();
+        let q2 = q1 / (SciDecimal::ONE * km);
+        // Should have cancelled by unit, but not by dimension
+        assert_eq!(q2.to_string(), "3000 m km-1");
     }
 
     #[test]
     fn in_base() {
-        let m = Unit::new(LinearUnit {
-            id: Unit128::METRE,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::LENGTH,
-            symbol: Some(String::from("m")),
-            name: Some(String::from("metre")),
-            prefix: None,
-            number: SciDecimal::ONE,
-            factors: Vec::new(),
-        });
+        let m = Unit::metre();
         let ft = Unit::new(LinearUnit {
             id: Unit128(0xBE7FC0000000000010001),
             utype: LinearUnitType::Derived,
@@ -729,16 +752,7 @@ mod tests {
 
     #[test]
     fn in_unit() {
-        let m = Unit::new(LinearUnit {
-            id: Unit128::METRE,
-            utype: LinearUnitType::Base,
-            dimensions: Dimensions::LENGTH,
-            symbol: Some(String::from("m")),
-            name: Some(String::from("metre")),
-            prefix: None,
-            number: SciDecimal::ONE,
-            factors: Vec::new(),
-        });
+        let m = Unit::metre();
         let km = Prefix::kilo * m.clone();
         let q: Quantity<SciDecimal> = SciDecimal::new(3000, 0) * m;
         assert_eq!(q.in_unit(&km).unwrap(), SciDecimal::new(3, 0) * km);

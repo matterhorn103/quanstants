@@ -14,6 +14,8 @@ use crate::{
     unit128::Unit128,
 };
 
+/// A struct to hold unit definitions and provide lookup mechanisms for them by
+/// UoMID, name, and symbol.
 #[derive(Debug)]
 pub struct UnitRegistry {
     pub(crate) units: HashMap<Unit128, Unit>,
@@ -22,6 +24,7 @@ pub struct UnitRegistry {
     pub(crate) sources: HashMap<Unit128, Option<String>>,
 }
 
+/// Constructors.
 impl UnitRegistry {
     /// Creates a new `UnitRegistry` with minimal pre-population (just the SI
     /// base units).
@@ -33,7 +36,7 @@ impl UnitRegistry {
             symbol_map: HashMap::new(),
             sources: HashMap::new(),
         };
-        reg.add_unitless();
+        reg.add_one();
         reg.load_si_base();
         reg
     }
@@ -47,15 +50,13 @@ impl UnitRegistry {
             .expect("Internal `si.toml` file should be correct");
         reg
     }
-}
 
-impl Default for UnitRegistry {
     /// Creates a new `UnitRegistry` pre-populated with:
     /// - the SI base units
     /// - the SI derived units
     /// - the non-SI units officially approved for use with the SI
     /// - common prefixed units
-    fn default() -> Self {
+    pub fn new_populated() -> Self {
         let mut reg = Self::new();
         reg.load_module(UnitModule::SiCompatible)
             .expect("Internal `si_compatible.toml` file should be correct");
@@ -64,24 +65,12 @@ impl Default for UnitRegistry {
     }
 }
 
+/// Private associated helper functions to assist with the creation of new
+/// `LinearUnit`s and wrapping `Unit`s.
 impl UnitRegistry {
-    /// Adds the unit to string_map under the normalized lowercase form of the
-    /// provided name.
-    #[inline]
-    fn insert_under_string(&mut self, name: String, unit: Unit) {
-        let normalized = name.to_lowercase();
-        self.string_map.insert(normalized, unit);
-    }
-
-    /// Adds the unit to symbol_map under the provided symbol if not already
-    /// present.
-    #[inline]
-    fn insert_under_symbol_checked(&mut self, symbol: String, unit: Unit) {
-        self.symbol_map.entry(symbol).or_insert(unit);
-    }
-
+    /// Creates a new base `LinearUnit` and wraps it in a `Unit`, giving it the
+    /// provided UoMID.
     fn new_base(
-        &mut self,
         id: Unit128,
         dimensions: Dimensions,
         symbol: String,
@@ -100,63 +89,9 @@ impl UnitRegistry {
         })
     }
 
-    pub fn add_base(
-        &mut self,
-        dimensions: Dimensions,
-        symbol: String,
-        name: String,
-        prefix: Option<Prefix>,
-    ) -> Unit128 {
-        let id = Unit128::new(SciDecimal::ONE, dimensions);
-        let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
-        self.insert_under_string(name, unit.clone());
-        self.insert_under_symbol_checked(symbol, unit.clone());
-        self.units.insert(id, unit);
-        id
-    }
-
-    pub fn add_base_with_alt_names(
-        &mut self,
-        dimensions: Dimensions,
-        symbol: String,
-        name: String,
-        prefix: Option<Prefix>,
-        alt_names: Vec<String>,
-    ) -> Unit128 {
-        let id = Unit128::new(SciDecimal::ONE, dimensions);
-        let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
-        self.insert_under_string(name, unit.clone());
-        for n in alt_names {
-            let alt_unit = self.new_base(id, dimensions, symbol.clone(), n.clone(), prefix);
-            self.insert_under_string(n, alt_unit);
-        }
-        // Getting the unit by symbol or ID should return the canonical form
-        self.insert_under_symbol_checked(symbol, unit.clone());
-        self.units.insert(id, unit);
-        id
-    }
-
-    pub fn add_base_with_aliases(
-        &mut self,
-        dimensions: Dimensions,
-        symbol: String,
-        name: String,
-        prefix: Option<Prefix>,
-        aliases: Vec<String>,
-    ) -> Unit128 {
-        let id = Unit128::new(SciDecimal::ONE, dimensions);
-        let unit = self.new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
-        self.insert_under_string(name, unit.clone());
-        for alias in aliases {
-            self.insert_under_string(alias, unit.clone());
-        }
-        self.insert_under_symbol_checked(symbol, unit.clone());
-        self.units.insert(id, unit);
-        id
-    }
-
+    /// Creates a new derived `LinearUnit` and wraps it in a `Unit`, giving it the
+    /// provided UoMID.
     fn new_derived(
-        &mut self,
         id: Unit128,
         symbol: String,
         name: String,
@@ -211,15 +146,139 @@ impl UnitRegistry {
             Unit128::new(proportionality_factor * cmpd.factor(), cmpd.dimensions())
         }
     }
+}
 
-    /// Adds a derived unit to the registry.
+/// Methods for adding units to the registry.
+impl UnitRegistry {
+    /// Adds the unit to string_map under the normalized lowercase form of the
+    /// provided name.
+    #[inline]
+    fn insert_under_string(&mut self, name: String, unit: Unit) {
+        let normalized = name.to_lowercase();
+        self.string_map.insert(normalized, unit);
+    }
+
+    /// Adds the unit to symbol_map under the provided symbol only if not already
+    /// present.
+    #[inline]
+    fn insert_under_symbol_checked(&mut self, symbol: String, unit: Unit) {
+        self.symbol_map.entry(symbol).or_insert(unit);
+    }
+
+    /// Adds a definition for 1 to the registry.
+    fn add_one(&mut self) {
+        self.units.insert(Unit128::ONE, Unit::one());
+    }
+
+    /// Creates a base unit and inserts it into the registry.
     ///
-    /// The symbol and name of the unit should include the prefix, if there is
-    /// one.
+    /// The UoMID is automatically calculated.
+    pub fn add_base(
+        &mut self,
+        dimensions: Dimensions,
+        symbol: String,
+        name: String,
+        prefix: Option<Prefix>,
+    ) -> Unit128 {
+        let id = Unit128::new(SciDecimal::ONE, dimensions);
+        let unit = Self::new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
+        self.insert_under_string(name, unit.clone());
+        self.insert_under_symbol_checked(symbol, unit.clone());
+        self.units.insert(id, unit);
+        id
+    }
+
+    /// Creates variations of a base unit with multiple alternative names and
+    /// inserts them into the registry.
     ///
-    /// On the other hand, the proportionality factor should not include the
-    /// value of the prefix. The overall value of the unit is then (prefix *
-    /// number * factors[0] * … * factors[-1])
+    /// The `name` and each `alt_name` then all refer to separate `Unit`s with
+    /// identical values.
+    ///
+    /// Localized and translated names are equally valid spellings, so it is
+    /// important that the unit returned from a lookup has the name expected
+    /// by the user and not the "canonical" (here, English) one.
+    /// This includes distinguishing between "metre" and "meter".
+    ///
+    /// Calling `Unit.name()` on the alternative units then returns a different
+    /// name in each case. The symbol and value of each alternative unit is
+    /// the same. The UoMID of each alternative unit is also identical, but
+    /// lookup in the registry using the ID will always return the canonical
+    /// unit.
+    ///
+    /// The UoMID is automatically calculated.
+    pub fn add_base_with_alt_names(
+        &mut self,
+        dimensions: Dimensions,
+        symbol: String,
+        name: String,
+        prefix: Option<Prefix>,
+        alt_names: Vec<String>,
+    ) -> Unit128 {
+        let id = Unit128::new(SciDecimal::ONE, dimensions);
+        let unit = Self::new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
+        self.insert_under_string(name, unit.clone());
+        for n in alt_names {
+            let alt_unit = Self::new_base(id, dimensions, symbol.clone(), n.clone(), prefix);
+            self.insert_under_string(n, alt_unit);
+        }
+        // Getting the unit by symbol or ID should return the canonical form
+        self.insert_under_symbol_checked(symbol, unit.clone());
+        self.units.insert(id, unit);
+        id
+    }
+
+    /// Creates a base unit and inserts it into the registry under `name` and
+    /// one or more `aliases` that point to the same `Unit`.
+    ///
+    /// Unlike `alt_names`, only a single `Unit` is created, and each alias in
+    /// `aliases` refers to the exact same `Unit`.
+    /// This allows the unit to be found using several different names, assisting
+    /// unit discovery.
+    ///
+    /// For example:
+    /// - the kilogram can also be found under "kilo"
+    /// - the ampere can also be found under "amp"
+    /// - the percent can also be found under "per cent"
+    /// - the dalton can also be found under "unified atomic mass unit"
+    ///
+    /// The unit obtained by the search is identical regardless of the alias used.
+    /// Calling `Unit.name()` on a unit obtained using an alias always returns
+    /// the canonical name.
+    ///
+    /// The UoMID is automatically calculated.
+    pub fn add_base_with_aliases(
+        &mut self,
+        dimensions: Dimensions,
+        symbol: String,
+        name: String,
+        prefix: Option<Prefix>,
+        aliases: Vec<String>,
+    ) -> Unit128 {
+        let id = Unit128::new(SciDecimal::ONE, dimensions);
+        let unit = Self::new_base(id, dimensions, symbol.clone(), name.clone(), prefix);
+        self.insert_under_string(name, unit.clone());
+        for alias in aliases {
+            self.insert_under_string(alias, unit.clone());
+        }
+        self.insert_under_symbol_checked(symbol, unit.clone());
+        self.units.insert(id, unit);
+        id
+    }
+
+    /// Creates a derived unit and inserts it into the registry.
+    ///
+    /// If the unit is prefixed:
+    /// - the symbol and name provided should already include the prefix
+    /// - BUT the proportionality factor should *not* already include the
+    ///   value of the prefix.
+    ///
+    /// The overall value of the unit is then:
+    /// `prefix * proportionality_factor * factors[0] * … * factors[-1])`
+    ///
+    /// For catalogued units, the correct ID should be provided.
+    /// For anonymous units, a UoMID is generated automatically; to avoid
+    /// conflicts, anonymous units are not added to `self.units` and cannot be
+    /// looked up by their ID.
     pub fn add_derived(
         &mut self,
         id: Option<Unit128>,
@@ -229,12 +288,12 @@ impl UnitRegistry {
         proportionality_factor: SciDecimal,
         unit_factors: Vec<(Unit, Frac)>,
     ) -> Unit128 {
-        let id = match id {
+        let new_id = match id {
             Some(id) => id, // If it's a catalogued derived unit it'll have had the ID provided
             None => Self::calculate_derived_id(prefix, proportionality_factor, &unit_factors),
         };
-        let unit = self.new_derived(
-            id,
+        let unit = Self::new_derived(
+            new_id,
             symbol.clone(),
             name.clone(),
             prefix,
@@ -243,25 +302,37 @@ impl UnitRegistry {
         );
         self.insert_under_string(name, unit.clone());
         self.insert_under_symbol_checked(symbol, unit.clone());
-        self.units.insert(id, unit);
-        id
+        // Only insert if the ID was provided to avoid conflicts between
+        // non-catalogued units
+        if id.is_some() {
+            self.units.insert(new_id, unit);
+        }
+        new_id
     }
 
-    /// Adds a derived unit to the registry under multiple alternative names.
+    /// Creates variations of a derived unit with multiple alternative names and
+    /// inserts them into the registry.
     ///
     /// The `name` and each `alt_name` then all refer to separate `Unit`s with
     /// identical values.
     ///
     /// Localized and translated names are equally valid spellings, so it is
     /// important that the unit returned from a lookup has the name expected
-    /// by the user and not the "canonical" (English) one.
+    /// by the user and not the "canonical" (here, English) one.
     /// This includes distinguishing between "metre" and "meter".
     ///
     /// Calling `Unit.name()` on the alternative units then returns a different
     /// name in each case. The symbol and value of each alternative unit is
-    /// the same. The ID of each alternative unit is also identical, but
+    /// the same. The UoMID of each alternative unit is also identical, but
     /// lookup in the registry using the ID will always return the canonical
     /// unit.
+    ///
+    /// See [`UnitRegistry::add_derived`] for notes on prefixed units.
+    ///
+    /// For catalogued units, the correct ID should be provided.
+    /// For anonymous units, a UoMID is generated automatically; to avoid
+    /// conflicts, anonymous units are not added to `self.units` and cannot be
+    /// looked up by their ID.
     #[allow(clippy::too_many_arguments)]
     pub fn add_derived_with_alt_names(
         &mut self,
@@ -273,12 +344,12 @@ impl UnitRegistry {
         unit_factors: Vec<(Unit, Frac)>,
         alt_names: Vec<String>,
     ) -> Unit128 {
-        let id = match id {
+        let new_id = match id {
             Some(id) => id, // If it's a catalogued derived unit it'll have had the ID provided
             None => Self::calculate_derived_id(prefix, proportionality_factor, &unit_factors),
         };
-        let unit = self.new_derived(
-            id,
+        let unit = Self::new_derived(
+            new_id,
             symbol.clone(),
             name.clone(),
             prefix,
@@ -287,8 +358,8 @@ impl UnitRegistry {
         );
         self.insert_under_string(name, unit.clone());
         for n in alt_names {
-            let alt_unit = self.new_derived(
-                id,
+            let alt_unit = Self::new_derived(
+                new_id,
                 symbol.clone(),
                 n.clone(),
                 prefix,
@@ -299,21 +370,38 @@ impl UnitRegistry {
         }
         // Getting the unit by symbol or ID should return the canonical form
         self.insert_under_symbol_checked(symbol, unit.clone());
-        self.units.insert(id, unit);
-        id
+        // Only insert if the ID was provided to avoid conflicts between
+        // non-catalogued units
+        if id.is_some() {
+            self.units.insert(new_id, unit);
+        }
+        new_id
     }
 
-    /// Adds a derived unit to the registry along with aliases that point to the
-    /// same unit.
+    /// Creates a derived unit and inserts it into the registry under `name` and
+    /// one or more `aliases` that point to the same `Unit`.
     ///
-    /// Unlike `alt_names`, `aliases` refer to the exact same `Unit`, they just
-    /// allow the unit to be found using several different names.
+    /// Unlike `alt_names`, only a single `Unit` is created, and each alias in
+    /// `aliases` refers to the exact same `Unit`.
+    /// This allows the unit to be found using several different names, assisting
+    /// unit discovery.
     ///
     /// For example:
-    /// - the "percent" unit can also be found under "per cent"
-    /// - the "Dalton" unit can also be found under "unified atomic mass unit"
+    /// - the kilogram can also be found under "kilo"
+    /// - the ampere can also be found under "amp"
+    /// - the percent can also be found under "per cent"
+    /// - the dalton can also be found under "unified atomic mass unit"
     ///
-    /// Calling `Unit.name()` on the units always returns the canonical name.
+    /// The unit obtained by the search is identical regardless of the alias used.
+    /// Calling `Unit.name()` on a unit obtained using an alias always returns
+    /// the canonical name.
+    ///
+    /// See [`UnitRegistry::add_derived`] for notes on prefixed units.
+    ///
+    /// For catalogued units, the correct ID should be provided.
+    /// For anonymous units, a UoMID is generated automatically; to avoid
+    /// conflicts, anonymous units are not added to `self.units` and cannot be
+    /// looked up by their ID.
     #[allow(clippy::too_many_arguments)]
     pub fn add_derived_with_aliases(
         &mut self,
@@ -325,12 +413,12 @@ impl UnitRegistry {
         unit_factors: Vec<(Unit, Frac)>,
         aliases: Vec<String>,
     ) -> Unit128 {
-        let id = match id {
+        let new_id = match id {
             Some(id) => id, // If it's a catalogued derived unit it'll have had the ID provided
             None => Self::calculate_derived_id(prefix, proportionality_factor, &unit_factors),
         };
-        let unit = self.new_derived(
-            id,
+        let unit = Self::new_derived(
+            new_id,
             symbol.clone(),
             name.clone(),
             prefix,
@@ -342,12 +430,21 @@ impl UnitRegistry {
             self.insert_under_string(alias, unit.clone());
         }
         self.insert_under_symbol_checked(symbol, unit.clone());
-        self.units.insert(id, unit);
-        id
+        // Only insert if the ID was provided to avoid conflicts between
+        // non-catalogued units
+        if id.is_some() {
+            self.units.insert(new_id, unit);
+        }
+        new_id
     }
 
-    /// Adds a `Prefix` to the provided `Unit`, gives it an ID with the least
-    /// significant byte indicated, and inserts it into the registry.
+    /// Adds a `Prefix` to the provided `Unit`, gives it an ID with the catalogue
+    /// number indicated, and inserts it into the registry under the prefixed name.
+    ///
+    /// Generally, a catalogue number of 1 should be used for a catalogued
+    /// prefixed unit.
+    ///
+    /// Anonymous prefixed units shouldn't be added to the registry.
     ///
     /// Only possible with metric prefixes.
     ///
@@ -368,6 +465,121 @@ impl UnitRegistry {
         new_unit.id = new_unit.id.with_catalogue_number(catalogue_number);
         self.insert_under_string(new_unit.name(), new_unit.clone());
         self.units.insert(new_unit.id, new_unit);
+    }
+}
+
+/// Methods for loading unit definition modules and adding sets of pre-defined units.
+impl UnitRegistry {
+    /// Adds the SI base units to the registry.
+    ///
+    /// Two versions of the metre are added, with the two different spellings.
+    fn load_si_base(&mut self) {
+        self.add_base(
+            Dimensions::new(1, 0, 0, 0, 0, 0, 0),
+            String::from("s"),
+            String::from("second"),
+            None,
+        );
+        self.add_base_with_alt_names(
+            Dimensions::new(0, 1, 0, 0, 0, 0, 0),
+            String::from("m"),
+            String::from("metre"),
+            None,
+            vec![String::from("meter")],
+        );
+        self.add_base(
+            Dimensions::new(0, 0, 1, 0, 0, 0, 0),
+            String::from("kg"),
+            String::from("kilogram"),
+            Some(Prefix::kilo),
+        );
+        self.add_base_with_aliases(
+            Dimensions::new(0, 0, 0, 1, 0, 0, 0),
+            String::from("A"),
+            String::from("ampere"),
+            None,
+            vec![String::from("amp")],
+        );
+        self.add_base(
+            Dimensions::new(0, 0, 0, 0, 1, 0, 0),
+            String::from("K"),
+            String::from("kelvin"),
+            None,
+        );
+        self.add_base(
+            Dimensions::new(0, 0, 0, 0, 0, 1, 0),
+            String::from("mol"),
+            String::from("mole"),
+            None,
+        );
+        self.add_base(
+            Dimensions::new(0, 0, 0, 0, 0, 0, 1),
+            String::from("cd"),
+            String::from("candela"),
+            None,
+        );
+    }
+
+    /// Adds some of the most common prefixed units to the registry.
+    ///
+    /// Note that this method relies on the definitions of the SI base units, so
+    /// [`UnitRegistry::load_si_base()`] should have been called prior.
+    fn load_common_prefixed(&mut self) {
+        self.add_prefixed(Prefix::nano, self.get_by_id(Unit128::SECOND).unwrap(), 0x01);
+        self.add_prefixed(
+            Prefix::micro,
+            self.get_by_id(Unit128::SECOND).unwrap(),
+            0x01,
+        );
+        self.add_prefixed(
+            Prefix::milli,
+            self.get_by_id(Unit128::SECOND).unwrap(),
+            0x01,
+        );
+
+        self.add_prefixed(Prefix::nano, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::micro, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::centi, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::deci, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::MOLE).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
+        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
+        self.add_prefixed(Prefix::giga, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
+        self.add_prefixed(Prefix::tera, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
+
+        self.add_prefixed(
+            Prefix::hecto,
+            self.get_by_id(Unit128::PASCAL).unwrap(),
+            0x01,
+        );
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::PASCAL).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
+        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
+        self.add_prefixed(Prefix::giga, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::JOULE).unwrap(), 0x01);
+        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::JOULE).unwrap(), 0x01);
+
+        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::TESLA).unwrap(), 0x01);
+
+        if let Some(gram) = self.get_by_id(Unit128::GRAM) {
+            self.add_prefixed(Prefix::milli, gram, 0x01);
+        }
+
+        if let Some(electronvolt) = self.get_by_name("electronvolt") {
+            self.add_prefixed(Prefix::mega, electronvolt.clone(), 0x01);
+            self.add_prefixed(Prefix::giga, electronvolt, 0x01);
+        }
+
+        if let Some(litre) = self.get_by_name("litre") {
+            self.add_prefixed(Prefix::micro, litre.clone(), 0x01);
+            self.add_prefixed(Prefix::milli, litre, 0x01);
+        }
     }
 
     /// Creates a `Unit` (base or derived, as appropriate) from the definition
@@ -481,6 +693,7 @@ impl UnitRegistry {
         Ok(id)
     }
 
+    /// Add the units defined by the given unit definition module.
     pub fn load_module(&mut self, module: UnitModule) -> Result<(), QuanstantsError> {
         let def_file: DefFile =
             toml::from_str(module.toml()).expect("Files stored in binary, so they should work");
@@ -516,138 +729,57 @@ impl UnitRegistry {
         }
         Ok(())
     }
+}
 
+// Methods for unit access and lookup.
+impl UnitRegistry {
+    /// Returns the unit equivalent to 1.
     #[inline]
     pub fn one(&self) -> Unit {
         self.units.get(&Unit128::ONE).unwrap().clone()
     }
 
+    /// Returns the unit stored in the registry under `name`, or `None` if there
+    /// is no corresponding unit.
+    ///
+    /// `name` may be the unit's canonical name, or an alias.
+    /// The ampere, for example, can also be obtained using `get_by_name("amp")`.
     #[inline]
     pub fn get_by_name(&self, name: &str) -> Option<Unit> {
         self.string_map.get(&name.to_lowercase()).cloned()
     }
 
+    /// Returns the unit with the corresponding `symbol`, or `None` if there
+    /// is no corresponding unit.
+    ///
+    /// Note that it is common for multiple units to have the same symbol. If
+    /// this is the case, it is the first one added to the registry that is
+    /// listed under the symbol, and it will be that one which is returned.
+    ///
+    /// This makes the behaviour of this function dependent on the order in
+    /// which modules were loaded.
+    /// In general, lookup by name is more reliable and less error-prone, so
+    /// should be preferred.
     #[inline]
     pub fn get_by_symbol(&self, symbol: &str) -> Option<Unit> {
         self.symbol_map.get(symbol).cloned()
     }
 
+    /// Returns the unit with the corresponding UoMID, or `None` if there
+    /// is no corresponding unit.
+    ///
+    /// Note that only base and catalogued units are accessible by their IDs.
     #[inline]
     pub fn get_by_id(&self, id: Unit128) -> Option<Unit> {
         self.units.get(&id).cloned()
     }
 }
 
-// Functions to add sets of units, for internal use only
-impl UnitRegistry {
-    fn add_unitless(&mut self) {
-        self.units.insert(Unit128::ONE, Unit::one());
-    }
-
-    fn load_si_base(&mut self) {
-        self.add_base(
-            Dimensions::new(1, 0, 0, 0, 0, 0, 0),
-            String::from("s"),
-            String::from("second"),
-            None,
-        );
-        self.add_base_with_alt_names(
-            Dimensions::new(0, 1, 0, 0, 0, 0, 0),
-            String::from("m"),
-            String::from("metre"),
-            None,
-            vec![String::from("meter")],
-        );
-        self.add_base(
-            Dimensions::new(0, 0, 1, 0, 0, 0, 0),
-            String::from("kg"),
-            String::from("kilogram"),
-            Some(Prefix::kilo),
-        );
-        self.add_base_with_aliases(
-            Dimensions::new(0, 0, 0, 1, 0, 0, 0),
-            String::from("A"),
-            String::from("ampere"),
-            None,
-            vec![String::from("amp")],
-        );
-        self.add_base(
-            Dimensions::new(0, 0, 0, 0, 1, 0, 0),
-            String::from("K"),
-            String::from("kelvin"),
-            None,
-        );
-        self.add_base(
-            Dimensions::new(0, 0, 0, 0, 0, 1, 0),
-            String::from("mol"),
-            String::from("mole"),
-            None,
-        );
-        self.add_base(
-            Dimensions::new(0, 0, 0, 0, 0, 0, 1),
-            String::from("cd"),
-            String::from("candela"),
-            None,
-        );
-    }
-
-    /// Pre-defines some of the most common prefixed units.
-    fn load_common_prefixed(&mut self) {
-        self.add_prefixed(Prefix::nano, self.get_by_id(Unit128::SECOND).unwrap(), 0x01);
-        self.add_prefixed(
-            Prefix::micro,
-            self.get_by_id(Unit128::SECOND).unwrap(),
-            0x01,
-        );
-        self.add_prefixed(
-            Prefix::milli,
-            self.get_by_id(Unit128::SECOND).unwrap(),
-            0x01,
-        );
-
-        self.add_prefixed(Prefix::nano, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
-        self.add_prefixed(Prefix::micro, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
-        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
-        self.add_prefixed(Prefix::centi, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
-        self.add_prefixed(Prefix::deci, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
-        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::METRE).unwrap(), 0x01);
-
-        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::MOLE).unwrap(), 0x01);
-
-        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
-        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
-        self.add_prefixed(Prefix::giga, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
-        self.add_prefixed(Prefix::tera, self.get_by_id(Unit128::HERTZ).unwrap(), 0x01);
-
-        self.add_prefixed(
-            Prefix::hecto,
-            self.get_by_id(Unit128::PASCAL).unwrap(),
-            0x01,
-        );
-        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::PASCAL).unwrap(), 0x01);
-
-        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
-        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
-        self.add_prefixed(Prefix::giga, self.get_by_id(Unit128::WATT).unwrap(), 0x01);
-
-        self.add_prefixed(Prefix::kilo, self.get_by_id(Unit128::JOULE).unwrap(), 0x01);
-        self.add_prefixed(Prefix::mega, self.get_by_id(Unit128::JOULE).unwrap(), 0x01);
-
-        self.add_prefixed(Prefix::milli, self.get_by_id(Unit128::TESLA).unwrap(), 0x01);
-
-        if let Some(gram) = self.get_by_id(Unit128::GRAM) {
-            self.add_prefixed(Prefix::milli, gram, 0x01);
-        }
-
-        if let Some(electronvolt) = self.get_by_name("electronvolt") {
-            self.add_prefixed(Prefix::mega, electronvolt.clone(), 0x01);
-            self.add_prefixed(Prefix::giga, electronvolt, 0x01);
-        }
-
-        if let Some(litre) = self.get_by_name("litre") {
-            self.add_prefixed(Prefix::micro, litre.clone(), 0x01);
-            self.add_prefixed(Prefix::milli, litre, 0x01);
-        }
+impl Default for UnitRegistry {
+    /// Creates a new, pre-populated `UnitRegistry`.
+    /// Equivalent to [`UnitRegistry::new_populated`].
+    fn default() -> Self {
+        Self::new_populated()
     }
 }
 
